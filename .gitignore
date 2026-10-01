@@ -28,3 +28,6 @@ test-results/
 .vscode/*
 !.vscode/extensions.json
 *.log
+
+# design references (third-party art, not ours to publish)
+docs/design/refs/
