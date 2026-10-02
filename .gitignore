@@ -31,3 +31,6 @@ test-results/
 
 # design references (third-party art, not ours to publish)
 docs/design/refs/
+
+# generated Prisma client (run `pnpm --filter @nook/api db:generate`)
+apps/api/src/generated/
