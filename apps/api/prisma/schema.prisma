@@ -1,0 +1,211 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum BlockType {
+  PARAGRAPH
+  HEADING_1
+  HEADING_2
+  HEADING_3
+  BULLETED_LIST
+  NUMBERED_LIST
+  TODO
+  QUOTE
+  CODE
+  DIVIDER
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id        String   @id @default(uuid(7))
+  email     String   @unique
+  name      String
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships   Membership[]
+  authoredPages Page[]       @relation("PageAuthor")
+  assignedTasks Task[]       @relation("TaskAssignee")
+
+  @@index([name])
+}
+
+model Workspace {
+  id        String   @id @default(uuid(7))
+  name      String
+  slug      String   @unique
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  pages       Page[]
+  tasks       Task[]
+  tags        Tag[]
+  events      CalendarEvent[]
+  attachments Attachment[]
+}
+
+model Membership {
+  id          String   @id @default(uuid(7))
+  role        Role     @default(MEMBER)
+  createdAt   DateTime @default(now())
+  userId      String
+  workspaceId String
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+model Page {
+  id          String   @id @default(uuid(7))
+  title       String
+  icon        String?
+  // Link to an uploaded cover image (the "file" field required by the MVC task).
+  coverUrl    String?
+  // Public landing page address: /p/:slug. Null while the page is private.
+  slug        String?  @unique
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspaceId String
+  authorId    String
+  parentId    String?
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author      User         @relation("PageAuthor", fields: [authorId], references: [id])
+  parent      Page?        @relation("PageTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Page[]       @relation("PageTree")
+  blocks      Block[]
+  tasks       Task[]
+  attachments Attachment[]
+
+  @@index([workspaceId, parentId])
+  @@index([title])
+}
+
+model Block {
+  id        String    @id @default(uuid(7))
+  type      BlockType @default(PARAGRAPH)
+  content   Json      @default("{}")
+  // Fractional position inside the page: a new block goes between its neighbours.
+  position  Float
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  pageId    String
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, position])
+}
+
+model Task {
+  id          String       @id @default(uuid(7))
+  title       String
+  description String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+  // Order inside a Kanban column.
+  position    Float        @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  completedAt DateTime?
+  workspaceId String
+  pageId      String?
+  assigneeId  String?
+
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  page      Page?           @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  assignee  User?           @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  tags      Tag[]
+  events    CalendarEvent[]
+
+  @@index([workspaceId, status, position])
+  @@index([workspaceId, dueDate])
+  @@index([assigneeId])
+}
+
+model Tag {
+  id          String   @id @default(uuid(7))
+  name        String
+  color       String   @default("#EC4E95")
+  createdAt   DateTime @default(now())
+  workspaceId String
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+
+  @@unique([workspaceId, name])
+}
+
+model CalendarEvent {
+  id            String   @id @default(uuid(7))
+  title         String
+  description   String?
+  startsAt      DateTime
+  endsAt        DateTime
+  allDay        Boolean  @default(false)
+  // Set when the event is synced with Google Calendar.
+  googleEventId String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  workspaceId   String
+  taskId        String?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  task      Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, startsAt])
+}
+
+model Attachment {
+  id          String   @id @default(uuid(7))
+  filename    String
+  // Link to the stored file (local uploads now, blob storage later).
+  url         String
+  mimeType    String
+  size        Int
+  createdAt   DateTime @default(now())
+  workspaceId String
+  pageId      String?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  page      Page?     @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([pageId])
+}
