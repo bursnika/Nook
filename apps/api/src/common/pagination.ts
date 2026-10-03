@@ -51,15 +51,18 @@ export function toPage<T>(
 }
 
 /** Swagger helper: documents a paginated list of `model`. */
-export function ApiPaginatedResponse(model: ClassType<unknown>) {
+export function ApiPaginatedResponse(model?: ClassType<unknown>) {
   return applyDecorators(
-    ApiExtraModels(model),
+    ...(model ? [ApiExtraModels(model)] : []),
     ApiOkResponse({
       schema: {
         type: 'object',
         required: ['items', 'total', 'skip', 'limit', 'nextLink'],
         properties: {
-          items: { type: 'array', items: { $ref: getSchemaPath(model) } },
+          items: {
+            type: 'array',
+            items: model ? { $ref: getSchemaPath(model) } : { type: 'object' },
+          },
           total: { type: 'integer' },
           skip: { type: 'integer' },
           limit: { type: 'integer' },
