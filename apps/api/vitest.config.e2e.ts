@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { defineConfig } from 'vitest/config';
 import { testDatabaseUrl } from './test/test-db.js';
 
@@ -10,6 +12,9 @@ export default defineConfig({
     fileParallelism: false,
     maxWorkers: 1,
     globalSetup: ['./test/global-setup.ts'],
-    env: { DATABASE_URL: testDatabaseUrl() },
+    env: {
+      DATABASE_URL: testDatabaseUrl(),
+      UPLOAD_DIR: join(tmpdir(), 'nook-e2e-uploads'),
+    },
   },
 });

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AttachmentsModule } from './attachments/attachments.module.js';
 import { BlocksModule } from './blocks/blocks.module.js';
 import { EventsModule } from './events/events.module.js';
 import { HealthController } from './health/health.controller.js';
@@ -21,6 +22,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     TagsModule,
     TasksModule,
     EventsModule,
+    AttachmentsModule,
   ],
   controllers: [HealthController],
 })
