@@ -8,6 +8,7 @@ export default defineConfig({
     root: './',
     include: ['test/**/*.e2e-spec.ts'],
     fileParallelism: false,
+    maxWorkers: 1,
     globalSetup: ['./test/global-setup.ts'],
     env: { DATABASE_URL: testDatabaseUrl() },
   },
