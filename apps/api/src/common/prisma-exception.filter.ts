@@ -2,14 +2,16 @@ import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus } from '@nestjs/commo
 import type { Response } from 'express';
 import { Prisma } from '../generated/prisma/client.js';
 
-const MAPPING: Record<string, { status: HttpStatus; message: string }> = {
-  P2025: { status: HttpStatus.NOT_FOUND, message: 'Record not found' },
+const MAPPING: Record<string, { status: HttpStatus; error: string; message: string }> = {
+  P2025: { status: HttpStatus.NOT_FOUND, error: 'Not Found', message: 'Record not found' },
   P2002: {
     status: HttpStatus.CONFLICT,
+    error: 'Conflict',
     message: 'A record with these unique values already exists',
   },
   P2003: {
     status: HttpStatus.CONFLICT,
+    error: 'Conflict',
     message: 'Referenced record does not exist or is still in use',
   },
 };
@@ -29,7 +31,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     }
     res.status(mapped.status).json({
       statusCode: mapped.status,
-      error: HttpStatus[mapped.status],
+      error: mapped.error,
       message: mapped.message,
     });
   }
