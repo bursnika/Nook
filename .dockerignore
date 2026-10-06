@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+**/uploads
+**/coverage
+.git
+docs
+infra
+*.md

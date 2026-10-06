@@ -1,5 +1,4 @@
 name: nook
-# host port 5433 (not 5432) so it does not clash with other local Postgres instances
 
 services:
   postgres:
@@ -9,6 +8,7 @@ services:
       POSTGRES_USER: nook
       POSTGRES_PASSWORD: nook
       POSTGRES_DB: nook
+    # host port 5433 (not 5432) so it does not clash with other local Postgres instances
     ports:
       - '5433:5432'
     volumes:
@@ -19,5 +19,36 @@ services:
       timeout: 3s
       retries: 10
 
+  # One-shot: applies pending migrations, then exits. The API starts after it succeeds.
+  migrate:
+    build:
+      context: ..
+      dockerfile: infra/api.Dockerfile
+      target: build
+    command: ['pnpm', '--filter', '@nook/api', 'db:deploy']
+    environment:
+      DATABASE_URL: postgresql://nook:nook@postgres:5432/nook?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/api.Dockerfile
+      target: runtime
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://nook:nook@postgres:5432/nook?schema=public
+    ports:
+      - '3000:3000'
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
 volumes:
   postgres-data:
+  uploads:

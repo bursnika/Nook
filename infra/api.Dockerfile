@@ -1,0 +1,41 @@
+# Build context is the repository root:  docker build -f infra/api.Dockerfile .
+FROM node:22-alpine AS base
+RUN corepack enable
+WORKDIR /repo
+
+# Full dependencies + compiled app. Also used by the one-shot `migrate` service (needs the Prisma CLI).
+FROM base AS build
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json apps/api/
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    --mount=type=cache,id=pnpm-cache,target=/root/.cache/pnpm \
+    pnpm install --frozen-lockfile --filter @nook/api...
+COPY apps/api apps/api
+# `prisma generate` never connects, but its config insists on a URL, so give it a placeholder.
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm --filter @nook/api db:generate \
+ && pnpm --filter @nook/api build
+
+# Production dependencies only. pnpm and its caches stay in this stage and never reach the runtime image.
+FROM base AS prod-deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json apps/api/
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    --mount=type=cache,id=pnpm-cache,target=/root/.cache/pnpm \
+    pnpm install --frozen-lockfile --prod --filter @nook/api...
+
+# Runtime image: plain Node, compiled output and production dependencies, running as a non-root user.
+FROM node:22-alpine AS runtime
+ENV NODE_ENV=production \
+    PORT=3000 \
+    UPLOAD_DIR=/data/uploads
+WORKDIR /repo
+COPY --from=prod-deps /repo/node_modules node_modules
+COPY --from=prod-deps /repo/apps/api/node_modules apps/api/node_modules
+COPY --from=build /repo/apps/api/package.json apps/api/package.json
+COPY --from=build /repo/apps/api/dist apps/api/dist
+RUN mkdir -p /data/uploads && chown -R node:node /data
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
+  CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
+CMD ["node", "apps/api/dist/src/main.js"]
