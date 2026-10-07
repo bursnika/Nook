@@ -24,8 +24,34 @@ docs/           звіти та документація
 
 ## Локальний запуск
 
-Потрібні Node 22 і pnpm.
+Потрібні Node 22, pnpm і Docker.
 
 ```bash
 pnpm install
+cp .env.example apps/api/.env
+
+# Postgres (порт 5433, щоб не конфліктувати з локальним 5432)
+docker compose -f infra/docker-compose.yml up -d postgres
+
+pnpm --filter @nook/api db:generate   # Prisma-клієнт
+pnpm --filter @nook/api db:migrate    # міграції
+pnpm --filter @nook/api db:seed       # демо-дані
+pnpm --filter @nook/api start:dev     # http://localhost:3000/api
+```
+
+Swagger: <http://localhost:3000/api/docs>
+
+### Увесь стек у Docker
+
+```bash
+docker compose -f infra/docker-compose.yml up -d --build --wait
+curl localhost:3000/api/health
+```
+
+Сервіс `migrate` застосовує міграції й завершується, після цього стартує `api`. Завантажені файли лежать у томі `uploads`.
+
+### Тести
+
+```bash
+pnpm --filter @nook/api test:e2e   # e2e проти окремої БД nook_test
 ```
