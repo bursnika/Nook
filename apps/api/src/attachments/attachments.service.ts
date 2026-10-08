@@ -1,9 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { unlink } from 'node:fs/promises';
-import { basename, join } from 'node:path';
-import { env } from '../env.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { UploadsService } from '../uploads/uploads.service.js';
 import {
   ListAttachmentsQuery,
   UpdateAttachmentDto,
@@ -13,7 +11,10 @@ import { originalName } from './upload.config.js';
 
 @Injectable()
 export class AttachmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploads: UploadsService,
+  ) {}
 
   async list(workspaceId: string, { pageId, q, skip, limit }: ListAttachmentsQuery) {
     const where: Prisma.AttachmentWhereInput = {
@@ -46,13 +47,13 @@ export class AttachmentsService {
           workspaceId,
           pageId: dto.pageId,
           filename: originalName(file),
-          url: `/uploads/${file.filename}`,
+          url: this.uploads.urlFor(file.filename),
           mimeType: file.mimetype,
           size: file.size,
         },
       });
     } catch (error) {
-      await this.deleteFile(file.filename); // do not leave orphans when the record was rejected
+      await this.uploads.remove(file.filename); // do not leave orphans when the record was rejected
       throw error;
     }
   }
@@ -65,7 +66,7 @@ export class AttachmentsService {
   async remove(workspaceId: string, id: string) {
     const attachment = await this.get(workspaceId, id);
     await this.prisma.attachment.delete({ where: { id } });
-    await this.deleteFile(basename(attachment.url));
+    await this.uploads.remove(attachment.url);
   }
 
   private async assertPage(workspaceId: string, pageId?: string | null) {
@@ -75,9 +76,5 @@ export class AttachmentsService {
       select: { id: true },
     });
     if (!page) throw new BadRequestException('pageId does not belong to this workspace');
-  }
-
-  private async deleteFile(storedName: string) {
-    await unlink(join(env.uploadDir, basename(storedName))).catch(() => undefined);
   }
 }
