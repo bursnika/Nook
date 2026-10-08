@@ -1,3 +1,5 @@
 pnpm-lock.yaml
 dist
 coverage
+# Handlebars templates are whitespace-sensitive; the glimmer formatter would change the rendered output
+*.hbs
