@@ -1,0 +1,7 @@
+<form method="get" class="row g-2 mb-3">
+  <div class="col">
+    <input type="search" class="form-control" name="q" value="{{q}}" placeholder="{{#if placeholder}}{{placeholder}}{{else}}Search…{{/if}}" aria-label="Search">
+  </div>
+  <div class="col-auto"><button class="btn btn-outline-primary" type="submit">Search</button></div>
+  {{#if q}}<div class="col-auto"><a class="btn btn-link" href="?">Reset</a></div>{{/if}}
+</form>

@@ -1,0 +1,7 @@
+<div class="mb-3">
+  <label for="f-{{name}}" class="form-label">{{label}}</label>
+  <select class="form-select{{#if error}} is-invalid{{/if}}" id="f-{{name}}" name="{{name}}">
+    {{#each options}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+  </select>
+  {{#if error}}<div class="invalid-feedback">{{error}}</div>{{/if}}
+</div>

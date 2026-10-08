@@ -1,0 +1,6 @@
+<div class="mb-3">
+  <label for="f-{{name}}" class="form-label">{{label}}{{#if required}} <span class="text-danger">*</span>{{/if}}</label>
+  <input type="{{#if type}}{{type}}{{else}}text{{/if}}" class="form-control{{#if error}} is-invalid{{/if}}" id="f-{{name}}" name="{{name}}" value="{{value}}"{{#if required}} required{{/if}}{{#if maxlength}} maxlength="{{maxlength}}"{{/if}}{{#if placeholder}} placeholder="{{placeholder}}"{{/if}}>
+  {{#if error}}<div class="invalid-feedback">{{error}}</div>{{/if}}
+  {{#if hint}}<div class="form-text">{{hint}}</div>{{/if}}
+</div>

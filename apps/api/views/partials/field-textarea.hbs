@@ -1,0 +1,5 @@
+<div class="mb-3">
+  <label for="f-{{name}}" class="form-label">{{label}}</label>
+  <textarea class="form-control{{#if error}} is-invalid{{/if}}" id="f-{{name}}" name="{{name}}" rows="{{#if rows}}{{rows}}{{else}}4{{/if}}">{{value}}</textarea>
+  {{#if error}}<div class="invalid-feedback">{{error}}</div>{{/if}}
+</div>

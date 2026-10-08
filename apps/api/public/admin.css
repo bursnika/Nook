@@ -1,0 +1,207 @@
+/* Nook admin: Bootstrap 5 re-themed with the Nook palette (see docs/design.md). */
+:root {
+  --nook-pink-100: #fce1ee;
+  --nook-pink-300: #f4a3c8;
+  --nook-pink-700: #b8326f;
+  --nook-lav-100: #eee6f8;
+  --nook-lav-300: #c4abe4;
+  --nook-lav-700: #654390;
+  --nook-blue-100: #e3eefb;
+  --nook-blue-700: #2f5aa6;
+  --nook-ink: #2b1e33;
+
+  --bs-body-font-family: 'Nunito', system-ui, sans-serif;
+  --bs-body-color: var(--nook-ink);
+  --bs-primary: var(--nook-pink-700);
+  --bs-primary-rgb: 184, 50, 111;
+  --bs-link-color: var(--nook-pink-700);
+  --bs-link-color-rgb: 184, 50, 111;
+  --bs-link-hover-color: #8f2253;
+  --bs-border-radius: 0;
+  --bs-border-radius-sm: 0;
+  --bs-border-radius-lg: 0;
+}
+
+body {
+  background-color: #f7f6f9;
+  background-image:
+    linear-gradient(var(--nook-lav-100) 1px, transparent 1px),
+    linear-gradient(90deg, var(--nook-lav-100) 1px, transparent 1px);
+  background-size: 24px 24px;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+.navbar-brand,
+.subnav-title {
+  font-family: 'Pixelify Sans', 'Nunito', sans-serif;
+  letter-spacing: 0.2px;
+}
+
+.navbar-nook {
+  background: linear-gradient(90deg, var(--nook-pink-300), var(--nook-lav-300));
+  border-bottom: 2px solid var(--nook-lav-700);
+}
+.navbar-nook .navbar-brand {
+  color: var(--nook-ink);
+  font-weight: 700;
+}
+.navbar-nook .navbar-brand small {
+  color: var(--nook-lav-700);
+  font-size: 0.7em;
+}
+.navbar-nook .nav-link {
+  color: var(--nook-ink);
+  font-weight: 600;
+}
+.navbar-nook .nav-link.active {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+.subnav {
+  background: var(--nook-lav-100);
+  border-bottom: 2px solid var(--nook-lav-300);
+  padding: 0.5rem 0;
+}
+.subnav .nav-link {
+  color: var(--nook-lav-700);
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+}
+.subnav .nav-pills .nav-link.active {
+  background: var(--nook-pink-700);
+  color: #fff;
+}
+
+/* hard pixel-style frame */
+.card,
+.table-frame,
+.form-frame {
+  border: 2px solid var(--nook-ink);
+  box-shadow: 4px 4px 0 rgba(101, 67, 144, 0.3);
+  background: #fff;
+}
+.table-frame {
+  padding: 0;
+  overflow-x: auto;
+}
+.form-frame {
+  padding: 1.5rem;
+  max-width: 760px;
+}
+
+.table {
+  margin-bottom: 0;
+}
+.table thead th {
+  font-family: 'Pixelify Sans', sans-serif;
+  font-weight: 500;
+  background: var(--nook-pink-100);
+  border-bottom: 2px solid var(--nook-ink);
+}
+
+.btn {
+  border: 2px solid var(--nook-ink);
+  font-weight: 700;
+  box-shadow: 2px 2px 0 var(--nook-ink);
+}
+.btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+.btn-primary {
+  --bs-btn-bg: var(--nook-pink-700);
+  --bs-btn-border-color: var(--nook-ink);
+  --bs-btn-hover-bg: #8f2253;
+  --bs-btn-hover-border-color: var(--nook-ink);
+  --bs-btn-active-bg: #8f2253;
+  --bs-btn-active-border-color: var(--nook-ink);
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--nook-pink-700);
+  --bs-btn-border-color: var(--nook-ink);
+  --bs-btn-hover-bg: var(--nook-pink-700);
+  --bs-btn-hover-border-color: var(--nook-ink);
+  --bs-btn-active-bg: var(--nook-pink-700);
+}
+.btn-outline-danger {
+  --bs-btn-border-color: var(--nook-ink);
+}
+.btn-link {
+  border: 0;
+  box-shadow: none;
+}
+
+.form-control,
+.form-select,
+.select2-container--bootstrap-5 .select2-selection {
+  border: 2px solid var(--nook-ink);
+}
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--nook-pink-700);
+  box-shadow: 0 0 0 0.2rem rgba(184, 50, 111, 0.2);
+}
+
+.stat {
+  font-family: 'Pixelify Sans', sans-serif;
+  font-size: 2.2rem;
+  color: var(--nook-pink-700);
+  line-height: 1;
+}
+
+/* status / priority chips */
+.chip {
+  display: inline-block;
+  padding: 0 0.5rem;
+  border: 1px solid currentColor;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.chip-todo {
+  color: #6f6979;
+}
+.chip-in_progress {
+  color: var(--nook-blue-700);
+  background: var(--nook-blue-100);
+}
+.chip-done {
+  color: var(--nook-lav-700);
+  background: var(--nook-lav-100);
+}
+.chip-high {
+  color: var(--nook-pink-700);
+  background: var(--nook-pink-100);
+}
+.chip-medium {
+  color: var(--nook-blue-700);
+}
+.chip-low {
+  color: #6f6979;
+}
+
+.cover-preview {
+  max-width: 240px;
+  max-height: 160px;
+  border: 2px solid var(--nook-ink);
+  image-rendering: auto;
+}
+.tag-dot {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 1px solid var(--nook-ink);
+  vertical-align: middle;
+  margin-right: 0.35rem;
+}
+
+@media (max-width: 576px) {
+  .form-frame {
+    padding: 1rem;
+  }
+}

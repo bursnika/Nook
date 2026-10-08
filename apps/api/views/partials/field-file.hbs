@@ -1,0 +1,6 @@
+<div class="mb-3">
+  <label for="f-{{name}}" class="form-label">{{label}}</label>
+  <input class="form-control{{#if error}} is-invalid{{/if}}" type="file" id="f-{{name}}" name="{{name}}"{{#if accept}} accept="{{accept}}"{{/if}}>
+  {{#if error}}<div class="invalid-feedback">{{error}}</div>{{/if}}
+  {{#if hint}}<div class="form-text">{{hint}}</div>{{/if}}
+</div>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{title}} · Nook admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/static/vendor/select2/css/select2.min.css" />
+    <link rel="stylesheet" href="/static/vendor/select2-theme/select2-bootstrap-5-theme.min.css" />
+    <link rel="stylesheet" href="/static/admin.css" />
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-md navbar-nook">
+      <div class="container">
+        <a class="navbar-brand" href="/admin">♡ Nook <small>admin</small></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="nav">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item"><a class="nav-link{{#if (eq nav 'dashboard')}} active{{/if}}" href="/admin">Dashboard</a></li>
+            <li class="nav-item"><a class="nav-link{{#if (eq nav 'workspaces')}} active{{/if}}" href="/admin/workspaces">Workspaces</a></li>
+            <li class="nav-item"><a class="nav-link{{#if (eq nav 'users')}} active{{/if}}" href="/admin/users">Users</a></li>
+          </ul>
+          <a class="nav-link" href="/api/docs">API docs ↗</a>
+        </div>
+      </div>
+    </nav>
+
+    {{#if ws}}
+      <div class="subnav">
+        <div class="container d-flex flex-wrap align-items-center gap-3">
+          <strong class="subnav-title">{{ws.name}}</strong>
+          <ul class="nav nav-pills">
+            <li class="nav-item"><a class="nav-link{{#if (eq section 'overview')}} active{{/if}}" href="/admin/workspaces/{{ws.id}}">Overview</a></li>
+            <li class="nav-item"><a class="nav-link{{#if (eq section 'pages')}} active{{/if}}" href="/admin/workspaces/{{ws.id}}/pages">Pages</a></li>
+            <li class="nav-item"><a class="nav-link{{#if (eq section 'tasks')}} active{{/if}}" href="/admin/workspaces/{{ws.id}}/tasks">Tasks</a></li>
+            <li class="nav-item"><a class="nav-link{{#if (eq section 'tags')}} active{{/if}}" href="/admin/workspaces/{{ws.id}}/tags">Tags</a></li>
+            <li class="nav-item"><a class="nav-link{{#if (eq section 'attachments')}} active{{/if}}" href="/admin/workspaces/{{ws.id}}/attachments">Attachments</a></li>
+          </ul>
+        </div>
+      </div>
+    {{/if}}
+
+    <main class="container py-4">
+      {{#if flash}}<div class="alert alert-success" role="status">{{flash}}</div>{{/if}}
+      {{#if formError}}<div class="alert alert-danger" role="alert">{{formError}}</div>{{/if}}
+      {{{body}}}
+    </main>
+
+    <script src="/static/vendor/jquery/jquery.min.js"></script>
+    <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/vendor/select2/js/select2.min.js"></script>
+    <script src="/static/admin.js"></script>
+  </body>
+</html>

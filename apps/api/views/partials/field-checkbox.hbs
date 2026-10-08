@@ -1,0 +1,5 @@
+<div class="form-check mb-3">
+  <input class="form-check-input" type="checkbox" id="f-{{name}}" name="{{name}}"{{#if checked}} checked{{/if}}>
+  <label class="form-check-label" for="f-{{name}}">{{label}}</label>
+  {{#if error}}<div class="text-danger small">{{error}}</div>{{/if}}
+</div>

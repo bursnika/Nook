@@ -1,0 +1,10 @@
+{{#if pager}}
+<nav class="d-flex justify-content-between align-items-center mt-3" aria-label="Pagination">
+  <span class="text-muted small">{{pager.from}}–{{pager.to}} of {{pager.total}}</span>
+  <ul class="pagination mb-0">
+    <li class="page-item{{#unless pager.hasPrev}} disabled{{/unless}}"><a class="page-link" href="{{pager.prev}}">‹ Prev</a></li>
+    <li class="page-item disabled"><span class="page-link">{{pager.page}} / {{pager.pages}}</span></li>
+    <li class="page-item{{#unless pager.hasNext}} disabled{{/unless}}"><a class="page-link" href="{{pager.next}}">Next ›</a></li>
+  </ul>
+</nav>
+{{/if}}
