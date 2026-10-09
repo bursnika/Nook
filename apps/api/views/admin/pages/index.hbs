@@ -1,0 +1,30 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">Pages</h1>
+  <a class="btn btn-primary" href="/admin/workspaces/{{ws.id}}/pages/new">+ New page</a>
+</div>
+{{> search-form q=q placeholder="Search by title…"}}
+<div class="table-frame">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>Title</th><th>Blocks</th><th>Subpages</th><th>Published</th><th>Updated</th><th></th></tr></thead>
+    <tbody>
+      {{#each pages}}
+        <tr>
+          <td><a href="/admin/workspaces/{{../ws.id}}/pages/{{id}}">{{#if icon}}{{icon}} {{/if}}{{title}}</a></td>
+          <td>{{_count.blocks}}</td>
+          <td>{{_count.children}}</td>
+          <td>{{#if isPublished}}<span class="chip chip-done">/p/{{slug}}</span>{{else}}<span class="text-muted">private</span>{{/if}}</td>
+          <td>{{date updatedAt}}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary" href="/admin/workspaces/{{../ws.id}}/pages/{{id}}/edit">Edit</a>
+            <form class="d-inline" method="post" action="/admin/workspaces/{{../ws.id}}/pages/{{id}}/delete" data-confirm="Delete page “{{title}}” and its subpages?">
+              <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {{else}}
+        <tr><td colspan="6" class="text-muted p-4">No pages found.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{> pagination}}

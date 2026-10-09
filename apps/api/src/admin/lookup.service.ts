@@ -79,6 +79,38 @@ export class LookupService {
     return this.toResult(rows.map((t) => ({ id: t.id, text: t.name })));
   }
 
+  // ---- labels of already chosen values, used to re-render a form with its selection --------------
+
+  async userOption(id?: unknown): Promise<LookupResult['results']> {
+    if (typeof id !== 'string' || !id) return [];
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, name: true, email: true },
+    });
+    return user ? [{ id: user.id, text: `${user.name} · ${user.email}` }] : [];
+  }
+
+  async pageOption(workspaceId: string, id?: unknown): Promise<LookupResult['results']> {
+    if (typeof id !== 'string' || !id) return [];
+    const page = await this.prisma.page.findFirst({
+      where: { id, workspaceId },
+      select: { id: true, title: true, icon: true },
+    });
+    return page ? [{ id: page.id, text: `${page.icon ? `${page.icon} ` : ''}${page.title}` }] : [];
+  }
+
+  async tagOptions(workspaceId: string, ids?: unknown): Promise<LookupResult['results']> {
+    const list = (Array.isArray(ids) ? ids : ids ? [ids] : []).filter(
+      (v): v is string => typeof v === 'string',
+    );
+    if (!list.length) return [];
+    const tags = await this.prisma.tag.findMany({
+      where: { workspaceId, id: { in: list } },
+      select: { id: true, name: true },
+    });
+    return tags.map((t) => ({ id: t.id, text: t.name }));
+  }
+
   // One extra row tells Select2 whether another page exists.
   private window(page: number) {
     return { skip: (page - 1) * LOOKUP_PAGE_SIZE, take: LOOKUP_PAGE_SIZE + 1 };

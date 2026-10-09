@@ -21,6 +21,11 @@ export function registerViewHelpers(engine: typeof hbs) {
     if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
     return `${(n / 1024 / 1024).toFixed(1)} MB`;
   });
+  // concat "a" b "c": builds URLs for the lookup attributes (the last argument is Handlebars' options object)
+  engine.registerHelper('concat', (...parts: unknown[]) => parts.slice(0, -1).join(''));
+  engine.registerHelper('coverLabel', (url: unknown) =>
+    url ? 'Replace the cover' : 'Cover image',
+  );
   engine.registerHelper('lower', (value: unknown) => String(value ?? '').toLowerCase());
   engine.registerHelper('nice', (value: unknown) =>
     String(value ?? '')

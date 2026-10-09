@@ -30,7 +30,12 @@ export class PagesService {
   get(workspaceId: string, id: string) {
     return this.prisma.page.findFirstOrThrow({
       where: { id, workspaceId },
-      include: { blocks: { orderBy: { position: 'asc' } }, attachments: true },
+      include: {
+        blocks: { orderBy: { position: 'asc' } },
+        attachments: true,
+        author: { select: { id: true, name: true, email: true } },
+        parent: { select: { id: true, title: true } },
+      },
     });
   }
 
