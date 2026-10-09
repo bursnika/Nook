@@ -1,0 +1,23 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="mb-1">{{task.title}}</h1>
+    <span class="chip chip-{{lower task.status}}">{{nice task.status}}</span>
+    <span class="chip chip-{{lower task.priority}}">{{nice task.priority}}</span>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" href="/admin/workspaces/{{ws.id}}/tasks/{{task.id}}/edit">Edit</a>
+    <form method="post" action="/admin/workspaces/{{ws.id}}/tasks/{{task.id}}/delete" data-confirm="Delete this task?">
+      <button class="btn btn-outline-danger" type="submit">Delete</button>
+    </form>
+  </div>
+</div>
+<div class="card p-3" style="max-width: 760px">
+  {{#if task.description}}<p>{{task.description}}</p>{{/if}}
+  <dl class="mb-0">
+    <dt>Due date</dt><dd>{{#if task.dueDate}}{{date task.dueDate}}{{else}}<span class="text-muted">none</span>{{/if}}</dd>
+    <dt>Assignee</dt><dd>{{#if assignee}}{{assignee.text}}{{else}}<span class="text-muted">unassigned</span>{{/if}}</dd>
+    <dt>Page</dt><dd>{{#if page}}<a href="/admin/workspaces/{{ws.id}}/pages/{{page.id}}">{{page.text}}</a>{{else}}<span class="text-muted">none</span>{{/if}}</dd>
+    <dt>Tags</dt><dd>{{#each task.tags}}<span class="tag-dot" style="background: {{color}}"></span>{{name}} {{else}}<span class="text-muted">none</span>{{/each}}</dd>
+    <dt>Completed</dt><dd class="mb-0">{{#if task.completedAt}}{{datetime task.completedAt}}{{else}}<span class="text-muted">not yet</span>{{/if}}</dd>
+  </dl>
+</div>

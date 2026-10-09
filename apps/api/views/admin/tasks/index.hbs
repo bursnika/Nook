@@ -1,0 +1,39 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">Tasks</h1>
+  <a class="btn btn-primary" href="/admin/workspaces/{{ws.id}}/tasks/new">+ New task</a>
+</div>
+<form method="get" class="row g-2 mb-3">
+  <div class="col-12 col-md"><input type="search" class="form-control" name="q" value="{{q}}" placeholder="Search by title…" aria-label="Search"></div>
+  <div class="col-8 col-md-3">
+    <select class="form-select" name="status" aria-label="Status">
+      {{#each statuses}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
+  <div class="col-auto"><a class="btn btn-link" href="?">Reset</a></div>
+</form>
+<div class="table-frame">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>Title</th><th>Status</th><th>Priority</th><th>Due</th><th>Tags</th><th></th></tr></thead>
+    <tbody>
+      {{#each tasks}}
+        <tr>
+          <td><a href="/admin/workspaces/{{../ws.id}}/tasks/{{id}}">{{title}}</a></td>
+          <td><span class="chip chip-{{lower status}}">{{nice status}}</span></td>
+          <td><span class="chip chip-{{lower priority}}">{{nice priority}}</span></td>
+          <td>{{date dueDate}}</td>
+          <td>{{#each tags}}<span class="tag-dot" style="background: {{color}}"></span>{{name}} {{/each}}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary" href="/admin/workspaces/{{../ws.id}}/tasks/{{id}}/edit">Edit</a>
+            <form class="d-inline" method="post" action="/admin/workspaces/{{../ws.id}}/tasks/{{id}}/delete" data-confirm="Delete task “{{title}}”?">
+              <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {{else}}
+        <tr><td colspan="6" class="text-muted p-4">No tasks found.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{> pagination}}

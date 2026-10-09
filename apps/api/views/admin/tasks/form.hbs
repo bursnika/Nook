@@ -1,0 +1,17 @@
+<h1 class="mb-3">{{title}}</h1>
+<form class="form-frame" method="post" action="{{action}}" novalidate>
+  {{> field-text name="title" label="Title" value=form.title error=errors.title required=true maxlength=200}}
+  {{> field-textarea name="description" label="Description" value=form.description error=errors.description}}
+  <div class="row">
+    <div class="col-md-6">{{> field-select name="status" label="Status" options=statuses error=errors.status}}</div>
+    <div class="col-md-6">{{> field-select name="priority" label="Priority" options=priorities error=errors.priority}}</div>
+  </div>
+  {{> field-text name="dueDate" type="date" label="Due date" value=dueDate error=errors.dueDate}}
+  {{> field-ajax name="assigneeId" label="Assignee" src=(concat "/admin/workspaces/" ws.id "/lookup/members") minLength=1 placeholder="Unassigned" selected=assignees error=errors.assigneeId hint="Members of this workspace."}}
+  {{> field-ajax name="pageId" label="Linked page" src=(concat "/admin/workspaces/" ws.id "/lookup/pages") minLength=1 placeholder="No page" selected=pages error=errors.pageId}}
+  {{> field-ajax name="tagIds" label="Tags" multiple=true src=(concat "/admin/workspaces/" ws.id "/lookup/tags") minLength=1 placeholder="Add tags…" selected=tags error=errors.tagIds}}
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-link" href="/admin/workspaces/{{ws.id}}/tasks">Cancel</a>
+  </div>
+</form>
