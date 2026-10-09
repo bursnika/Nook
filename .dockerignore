@@ -2,7 +2,8 @@
 **/dist
 **/.env
 **/.env.*
-**/uploads
+uploads
+apps/api/uploads
 **/coverage
 .git
 docs

@@ -15,7 +15,8 @@ coverage/
 !.env.example
 
 # uploads
-uploads/
+/uploads/
+/apps/api/uploads/
 
 # test reports
 playwright-report/
