@@ -7,4 +7,12 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   prettier,
+  {
+    // plain browser scripts served as-is from apps/api/public
+    files: ['apps/api/public/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: { window: 'readonly', document: 'readonly' },
+    },
+  },
 );
