@@ -1,0 +1,15 @@
+<h1 class="mb-3">Users</h1>
+{{> search-form q=q placeholder="Search by name or email…"}}
+<div class="table-frame">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>Name</th><th>Email</th><th>Created</th></tr></thead>
+    <tbody>
+      {{#each users}}
+        <tr><td>{{name}}</td><td>{{email}}</td><td>{{date createdAt}}</td></tr>
+      {{else}}
+        <tr><td colspan="3" class="text-muted p-4">No users found.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{> pagination}}

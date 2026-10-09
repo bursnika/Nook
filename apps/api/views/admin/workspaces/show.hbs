@@ -1,0 +1,53 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="mb-1">{{ws.name}}</h1>
+    <span class="text-muted">{{ws.slug}}</span> · <span class="chip chip-{{lower ws.plan}}">{{ws.plan}}</span>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" href="/admin/workspaces/{{ws.id}}/edit">Edit</a>
+    <form method="post" action="/admin/workspaces/{{ws.id}}/delete" data-confirm="Delete this workspace with all its pages, tasks and files?">
+      <button class="btn btn-outline-danger" type="submit">Delete</button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3"><a class="text-decoration-none" href="/admin/workspaces/{{ws.id}}/pages"><div class="card p-3"><div class="stat">{{counts.pages}}</div><div class="text-muted">Pages</div></div></a></div>
+  <div class="col-6 col-md-3"><a class="text-decoration-none" href="/admin/workspaces/{{ws.id}}/tasks"><div class="card p-3"><div class="stat">{{counts.tasks}}</div><div class="text-muted">Tasks</div></div></a></div>
+  <div class="col-6 col-md-3"><a class="text-decoration-none" href="/admin/workspaces/{{ws.id}}/tags"><div class="card p-3"><div class="stat">{{counts.tags}}</div><div class="text-muted">Tags</div></div></a></div>
+  <div class="col-6 col-md-3"><a class="text-decoration-none" href="/admin/workspaces/{{ws.id}}/attachments"><div class="card p-3"><div class="stat">{{counts.attachments}}</div><div class="text-muted">Attachments</div></div></a></div>
+</div>
+
+<h2 class="h4">Members</h2>
+<div class="table-frame mb-3">
+  <table class="table align-middle">
+    <thead><tr><th>User</th><th>Role</th><th></th></tr></thead>
+    <tbody>
+      {{#each members}}
+        <tr>
+          <td>{{user.name}}<br><small class="text-muted">{{user.email}}</small></td>
+          <td>
+            <form class="d-flex gap-2" method="post" action="/admin/workspaces/{{../ws.id}}/members/{{id}}">
+              <select class="form-select form-select-sm" name="role" aria-label="Role">
+                {{#each roles}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+              </select>
+              <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
+            </form>
+          </td>
+          <td class="text-end">
+            <form class="d-inline" method="post" action="/admin/workspaces/{{../ws.id}}/members/{{id}}/delete" data-confirm="Remove {{user.name}} from this workspace?">
+              <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+            </form>
+          </td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+<form class="form-frame" method="post" action="/admin/workspaces/{{ws.id}}/members">
+  <h3 class="h5">Add a member</h3>
+  {{> field-ajax name="userId" label="User" lookup="/admin/lookup/users" minLength=3 placeholder="Search among all users by name or email…" required=true hint="The user table is huge: results load from the server after 3 characters."}}
+  {{> field-select name="role" label="Role" options=newRoles}}
+  <button class="btn btn-primary" type="submit">Add member</button>
+</form>

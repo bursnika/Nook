@@ -1,0 +1,10 @@
+<h1 class="mb-3">{{title}}</h1>
+<form class="form-frame" method="post" action="{{action}}" novalidate>
+  {{> field-text name="name" label="Name" value=form.name error=errors.name required=true maxlength=100}}
+  {{> field-text name="slug" label="Slug" value=form.slug error=errors.slug required=true maxlength=60 hint="Lowercase letters, digits and single dashes, e.g. my-team"}}
+  {{> field-select name="plan" label="Plan" options=plans error=errors.plan}}
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-link" href="{{#if ws}}/admin/workspaces/{{ws.id}}{{else}}/admin/workspaces{{/if}}">Cancel</a>
+  </div>
+</form>

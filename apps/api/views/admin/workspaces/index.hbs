@@ -1,0 +1,29 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">Workspaces</h1>
+  <a class="btn btn-primary" href="/admin/workspaces/new">+ New workspace</a>
+</div>
+{{> search-form q=q placeholder="Search by name or slug…"}}
+<div class="table-frame">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>Name</th><th>Slug</th><th>Plan</th><th>Created</th><th></th></tr></thead>
+    <tbody>
+      {{#each workspaces}}
+        <tr>
+          <td><a href="/admin/workspaces/{{id}}">{{name}}</a></td>
+          <td>{{slug}}</td>
+          <td><span class="chip chip-{{lower plan}}">{{plan}}</span></td>
+          <td>{{date createdAt}}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary" href="/admin/workspaces/{{id}}/edit">Edit</a>
+            <form class="d-inline" method="post" action="/admin/workspaces/{{id}}/delete" data-confirm="Delete workspace “{{name}}” with all its pages, tasks and files?">
+              <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {{else}}
+        <tr><td colspan="5" class="text-muted p-4">No workspaces found.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{> pagination}}

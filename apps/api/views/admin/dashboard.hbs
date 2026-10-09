@@ -1,0 +1,25 @@
+<h1 class="mb-4">Dashboard</h1>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3"><div class="card p-3"><div class="stat">{{stats.workspaces}}</div><div class="text-muted">Workspaces</div></div></div>
+  <div class="col-6 col-md-3"><div class="card p-3"><div class="stat">{{stats.users}}</div><div class="text-muted">Users</div></div></div>
+  <div class="col-6 col-md-3"><div class="card p-3"><div class="stat">{{stats.pages}}</div><div class="text-muted">Pages</div></div></div>
+  <div class="col-6 col-md-3"><div class="card p-3"><div class="stat">{{stats.tasks}}</div><div class="text-muted">Tasks</div></div></div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="h4 mb-0">Latest workspaces</h2>
+  <a class="btn btn-primary btn-sm" href="/admin/workspaces/new">+ New workspace</a>
+</div>
+<div class="table-frame">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>Name</th><th>Slug</th><th>Plan</th></tr></thead>
+    <tbody>
+      {{#each recent}}
+        <tr><td><a href="/admin/workspaces/{{id}}">{{name}}</a></td><td>{{slug}}</td><td><span class="chip chip-{{lower plan}}">{{plan}}</span></td></tr>
+      {{else}}
+        <tr><td colspan="3" class="text-muted p-4">No workspaces yet.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
