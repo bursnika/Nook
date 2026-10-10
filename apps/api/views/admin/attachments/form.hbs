@@ -1,0 +1,13 @@
+<h1 class="mb-3">{{title}}</h1>
+<form class="form-frame" method="post" action="{{action}}"{{#if isNew}} enctype="multipart/form-data"{{/if}} novalidate>
+  {{#if isNew}}
+    {{> field-file name="file" label="File" error=errors.file hint="PNG, JPEG, GIF, WebP, PDF, TXT or Markdown, up to 10 MB."}}
+  {{else}}
+    {{> field-text name="filename" label="File name" value=form.filename error=errors.filename required=true maxlength=255}}
+  {{/if}}
+  {{> field-ajax name="pageId" label="Attached to page" src=(concat "/admin/workspaces/" ws.id "/lookup/pages") minLength=1 placeholder="Not attached to a page" selected=pages error=errors.pageId}}
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-link" href="/admin/workspaces/{{ws.id}}/attachments">Cancel</a>
+  </div>
+</form>

@@ -1,0 +1,20 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <h1 class="mb-0">{{attachment.filename}}</h1>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" href="{{attachment.url}}" target="_blank" rel="noopener">Open file</a>
+    <a class="btn btn-outline-primary" href="/admin/workspaces/{{ws.id}}/attachments/{{attachment.id}}/edit">Edit</a>
+    <form method="post" action="/admin/workspaces/{{ws.id}}/attachments/{{attachment.id}}/delete" data-confirm="Delete this file?">
+      <button class="btn btn-outline-danger" type="submit">Delete</button>
+    </form>
+  </div>
+</div>
+{{#if (isImage attachment.mimeType)}}<img class="cover-preview mb-3 d-block" src="{{attachment.url}}" alt="{{attachment.filename}}">{{/if}}
+<div class="card p-3" style="max-width: 760px">
+  <dl class="mb-0">
+    <dt>Type</dt><dd>{{attachment.mimeType}}</dd>
+    <dt>Size</dt><dd>{{filesize attachment.size}}</dd>
+    <dt>Link</dt><dd><code>{{attachment.url}}</code></dd>
+    <dt>Page</dt><dd>{{#if page}}<a href="/admin/workspaces/{{ws.id}}/pages/{{page.id}}">{{page.text}}</a>{{else}}<span class="text-muted">not attached</span>{{/if}}</dd>
+    <dt>Uploaded</dt><dd class="mb-0">{{datetime attachment.createdAt}}</dd>
+  </dl>
+</div>

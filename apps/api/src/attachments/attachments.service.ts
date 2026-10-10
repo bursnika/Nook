@@ -58,6 +58,11 @@ export class AttachmentsService {
     }
   }
 
+  /** For callers that reject an upload before creating a record (e.g. form validation failed). */
+  async discardUpload(file: Express.Multer.File) {
+    await this.uploads.remove(file.filename);
+  }
+
   async update(workspaceId: string, id: string, dto: UpdateAttachmentDto) {
     await this.assertPage(workspaceId, dto.pageId);
     return this.prisma.attachment.update({ where: { id, workspaceId }, data: dto });

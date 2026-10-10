@@ -1,0 +1,29 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">Attachments</h1>
+  <a class="btn btn-primary" href="/admin/workspaces/{{ws.id}}/attachments/new">+ Upload a file</a>
+</div>
+{{> search-form q=q placeholder="Search by file name…"}}
+<div class="table-frame">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>File</th><th>Type</th><th>Size</th><th>Uploaded</th><th></th></tr></thead>
+    <tbody>
+      {{#each attachments}}
+        <tr>
+          <td><a href="/admin/workspaces/{{../ws.id}}/attachments/{{id}}">{{filename}}</a></td>
+          <td>{{mimeType}}</td>
+          <td>{{filesize size}}</td>
+          <td>{{date createdAt}}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary" href="/admin/workspaces/{{../ws.id}}/attachments/{{id}}/edit">Edit</a>
+            <form class="d-inline" method="post" action="/admin/workspaces/{{../ws.id}}/attachments/{{id}}/delete" data-confirm="Delete “{{filename}}”? The file is removed from storage.">
+              <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {{else}}
+        <tr><td colspan="5" class="text-muted p-4">No attachments found.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{> pagination}}
