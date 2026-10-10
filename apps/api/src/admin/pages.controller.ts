@@ -4,7 +4,6 @@ import {
   Param,
   Post,
   Query,
-  Redirect,
   Render,
   Req,
   Res,
@@ -88,15 +87,13 @@ export class PagesAdminController {
     });
     const coverError = await this.rejectBadCover(file);
     if (!ok || coverError) {
-      return res
-        .status(400)
-        .render(
-          'admin/pages/form',
-          await this.formView(workspaceId, {
-            ...view,
-            errors: { ...errors, ...(coverError && { cover: coverError }) },
-          }),
-        );
+      return res.status(400).render(
+        'admin/pages/form',
+        await this.formView(workspaceId, {
+          ...view,
+          errors: { ...errors, ...(coverError && { cover: coverError }) },
+        }),
+      );
     }
     if (file) value.coverUrl = this.uploads.urlFor(file.filename);
     try {
@@ -158,15 +155,13 @@ export class PagesAdminController {
     });
     const coverError = await this.rejectBadCover(file);
     if (!ok || coverError) {
-      return res
-        .status(400)
-        .render(
-          'admin/pages/form',
-          await this.formView(workspaceId, {
-            ...view,
-            errors: { ...errors, ...(coverError && { cover: coverError }) },
-          }),
-        );
+      return res.status(400).render(
+        'admin/pages/form',
+        await this.formView(workspaceId, {
+          ...view,
+          errors: { ...errors, ...(coverError && { cover: coverError }) },
+        }),
+      );
     }
 
     const removing = body.removeCover === 'on';
