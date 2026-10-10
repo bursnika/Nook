@@ -47,7 +47,7 @@
 
 <form class="form-frame" method="post" action="/admin/workspaces/{{ws.id}}/members">
   <h3 class="h5">Add a member</h3>
-  {{> field-ajax name="userId" label="User" lookup="/admin/lookup/users" minLength=3 placeholder="Search among all users by name or email…" required=true hint="The user table is huge: results load from the server after 3 characters."}}
+  {{> field-ajax name="userId" label="User" src="/admin/lookup/users" minLength=3 placeholder="Search among all users by name or email…" required=true hint="The user table is huge: results load from the server after 3 characters."}}
   {{> field-select name="role" label="Role" options=newRoles}}
   <button class="btn btn-primary" type="submit">Add member</button>
 </form>

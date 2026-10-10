@@ -7,9 +7,13 @@ import { TasksModule } from '../tasks/tasks.module.js';
 import { UploadsModule } from '../uploads/uploads.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { WorkspacesModule } from '../workspaces/workspaces.module.js';
+import { AttachmentsAdminController } from './attachments.controller.js';
 import { DashboardController } from './dashboard.controller.js';
 import { LookupController } from './lookup.controller.js';
 import { LookupService } from './lookup.service.js';
+import { PagesAdminController } from './pages.controller.js';
+import { TagsAdminController } from './tags.controller.js';
+import { TasksAdminController } from './tasks.controller.js';
 import { WorkspacesAdminController } from './workspaces.controller.js';
 
 @Module({
@@ -23,7 +27,15 @@ import { WorkspacesAdminController } from './workspaces.controller.js';
     AttachmentsModule,
     UploadsModule,
   ],
-  controllers: [DashboardController, LookupController, WorkspacesAdminController],
+  controllers: [
+    DashboardController,
+    LookupController,
+    WorkspacesAdminController,
+    PagesAdminController,
+    TasksAdminController,
+    TagsAdminController,
+    AttachmentsAdminController,
+  ],
   providers: [LookupService],
 })
 export class AdminModule {}
