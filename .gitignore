@@ -35,3 +35,6 @@ docs/design/refs/
 
 # generated Prisma client (run `pnpm --filter @nook/api db:generate`)
 apps/api/src/generated/
+
+# OAuth client secrets downloaded from Google Cloud
+client_secret*.json
