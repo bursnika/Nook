@@ -41,6 +41,21 @@ pnpm --filter @nook/api start:dev     # http://localhost:3000/api
 
 Swagger: <http://localhost:3000/api/docs>
 
+### Адмінка (MVC)
+
+Серверна адмінка на Handlebars + Bootstrap + jQuery/Select2: <http://localhost:3000/admin>
+
+- CRUD для воркспейсів, сторінок (з обкладинкою-файлом), задач, тегів і вкладень, керування учасниками.
+- Поля вибору (автор, виконавець, батьківська сторінка, теги, користувач) — Select2 з автопошуком: запит на сервер іде від 3 символів із паузою 300 мс.
+- Щоб побачити автопошук на великому обсязі, згенеруйте мільйон користувачів (~30 с):
+
+```bash
+pnpm --filter @nook/api db:seed:users          # 1 000 000
+pnpm --filter @nook/api db:seed:users 50000    # або свою кількість
+```
+
+Пошук підрядка прискорюють GIN-індекси `pg_trgm` (міграція `user_search_indexes`).
+
 ### Увесь стек у Docker
 
 ```bash
