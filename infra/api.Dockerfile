@@ -33,6 +33,9 @@ COPY --from=prod-deps /repo/node_modules node_modules
 COPY --from=prod-deps /repo/apps/api/node_modules apps/api/node_modules
 COPY --from=build /repo/apps/api/package.json apps/api/package.json
 COPY --from=build /repo/apps/api/dist apps/api/dist
+# server-rendered admin: Handlebars templates and own static assets
+COPY --from=build /repo/apps/api/views apps/api/views
+COPY --from=build /repo/apps/api/public apps/api/public
 RUN mkdir -p /data/uploads && chown -R node:node /data
 USER node
 EXPOSE 3000
