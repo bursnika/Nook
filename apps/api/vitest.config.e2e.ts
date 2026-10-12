@@ -15,6 +15,10 @@ export default defineConfig({
     env: {
       DATABASE_URL: testDatabaseUrl(),
       UPLOAD_DIR: join(tmpdir(), 'nook-e2e-uploads'),
+      JWT_SECRET: 'test-only-secret-test-only-secret-test-only-secret',
+      ADMIN_EMAILS: 'platform-admin@example.com',
+      GOOGLE_CLIENT_ID: 'test-client-id',
+      GOOGLE_CLIENT_SECRET: 'test-client-secret',
     },
   },
 });
