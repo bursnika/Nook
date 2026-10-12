@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AdminModule } from './admin/admin.module.js';
+import { AuthModule } from './auth/auth.module.js';
 import { AttachmentsModule } from './attachments/attachments.module.js';
 import { BlocksModule } from './blocks/blocks.module.js';
 import { EventsModule } from './events/events.module.js';
+import { FeaturesModule } from './features/features.module.js';
 import { HealthController } from './health/health.controller.js';
+import { InvitationsModule } from './invitations/invitations.module.js';
 import { MembersModule } from './members/members.module.js';
 import { PagesModule } from './pages/pages.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -15,6 +18,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
 @Module({
   imports: [
     PrismaModule,
+    AuthModule,
     UsersModule,
     WorkspacesModule,
     MembersModule,
@@ -24,6 +28,8 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     TasksModule,
     EventsModule,
     AttachmentsModule,
+    InvitationsModule,
+    FeaturesModule,
     AdminModule,
   ],
   controllers: [HealthController],

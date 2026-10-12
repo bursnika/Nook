@@ -1,10 +1,12 @@
 import { INestApplication, RequestMethod, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import hbs from 'hbs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { registerViewHelpers } from './admin/view-helpers.js';
+import { LoginRedirectFilter } from './auth/login-redirect.js';
 import { PrismaExceptionFilter } from './common/prisma-exception.filter.js';
 import { env } from './env.js';
 
@@ -20,7 +22,8 @@ export function configureApp(app: INestApplication) {
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );
-  app.useGlobalFilters(new PrismaExceptionFilter());
+  app.use(cookieParser());
+  app.useGlobalFilters(new PrismaExceptionFilter(), new LoginRedirectFilter());
 
   setupViews(app as NestExpressApplication);
 
