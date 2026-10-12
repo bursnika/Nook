@@ -13,7 +13,10 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { ApiPaginatedResponse, toPage } from '../common/pagination.js';
-import { IdParams } from '../common/params.js';
+import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentUser, Roles } from '../auth/decorators.js';
+import { Role } from '../generated/prisma/enums.js';
+import { WorkspaceParams } from '../common/params.js';
 import { CreateWorkspaceDto, ListWorkspacesQuery, UpdateWorkspaceDto } from './workspace.dto.js';
 import { WorkspacesService } from './workspaces.service.js';
 
@@ -24,29 +27,35 @@ export class WorkspacesController {
 
   @Get()
   @ApiPaginatedResponse()
-  async list(@Query() query: ListWorkspacesQuery, @Req() req: Request) {
-    const { items, total } = await this.workspaces.list(query);
+  async list(
+    @Query() query: ListWorkspacesQuery,
+    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
+  ) {
+    const { items, total } = await this.workspaces.list(query, user);
     return toPage(req, items, total, query);
   }
 
-  @Get(':id')
-  get(@Param() { id }: IdParams) {
-    return this.workspaces.get(id);
+  @Get(':workspaceId')
+  get(@Param() { workspaceId }: WorkspaceParams) {
+    return this.workspaces.get(workspaceId);
   }
 
   @Post()
-  create(@Body() dto: CreateWorkspaceDto) {
-    return this.workspaces.create(dto);
+  create(@Body() dto: CreateWorkspaceDto, @CurrentUser() user: AuthUser) {
+    return this.workspaces.create(dto, user.id);
   }
 
-  @Patch(':id')
-  update(@Param() { id }: IdParams, @Body() dto: UpdateWorkspaceDto) {
-    return this.workspaces.update(id, dto);
+  @Patch(':workspaceId')
+  @Roles(Role.OWNER, Role.ADMIN)
+  update(@Param() { workspaceId }: WorkspaceParams, @Body() dto: UpdateWorkspaceDto) {
+    return this.workspaces.update(workspaceId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':workspaceId')
   @HttpCode(204)
-  remove(@Param() { id }: IdParams) {
-    return this.workspaces.remove(id);
+  @Roles(Role.OWNER)
+  remove(@Param() { workspaceId }: WorkspaceParams) {
+    return this.workspaces.remove(workspaceId);
   }
 }

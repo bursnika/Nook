@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
+import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentUser } from '../auth/decorators.js';
 import { ApiPaginatedResponse, toPage } from '../common/pagination.js';
 import { WorkspaceItemParams, WorkspaceParams } from '../common/params.js';
 import { CreatePageDto, ListPagesQuery, UpdatePageDto } from './page.dto.js';
@@ -39,8 +41,12 @@ export class PagesController {
   }
 
   @Post()
-  create(@Param() { workspaceId }: WorkspaceParams, @Body() dto: CreatePageDto) {
-    return this.pages.create(workspaceId, dto);
+  create(
+    @Param() { workspaceId }: WorkspaceParams,
+    @Body() dto: CreatePageDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.pages.create(workspaceId, dto, user.id);
   }
 
   @Patch(':id')

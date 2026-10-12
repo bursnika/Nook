@@ -1,4 +1,4 @@
-import { OmitType, PartialType } from '@nestjs/swagger';
+import { PartialType } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsOptional,
@@ -31,10 +31,6 @@ export class CreatePageDto {
   @MaxLength(500)
   coverUrl?: string;
 
-  /** Must be a member of the workspace. Replaced by the signed-in user once auth lands. */
-  @IsUUID()
-  authorId!: string;
-
   @IsOptional()
   @IsUUID()
   parentId?: string;
@@ -49,7 +45,7 @@ export class CreatePageDto {
   isPublished?: boolean;
 }
 
-export class UpdatePageDto extends PartialType(OmitType(CreatePageDto, ['authorId'] as const)) {}
+export class UpdatePageDto extends PartialType(CreatePageDto) {}
 
 export class ListPagesQuery extends PaginationQuery {
   @IsOptional()

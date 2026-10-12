@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { Role } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AddMemberDto, UpdateMemberDto } from './member.dto.js';
@@ -23,8 +23,11 @@ export class MembersService {
     });
   }
 
-  async updateRole(workspaceId: string, id: string, dto: UpdateMemberDto) {
+  async updateRole(workspaceId: string, id: string, dto: UpdateMemberDto, actorRole: Role) {
     const member = await this.prisma.membership.findFirstOrThrow({ where: { id, workspaceId } });
+    if ((member.role === Role.OWNER || dto.role === Role.OWNER) && actorRole !== Role.OWNER) {
+      throw new ForbiddenException('Only an owner can change owners');
+    }
     if (member.role === Role.OWNER && dto.role !== Role.OWNER) {
       await this.assertAnotherOwnerExists(workspaceId, id);
     }
@@ -35,9 +38,13 @@ export class MembersService {
     });
   }
 
-  async remove(workspaceId: string, id: string) {
+  async remove(workspaceId: string, id: string, actorRole: Role) {
     const member = await this.prisma.membership.findFirstOrThrow({ where: { id, workspaceId } });
-    if (member.role === Role.OWNER) await this.assertAnotherOwnerExists(workspaceId, id);
+    if (member.role === Role.OWNER) {
+      if (actorRole !== Role.OWNER)
+        throw new ForbiddenException('Only an owner can remove an owner');
+      await this.assertAnotherOwnerExists(workspaceId, id);
+    }
     await this.prisma.membership.delete({ where: { id } });
   }
 

@@ -1,7 +1,6 @@
 import { PartialType } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { PaginationQuery } from '../common/pagination.js';
-import { Plan } from '../generated/prisma/enums.js';
 
 export class CreateWorkspaceDto {
   @IsString()
@@ -15,10 +14,6 @@ export class CreateWorkspaceDto {
   })
   @MaxLength(60)
   slug!: string;
-
-  @IsOptional()
-  @IsEnum(Plan)
-  plan?: Plan;
 }
 
 export class UpdateWorkspaceDto extends PartialType(CreateWorkspaceDto) {}

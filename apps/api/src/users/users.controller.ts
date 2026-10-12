@@ -12,12 +12,14 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
+import { PlatformAdminOnly } from '../auth/decorators.js';
 import { ApiPaginatedResponse, toPage } from '../common/pagination.js';
 import { IdParams } from '../common/params.js';
 import { CreateUserDto, ListUsersQuery, UpdateUserDto } from './user.dto.js';
 import { UsersService } from './users.service.js';
 
 @ApiTags('users')
+@PlatformAdminOnly()
 @Controller('users')
 export class UsersController {
   constructor(private readonly users: UsersService) {}

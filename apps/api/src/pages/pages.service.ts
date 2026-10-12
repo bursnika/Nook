@@ -39,11 +39,11 @@ export class PagesService {
     });
   }
 
-  async create(workspaceId: string, dto: CreatePageDto) {
-    await this.assertMember(workspaceId, dto.authorId);
+  /** The author is the signed-in user; the WorkspaceGuard already proved they may write here. */
+  async create(workspaceId: string, dto: CreatePageDto, authorId: string) {
     if (dto.parentId) await this.assertPageInWorkspace(workspaceId, dto.parentId);
     this.assertPublishable(dto.isPublished, dto.slug);
-    return this.prisma.page.create({ data: { ...dto, workspaceId } });
+    return this.prisma.page.create({ data: { ...dto, workspaceId, authorId } });
   }
 
   async update(workspaceId: string, id: string, dto: UpdatePageDto) {
@@ -59,14 +59,6 @@ export class PagesService {
   async remove(workspaceId: string, id: string) {
     await this.prisma.page.findFirstOrThrow({ where: { id, workspaceId }, select: { id: true } });
     await this.prisma.page.delete({ where: { id } });
-  }
-
-  private async assertMember(workspaceId: string, userId: string) {
-    const member = await this.prisma.membership.findUnique({
-      where: { userId_workspaceId: { userId, workspaceId } },
-      select: { id: true },
-    });
-    if (!member) throw new BadRequestException('authorId must be a member of this workspace');
   }
 
   private async assertPageInWorkspace(workspaceId: string, pageId: string) {
