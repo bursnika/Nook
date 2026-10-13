@@ -94,19 +94,19 @@ describe('Admin (MVC) pages', () => {
       const created = await http()
         .post('/admin/workspaces')
         .type('form')
-        .send({ name: 'Uni', slug: 'uni', plan: 'PRO' })
+        .send({ name: 'Uni', slug: 'uni' })
         .expect(302);
       expect(created.headers.location).toMatch(/^\/admin\/workspaces\/[\w-]+\?flash=created$/);
       const id = idFrom(created.headers.location);
       expect((await http().get(created.headers.location).expect(200)).text).toContain(
         'Created successfully.',
       );
-      expect((await ctx.prisma.workspace.findUniqueOrThrow({ where: { id } })).plan).toBe('PRO');
+      expect((await ctx.prisma.workspace.findUniqueOrThrow({ where: { id } })).plan).toBe('FREE');
 
       await http()
         .post(`/admin/workspaces/${id}`)
         .type('form')
-        .send({ name: 'University', slug: 'uni', plan: 'FREE' })
+        .send({ name: 'University', slug: 'uni' })
         .expect(302);
       expect(await ctx.prisma.workspace.findUniqueOrThrow({ where: { id } })).toMatchObject({
         name: 'University',
@@ -176,13 +176,12 @@ describe('Admin (MVC) pages', () => {
 
   describe('pages with a cover file', () => {
     it('creates a page with an uploaded cover, then replaces and removes it', async () => {
-      const { user, workspace } = await seedWorkspace(ctx.prisma);
+      const { workspace } = await seedWorkspace(ctx.prisma);
       const base = `/admin/workspaces/${workspace.id}/pages`;
 
       const created = await http()
         .post(base)
         .field('title', 'Landing')
-        .field('authorId', user.id)
         .field('slug', 'landing')
         .field('isPublished', 'on')
         .attach('cover', PNG, { filename: 'cover.png', contentType: 'image/png' })
@@ -220,11 +219,10 @@ describe('Admin (MVC) pages', () => {
     });
 
     it('rejects a non-image cover and leaves no file behind', async () => {
-      const { user, workspace } = await seedWorkspace(ctx.prisma);
+      const { workspace } = await seedWorkspace(ctx.prisma);
       const res = await http()
         .post(`/admin/workspaces/${workspace.id}/pages`)
         .field('title', 'x')
-        .field('authorId', user.id)
         .attach('cover', Buffer.from('plain text'), {
           filename: 'a.txt',
           contentType: 'text/plain',
@@ -235,20 +233,13 @@ describe('Admin (MVC) pages', () => {
       expect(storedFiles()).toHaveLength(0);
     });
 
-    it('requires a member author and a slug for publishing', async () => {
+    it('requires a slug for publishing', async () => {
       const a = await seedWorkspace(ctx.prisma, 'a');
-      const b = await seedWorkspace(ctx.prisma, 'b');
       const base = `/admin/workspaces/${a.workspace.id}/pages`;
-      const foreign = await http()
-        .post(base)
-        .type('form')
-        .send({ title: 'x', authorId: b.user.id })
-        .expect(400);
-      expect(foreign.text).toContain('must be a member');
       const noSlug = await http()
         .post(base)
         .type('form')
-        .send({ title: 'x', authorId: a.user.id, isPublished: 'on' })
+        .send({ title: 'x', isPublished: 'on' })
         .expect(400);
       expect(noSlug.text).toContain('A slug is required');
     });

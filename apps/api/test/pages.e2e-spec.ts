@@ -15,17 +15,17 @@ describe('Pages & blocks API', () => {
 
   const http = () => request(app.getHttpServer());
 
-  async function createPage(workspaceId: string, authorId: string, extra: object = {}) {
+  async function createPage(workspaceId: string, extra: object = {}) {
     const res = await http()
       .post(`/api/workspaces/${workspaceId}/pages`)
-      .send({ title: 'Plan', authorId, ...extra })
+      .send({ title: 'Plan', ...extra })
       .expect(201);
     return res.body;
   }
 
   it('creates a page and returns it with its blocks', async () => {
-    const { user, workspace } = await seedWorkspace(ctx.prisma);
-    const page = await createPage(workspace.id, user.id, { icon: '♡' });
+    const { workspace } = await seedWorkspace(ctx.prisma);
+    const page = await createPage(workspace.id, { icon: '♡' });
     expect(page).toMatchObject({ title: 'Plan', workspaceId: workspace.id, isPublished: false });
 
     await http()
@@ -45,19 +45,23 @@ describe('Pages & blocks API', () => {
     expect(full.body.blocks[0].position).toBeLessThan(full.body.blocks[1].position);
   });
 
-  it('only lets workspace members be authors', async () => {
+  it('records the signed-in user as the author and ignores a client-supplied one', async () => {
     const a = await seedWorkspace(ctx.prisma, 'a');
-    const b = await seedWorkspace(ctx.prisma, 'b');
+    const page = await createPage(a.workspace.id);
+    const admin = await ctx.prisma.user.findUniqueOrThrow({
+      where: { email: 'platform-admin@example.com' },
+    });
+    expect(page.authorId).toBe(admin.id);
     await http()
       .post(`/api/workspaces/${a.workspace.id}/pages`)
-      .send({ title: 'x', authorId: b.user.id })
-      .expect(400);
+      .send({ title: 'x', authorId: a.user.id })
+      .expect(400); // not an accepted field any more
   });
 
   it('isolates workspaces: a page is invisible and immutable from another workspace', async () => {
     const a = await seedWorkspace(ctx.prisma, 'a');
     const b = await seedWorkspace(ctx.prisma, 'b');
-    const page = await createPage(a.workspace.id, a.user.id);
+    const page = await createPage(a.workspace.id);
 
     await http().get(`/api/workspaces/${b.workspace.id}/pages/${page.id}`).expect(404);
     await http()
@@ -77,10 +81,10 @@ describe('Pages & blocks API', () => {
   });
 
   it('builds a page tree, filters by parent and rejects cycles', async () => {
-    const { user, workspace } = await seedWorkspace(ctx.prisma);
-    const root = await createPage(workspace.id, user.id, { title: 'Root' });
-    const child = await createPage(workspace.id, user.id, { title: 'Child', parentId: root.id });
-    const grandchild = await createPage(workspace.id, user.id, {
+    const { workspace } = await seedWorkspace(ctx.prisma);
+    const root = await createPage(workspace.id, { title: 'Root' });
+    const child = await createPage(workspace.id, { title: 'Child', parentId: root.id });
+    const grandchild = await createPage(workspace.id, {
       title: 'Grand',
       parentId: child.id,
     });
@@ -108,36 +112,36 @@ describe('Pages & blocks API', () => {
   });
 
   it('requires a slug to publish and keeps slugs unique', async () => {
-    const { user, workspace } = await seedWorkspace(ctx.prisma);
+    const { workspace } = await seedWorkspace(ctx.prisma);
     await http()
       .post(`/api/workspaces/${workspace.id}/pages`)
-      .send({ title: 'x', authorId: user.id, isPublished: true })
+      .send({ title: 'x', isPublished: true })
       .expect(400);
 
-    const page = await createPage(workspace.id, user.id, { slug: 'my-page', isPublished: true });
+    const page = await createPage(workspace.id, { slug: 'my-page', isPublished: true });
     expect(page.isPublished).toBe(true);
     await http()
       .post(`/api/workspaces/${workspace.id}/pages`)
-      .send({ title: 'y', authorId: user.id, slug: 'my-page' })
+      .send({ title: 'y', slug: 'my-page' })
       .expect(409);
   });
 
   it('validates coverUrl and searches by title', async () => {
-    const { user, workspace } = await seedWorkspace(ctx.prisma);
+    const { workspace } = await seedWorkspace(ctx.prisma);
     await http()
       .post(`/api/workspaces/${workspace.id}/pages`)
-      .send({ title: 'x', authorId: user.id, coverUrl: 'javascript:alert(1)' })
+      .send({ title: 'x', coverUrl: 'javascript:alert(1)' })
       .expect(400);
-    await createPage(workspace.id, user.id, { title: 'Lab report', coverUrl: '/uploads/a.png' });
-    await createPage(workspace.id, user.id, { title: 'Groceries' });
+    await createPage(workspace.id, { title: 'Lab report', coverUrl: '/uploads/a.png' });
+    await createPage(workspace.id, { title: 'Groceries' });
     const found = await http().get(`/api/workspaces/${workspace.id}/pages?q=lab`).expect(200);
     expect(found.body.items).toHaveLength(1);
     expect(found.body.items[0].coverUrl).toBe('/uploads/a.png');
   });
 
   it('updates, reorders and deletes blocks', async () => {
-    const { user, workspace } = await seedWorkspace(ctx.prisma);
-    const page = await createPage(workspace.id, user.id);
+    const { workspace } = await seedWorkspace(ctx.prisma);
+    const page = await createPage(workspace.id);
     const base = `/api/workspaces/${workspace.id}/pages/${page.id}/blocks`;
     const first = (
       await http()

@@ -28,7 +28,7 @@ describe('Workspaces API', () => {
       .expect(400);
     await request(app.getHttpServer())
       .post('/api/workspaces')
-      .send({ name: 'Bad', slug: 'ok', plan: 'ENTERPRISE' })
+      .send({ name: 'Bad', slug: 'ok', plan: 'PRO' }) // the plan cannot be chosen at creation
       .expect(400);
   });
 
@@ -38,13 +38,18 @@ describe('Workspaces API', () => {
     await request(app.getHttpServer()).post('/api/workspaces').send(body).expect(409);
   });
 
-  it('upgrades the plan and deletes the workspace', async () => {
+  it('changes the plan only through the plan endpoint and deletes the workspace', async () => {
     const { body } = await request(app.getHttpServer())
       .post('/api/workspaces')
       .send({ name: 'Uni', slug: 'uni' })
       .expect(201);
-    const upgraded = await request(app.getHttpServer())
+    // the generic update must not be a back door to a paid plan
+    await request(app.getHttpServer())
       .patch(`/api/workspaces/${body.id}`)
+      .send({ plan: 'PRO' })
+      .expect(400);
+    const upgraded = await request(app.getHttpServer())
+      .post(`/api/workspaces/${body.id}/plan`)
       .send({ plan: 'PRO' })
       .expect(200);
     expect(upgraded.body.plan).toBe('PRO');

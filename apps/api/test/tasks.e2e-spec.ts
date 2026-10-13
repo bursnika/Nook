@@ -100,7 +100,7 @@ describe('Tags, tasks & events API', () => {
       const foreignPage = (
         await http()
           .post(`/api/workspaces/${b.workspace.id}/pages`)
-          .send({ title: 'p', authorId: b.user.id })
+          .send({ title: 'p' })
           .expect(201)
       ).body;
       const base = `/api/workspaces/${a.workspace.id}/tasks`;

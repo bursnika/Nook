@@ -59,7 +59,7 @@ describe('Users API', () => {
   it('paginates with skip, limit and nextLink', async () => {
     for (let i = 1; i <= 5; i++) await create(i).expect(201);
 
-    const first = await request(app.getHttpServer()).get('/api/users?limit=2').expect(200);
+    const first = await request(app.getHttpServer()).get('/api/users?q=user&limit=2').expect(200);
     expect(first.body).toMatchObject({ total: 5, skip: 0, limit: 2 });
     expect(first.body.items).toHaveLength(2);
     expect(first.body.nextLink).toContain('skip=2');
@@ -71,7 +71,9 @@ describe('Users API', () => {
     expect(second.body.items).toHaveLength(2);
     expect(second.body.skip).toBe(2);
 
-    const last = await request(app.getHttpServer()).get('/api/users?skip=4&limit=2').expect(200);
+    const last = await request(app.getHttpServer())
+      .get('/api/users?q=user&skip=4&limit=2')
+      .expect(200);
     expect(last.body.items).toHaveLength(1);
     expect(last.body.nextLink).toBeNull();
 

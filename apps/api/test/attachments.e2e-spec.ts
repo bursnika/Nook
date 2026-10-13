@@ -95,10 +95,7 @@ describe('Attachments API', () => {
     const a = await seedWorkspace(ctx.prisma, 'a');
     const b = await seedWorkspace(ctx.prisma, 'b');
     const page = (
-      await http()
-        .post(`/api/workspaces/${a.workspace.id}/pages`)
-        .send({ title: 'p', authorId: a.user.id })
-        .expect(201)
+      await http().post(`/api/workspaces/${a.workspace.id}/pages`).send({ title: 'p' }).expect(201)
     ).body;
 
     const ok = await http()
