@@ -1,6 +1,7 @@
 import { Get, Param, Query } from '@nestjs/common';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { PlatformAdminOnly } from '../auth/decorators.js';
 import { WorkspaceParams } from '../common/params.js';
 import { AdminController } from './admin-controller.decorator.js';
 import { LookupService } from './lookup.service.js';
@@ -21,7 +22,9 @@ class LookupQuery {
 export class LookupController {
   constructor(private readonly lookup: LookupService) {}
 
+  /** Searching every user would expose other tenants' people, so it is for platform admins only. */
   @Get('lookup/users')
+  @PlatformAdminOnly()
   users(@Query() { q, page }: LookupQuery) {
     return this.lookup.users(q.trim(), page);
   }

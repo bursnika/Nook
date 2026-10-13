@@ -14,10 +14,10 @@
           <td><span class="chip chip-{{lower plan}}">{{plan}}</span></td>
           <td>{{date createdAt}}</td>
           <td class="text-end">
-            <a class="btn btn-sm btn-outline-primary" href="/admin/workspaces/{{id}}/edit">Edit</a>
+            {{#if (eq myRole "OWNER")}}<a class="btn btn-sm btn-outline-primary" href="/admin/workspaces/{{id}}/edit">Edit</a>
             <form class="d-inline" method="post" action="/admin/workspaces/{{id}}/delete" data-confirm="Delete workspace “{{name}}” with all its pages, tasks and files?">
               <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
-            </form>
+            </form>{{else if (eq myRole "ADMIN")}}<a class="btn btn-sm btn-outline-primary" href="/admin/workspaces/{{id}}/edit">Edit</a>{{/if}}
           </td>
         </tr>
       {{else}}

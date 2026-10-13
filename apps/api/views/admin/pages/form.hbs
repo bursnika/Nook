@@ -2,9 +2,6 @@
 <form class="form-frame" method="post" action="{{action}}" enctype="multipart/form-data" novalidate>
   {{> field-text name="title" label="Title" value=form.title error=errors.title required=true maxlength=200}}
   {{> field-text name="icon" label="Icon" value=form.icon error=errors.icon maxlength=16 hint="One emoji or a short symbol, e.g. ♡"}}
-  {{#if isNew}}
-    {{> field-ajax name="authorId" label="Author" src=(concat "/admin/workspaces/" ws.id "/lookup/members") minLength=1 placeholder="Pick a workspace member…" selected=authors error=errors.authorId required=true hint="Only members of this workspace can author pages."}}
-  {{/if}}
   {{> field-ajax name="parentId" label="Parent page" src=(concat "/admin/workspaces/" ws.id "/lookup/pages") minLength=1 placeholder="Top level (no parent)" selected=parents error=errors.parentId}}
   {{> field-text name="slug" label="Public slug" value=form.slug error=errors.slug maxlength=80 hint="Required to publish. The page is then served at /p/<slug>."}}
   {{> field-checkbox name="isPublished" label="Published (visible to everyone with the link)" checked=form.isPublished error=errors.isPublished}}

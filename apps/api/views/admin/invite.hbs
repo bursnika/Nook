@@ -1,0 +1,18 @@
+<div class="form-frame">
+  <h1 class="h3">Invitation to {{preview.workspaceName}}</h1>
+  {{#if preview.usable}}
+    <p>You are invited to join <strong>{{preview.workspaceName}}</strong> as <span class="chip chip-todo">{{nice preview.role}}</span>.</p>
+    {{#if emailMatches}}
+      <form method="post" action="/admin/invite/{{token}}/accept">
+        <button class="btn btn-primary" type="submit">Accept the invitation</button>
+        <a class="btn btn-link" href="/admin">Not now</a>
+      </form>
+    {{else}}
+      <div class="alert alert-warning" role="alert">
+        This invitation was sent to <strong>{{preview.email}}</strong>, but you are signed in as <strong>{{currentUser.email}}</strong>. Sign out and sign in with the invited address.
+      </div>
+    {{/if}}
+  {{else}}
+    <div class="alert alert-secondary" role="alert">This invitation has expired or was already used.</div>
+  {{/if}}
+</div>

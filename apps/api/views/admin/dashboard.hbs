@@ -2,7 +2,7 @@
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3"><div class="card p-3"><div class="stat">{{stats.workspaces}}</div><div class="text-muted">Workspaces</div></div></div>
-  <div class="col-6 col-md-3"><div class="card p-3"><div class="stat">{{stats.users}}</div><div class="text-muted">Users</div></div></div>
+  {{#if currentUser.isPlatformAdmin}}<div class="col-6 col-md-3"><div class="card p-3"><div class="stat">{{stats.users}}</div><div class="text-muted">Users</div></div></div>{{/if}}
   <div class="col-6 col-md-3"><div class="card p-3"><div class="stat">{{stats.pages}}</div><div class="text-muted">Pages</div></div></div>
   <div class="col-6 col-md-3"><div class="card p-3"><div class="stat">{{stats.tasks}}</div><div class="text-muted">Tasks</div></div></div>
 </div>

@@ -1,5 +1,7 @@
 import { Get, Query, Render, Req } from '@nestjs/common';
 import type { Request } from 'express';
+import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentUser, PlatformAdminOnly } from '../auth/decorators.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UsersService } from '../users/users.service.js';
 import { AdminController } from './admin-controller.decorator.js';
@@ -15,13 +17,17 @@ export class DashboardController {
 
   @Get()
   @Render('admin/dashboard')
-  async dashboard() {
+  async dashboard(@CurrentUser() user: AuthUser) {
+    // Everyone sees numbers for their own workspaces; only platform admins see the whole system.
+    const mine = { memberships: { some: { userId: user.id } } };
+    const workspaceWhere = user.isPlatformAdmin ? {} : mine;
+    const inWorkspace = user.isPlatformAdmin ? {} : { workspace: mine };
     const [workspaces, users, pages, tasks, recent] = await Promise.all([
-      this.prisma.workspace.count(),
-      this.prisma.user.count(),
-      this.prisma.page.count(),
-      this.prisma.task.count(),
-      this.prisma.workspace.findMany({ orderBy: { id: 'desc' }, take: 5 }),
+      this.prisma.workspace.count({ where: workspaceWhere }),
+      user.isPlatformAdmin ? this.prisma.user.count() : Promise.resolve(null),
+      this.prisma.page.count({ where: inWorkspace }),
+      this.prisma.task.count({ where: inWorkspace }),
+      this.prisma.workspace.findMany({ where: workspaceWhere, orderBy: { id: 'desc' }, take: 5 }),
     ]);
     return {
       title: 'Dashboard',
@@ -33,6 +39,7 @@ export class DashboardController {
 
   /** Read-only view over the whole user table (millions of rows), with search and paging. */
   @Get('users')
+  @PlatformAdminOnly()
   @Render('admin/users')
   async usersList(@Query() { page, q, flash }: AdminListQuery, @Req() req: Request) {
     const { items, total } = await this.users.list({

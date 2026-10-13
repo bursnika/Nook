@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { InvitationsModule } from '../invitations/invitations.module.js';
 import { AttachmentsModule } from '../attachments/attachments.module.js';
 import { MembersModule } from '../members/members.module.js';
 import { PagesModule } from '../pages/pages.module.js';
@@ -9,9 +10,11 @@ import { UsersModule } from '../users/users.module.js';
 import { WorkspacesModule } from '../workspaces/workspaces.module.js';
 import { AttachmentsAdminController } from './attachments.controller.js';
 import { DashboardController } from './dashboard.controller.js';
+import { InviteAdminController } from './invite-admin.controller.js';
 import { LookupController } from './lookup.controller.js';
 import { LookupService } from './lookup.service.js';
 import { PagesAdminController } from './pages.controller.js';
+import { SessionAdminController } from './session-admin.controller.js';
 import { TagsAdminController } from './tags.controller.js';
 import { TasksAdminController } from './tasks.controller.js';
 import { WorkspacesAdminController } from './workspaces.controller.js';
@@ -25,6 +28,7 @@ import { WorkspacesAdminController } from './workspaces.controller.js';
     TasksModule,
     TagsModule,
     AttachmentsModule,
+    InvitationsModule,
     UploadsModule,
   ],
   controllers: [
@@ -35,6 +39,8 @@ import { WorkspacesAdminController } from './workspaces.controller.js';
     TasksAdminController,
     TagsAdminController,
     AttachmentsAdminController,
+    InviteAdminController,
+    SessionAdminController,
   ],
   providers: [LookupService],
 })

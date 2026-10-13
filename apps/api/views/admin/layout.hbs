@@ -23,9 +23,15 @@
           <ul class="navbar-nav me-auto">
             <li class="nav-item"><a class="nav-link{{#if (eq nav 'dashboard')}} active{{/if}}" href="/admin">Dashboard</a></li>
             <li class="nav-item"><a class="nav-link{{#if (eq nav 'workspaces')}} active{{/if}}" href="/admin/workspaces">Workspaces</a></li>
-            <li class="nav-item"><a class="nav-link{{#if (eq nav 'users')}} active{{/if}}" href="/admin/users">Users</a></li>
+            {{#if currentUser.isPlatformAdmin}}<li class="nav-item"><a class="nav-link{{#if (eq nav 'users')}} active{{/if}}" href="/admin/users">Users</a></li>{{/if}}
           </ul>
           <a class="nav-link" href="/api/docs">API docs ↗</a>
+          {{#if currentUser}}
+            <form class="d-flex align-items-center gap-2 ms-md-3" method="post" action="/admin/logout">
+              <span class="small user-email" title="{{currentUser.email}}">{{currentUser.email}}{{#if currentUser.isPlatformAdmin}} <span class="chip chip-high">admin</span>{{/if}}</span>
+              <button class="btn btn-sm btn-outline-primary" type="submit">Sign out</button>
+            </form>
+          {{/if}}
         </div>
       </div>
     </nav>

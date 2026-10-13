@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
+import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentUser } from '../auth/decorators.js';
 import { uploadOptions } from '../attachments/upload.config.js';
 import { WorkspaceItemParams, WorkspaceParams } from '../common/params.js';
 import { CreatePageDto, UpdatePageDto } from '../pages/page.dto.js';
@@ -74,6 +76,7 @@ export class PagesAdminController {
     @Param() { workspaceId }: WorkspaceParams,
     @Body() body: Record<string, unknown>,
     @UploadedFile() file: Express.Multer.File | undefined,
+    @CurrentUser() user: AuthUser,
     @Res() res: Response,
   ) {
     const view = {
@@ -97,7 +100,7 @@ export class PagesAdminController {
     }
     if (file) value.coverUrl = this.uploads.urlFor(file.filename);
     try {
-      const created = await this.pages.create(workspaceId, value);
+      const created = await this.pages.create(workspaceId, value, user.id);
       return res.redirect(`/admin/workspaces/${workspaceId}/pages/${created.id}?flash=created`);
     } catch (error) {
       await this.uploads.remove(file?.filename);
@@ -210,9 +213,8 @@ export class PagesAdminController {
     },
   ) {
     const form = view.form ?? {};
-    const [ws, authors, parents] = await Promise.all([
+    const [ws, parents] = await Promise.all([
       this.workspaces.get(workspaceId),
-      this.lookup.userOption(form.authorId),
       this.lookup.pageOption(workspaceId, form.parentId),
     ]);
     return {
@@ -221,7 +223,6 @@ export class PagesAdminController {
       ws,
       form,
       errors: view.errors ?? {},
-      authors,
       parents,
       coverUrl: view.current?.coverUrl ?? null,
     };

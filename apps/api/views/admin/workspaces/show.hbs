@@ -4,10 +4,12 @@
     <span class="text-muted">{{ws.slug}}</span> · <span class="chip chip-{{lower ws.plan}}">{{ws.plan}}</span>
   </div>
   <div class="d-flex gap-2">
-    <a class="btn btn-outline-primary" href="/admin/workspaces/{{ws.id}}/edit">Edit</a>
-    <form method="post" action="/admin/workspaces/{{ws.id}}/delete" data-confirm="Delete this workspace with all its pages, tasks and files?">
-      <button class="btn btn-outline-danger" type="submit">Delete</button>
-    </form>
+    {{#if canManage}}<a class="btn btn-outline-primary" href="/admin/workspaces/{{ws.id}}/edit">Edit</a>{{/if}}
+    {{#if isOwner}}
+      <form method="post" action="/admin/workspaces/{{ws.id}}/delete" data-confirm="Delete this workspace with all its pages, tasks and files?">
+        <button class="btn btn-outline-danger" type="submit">Delete</button>
+      </form>
+    {{/if}}
   </div>
 </div>
 
@@ -18,6 +20,28 @@
   <div class="col-6 col-md-3"><a class="text-decoration-none" href="/admin/workspaces/{{ws.id}}/attachments"><div class="card p-3"><div class="stat">{{counts.attachments}}</div><div class="text-muted">Attachments</div></div></a></div>
 </div>
 
+<div class="card p-3 mb-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h2 class="h5 mb-1">Plan: {{ws.plan}}</h2>
+      <div class="text-muted small">Pro unlocks Insights, two-way Google Calendar sync and the AI assistant.</div>
+    </div>
+    {{#if isOwner}}
+      <form method="post" action="/admin/workspaces/{{ws.id}}/plan">
+        <input type="hidden" name="plan" value="{{otherPlan}}">
+        <button class="btn btn-primary" type="submit">Switch to {{otherPlan}}</button>
+      </form>
+    {{/if}}
+  </div>
+</div>
+
+{{#if newInvite}}
+  <div class="alert alert-success" role="status">
+    <strong>Invitation created for {{newInvite.email}}.</strong> Send them this link; it works once, for that e-mail address only, and is shown only now:
+    <input class="form-control mt-2" readonly value="{{newInvite.link}}" aria-label="Invitation link" onfocus="this.select()">
+  </div>
+{{/if}}
+
 <h2 class="h4">Members</h2>
 <div class="table-frame mb-3">
   <table class="table align-middle">
@@ -27,17 +51,23 @@
         <tr>
           <td>{{user.name}}<br><small class="text-muted">{{user.email}}</small></td>
           <td>
-            <form class="d-flex gap-2" method="post" action="/admin/workspaces/{{../ws.id}}/members/{{id}}">
-              <select class="form-select form-select-sm" name="role" aria-label="Role">
-                {{#each roles}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
-              </select>
-              <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
-            </form>
+            {{#if ../canManage}}
+              <form class="d-flex gap-2" method="post" action="/admin/workspaces/{{../ws.id}}/members/{{id}}">
+                <select class="form-select form-select-sm" name="role" aria-label="Role">
+                  {{#each roles}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+                </select>
+                <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
+              </form>
+            {{else}}
+              <span class="chip chip-todo">{{nice role}}</span>
+            {{/if}}
           </td>
           <td class="text-end">
-            <form class="d-inline" method="post" action="/admin/workspaces/{{../ws.id}}/members/{{id}}/delete" data-confirm="Remove {{user.name}} from this workspace?">
-              <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
-            </form>
+            {{#if ../canManage}}
+              <form class="d-inline" method="post" action="/admin/workspaces/{{../ws.id}}/members/{{id}}/delete" data-confirm="Remove {{user.name}} from this workspace?">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+              </form>
+            {{/if}}
           </td>
         </tr>
       {{/each}}
@@ -45,9 +75,38 @@
   </table>
 </div>
 
-<form class="form-frame" method="post" action="/admin/workspaces/{{ws.id}}/members">
-  <h3 class="h5">Add a member</h3>
-  {{> field-ajax name="userId" label="User" src="/admin/lookup/users" minLength=3 placeholder="Search among all users by name or email…" required=true hint="The user table is huge: results load from the server after 3 characters."}}
-  {{> field-select name="role" label="Role" options=newRoles}}
-  <button class="btn btn-primary" type="submit">Add member</button>
-</form>
+{{#if canManage}}
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <form class="form-frame h-100" method="post" action="/admin/workspaces/{{ws.id}}/invitations" novalidate>
+        <h3 class="h5">Invite by e-mail</h3>
+        {{> field-text name="email" type="email" label="E-mail" error=inviteErrors.email required=true}}
+        {{> field-select name="role" label="Role" options=inviteRoles}}
+        <button class="btn btn-primary" type="submit">Create invitation</button>
+      </form>
+      {{#if pendingInvitations.length}}
+        <h3 class="h6 mt-3">Pending invitations</h3>
+        <ul class="list-unstyled">
+          {{#each pendingInvitations}}
+            <li class="d-flex justify-content-between align-items-center py-1">
+              <span>{{email}} <span class="chip chip-todo">{{nice role}}</span> <small class="text-muted">until {{date expiresAt}}</small></span>
+              <form method="post" action="/admin/workspaces/{{../ws.id}}/invitations/{{id}}/delete" data-confirm="Revoke this invitation?">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Revoke</button>
+              </form>
+            </li>
+          {{/each}}
+        </ul>
+      {{/if}}
+    </div>
+    {{#if isPlatformAdmin}}
+      <div class="col-lg-6">
+        <form class="form-frame h-100" method="post" action="/admin/workspaces/{{ws.id}}/members">
+          <h3 class="h5">Add any user <span class="chip chip-high">platform admin</span></h3>
+          {{> field-ajax name="userId" label="User" src="/admin/lookup/users" minLength=3 placeholder="Search among all users by name or email…" required=true hint="The user table is huge: results load from the server after 3 characters."}}
+          {{> field-select name="role" label="Role" options=newRoles}}
+          <button class="btn btn-primary" type="submit">Add member</button>
+        </form>
+      </div>
+    {{/if}}
+  </div>
+{{/if}}

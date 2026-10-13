@@ -205,3 +205,11 @@ h4,
     padding: 1rem;
   }
 }
+
+.user-email {
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--nook-ink);
+}

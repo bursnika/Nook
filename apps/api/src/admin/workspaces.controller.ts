@@ -1,8 +1,12 @@
-import { Body, Get, Param, Post, Query, Redirect, Render, Req, Res } from '@nestjs/common';
+import { Body, Get, Param, Post, Query, Render, Req, Res } from '@nestjs/common';
 import { IsEnum, IsUUID } from 'class-validator';
 import type { Request, Response } from 'express';
-import { IdParams } from '../common/params.js';
+import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentUser, PlatformAdminOnly, Roles } from '../auth/decorators.js';
+import { WorkspaceParams } from '../common/params.js';
 import { Plan, Role } from '../generated/prisma/enums.js';
+import { CreateInvitationDto } from '../invitations/invitation.dto.js';
+import { InvitationsService } from '../invitations/invitations.service.js';
 import { AddMemberDto, UpdateMemberDto } from '../members/member.dto.js';
 import { MembersService } from '../members/members.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -12,9 +16,14 @@ import { AdminController } from './admin-controller.decorator.js';
 import { AdminListQuery } from './admin-query.js';
 import { enumOptions, flashMessage, PAGE_SIZE, pager, parseForm, toFormMessage } from './forms.js';
 
-class MemberParams extends IdParams {
+class MemberParams extends WorkspaceParams {
   @IsUUID()
   memberId!: string;
+}
+
+class InvitationParams extends WorkspaceParams {
+  @IsUUID()
+  invitationId!: string;
 }
 
 class RoleForm extends UpdateMemberDto {
@@ -22,28 +31,40 @@ class RoleForm extends UpdateMemberDto {
   declare role: Role;
 }
 
+class PlanForm {
+  @IsEnum(Plan)
+  plan!: Plan;
+}
+
 @AdminController('admin/workspaces')
 export class WorkspacesAdminController {
   constructor(
     private readonly workspaces: WorkspacesService,
     private readonly members: MembersService,
+    private readonly invitations: InvitationsService,
     private readonly prisma: PrismaService,
   ) {}
 
   @Get()
   @Render('admin/workspaces/index')
-  async index(@Query() { page, q, flash }: AdminListQuery, @Req() req: Request) {
-    const { items, total } = await this.workspaces.list({
-      q,
-      skip: (page - 1) * PAGE_SIZE,
-      limit: PAGE_SIZE,
-    });
+  async index(
+    @Query() { page, q, flash }: AdminListQuery,
+    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
+  ) {
+    const { items, total } = await this.workspaces.list(
+      { q, skip: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE },
+      user,
+    );
     return {
       title: 'Workspaces',
       nav: 'workspaces',
       flash: flashMessage(flash),
       q,
-      workspaces: items,
+      workspaces: items.map(({ memberships, ...workspace }) => ({
+        ...workspace,
+        myRole: user.isPlatformAdmin ? Role.OWNER : memberships[0]?.role,
+      })),
       pager: pager(req, total, page),
     };
   }
@@ -55,12 +76,16 @@ export class WorkspacesAdminController {
   }
 
   @Post()
-  async create(@Body() body: Record<string, unknown>, @Res() res: Response) {
+  async create(
+    @Body() body: Record<string, unknown>,
+    @CurrentUser() user: AuthUser,
+    @Res() res: Response,
+  ) {
     const { value, errors, ok } = await parseForm(CreateWorkspaceDto, body);
     const view = { title: 'New workspace', action: '/admin/workspaces', form: body, errors };
     if (!ok) return res.status(400).render('admin/workspaces/form', this.formView(view));
     try {
-      const created = await this.workspaces.create(value);
+      const created = await this.workspaces.create(value, user.id);
       return res.redirect(`/admin/workspaces/${created.id}?flash=created`);
     } catch (error) {
       const formError = toFormMessage(error);
@@ -69,56 +94,49 @@ export class WorkspacesAdminController {
     }
   }
 
-  @Get(':id')
+  @Get(':workspaceId')
   @Render('admin/workspaces/show')
-  async show(@Param() { id }: IdParams, @Query() { flash }: AdminListQuery) {
-    const workspace = await this.prisma.workspace.findUniqueOrThrow({
-      where: { id },
-      include: { _count: { select: { pages: true, tasks: true, tags: true, attachments: true } } },
-    });
-    const members = await this.members.list(id);
-    return {
-      title: workspace.name,
-      section: 'overview',
-      ws: workspace,
-      flash: flashMessage(flash),
-      counts: workspace._count,
-      members: members.map((m) => ({ ...m, roles: enumOptions(Object.values(Role), m.role) })),
-      newRoles: enumOptions(Object.values(Role), Role.MEMBER),
-    };
+  async show(
+    @Param() { workspaceId }: WorkspaceParams,
+    @Query() { flash }: AdminListQuery,
+    @Req() req: Request,
+  ) {
+    return this.showView(workspaceId, req, { flash: flashMessage(flash) });
   }
 
-  @Get(':id/edit')
+  @Get(':workspaceId/edit')
+  @Roles(Role.OWNER, Role.ADMIN)
   @Render('admin/workspaces/form')
-  async editForm(@Param() { id }: IdParams) {
-    const workspace = await this.workspaces.get(id);
+  async editForm(@Param() { workspaceId }: WorkspaceParams) {
+    const workspace = await this.workspaces.get(workspaceId);
     return this.formView({
       title: `Edit ${workspace.name}`,
-      action: `/admin/workspaces/${id}`,
+      action: `/admin/workspaces/${workspaceId}`,
       form: workspace,
       ws: workspace,
     });
   }
 
-  @Post(':id')
+  @Post(':workspaceId')
+  @Roles(Role.OWNER, Role.ADMIN)
   async update(
-    @Param() { id }: IdParams,
+    @Param() { workspaceId }: WorkspaceParams,
     @Body() body: Record<string, unknown>,
     @Res() res: Response,
   ) {
-    const workspace = await this.workspaces.get(id);
+    const workspace = await this.workspaces.get(workspaceId);
     const { value, errors, ok } = await parseForm(UpdateWorkspaceDto, body);
     const view = {
       title: `Edit ${workspace.name}`,
-      action: `/admin/workspaces/${id}`,
+      action: `/admin/workspaces/${workspaceId}`,
       form: body,
       errors,
       ws: workspace,
     };
     if (!ok) return res.status(400).render('admin/workspaces/form', this.formView(view));
     try {
-      await this.workspaces.update(id, value);
-      return res.redirect(`/admin/workspaces/${id}?flash=updated`);
+      await this.workspaces.update(workspaceId, value);
+      return res.redirect(`/admin/workspaces/${workspaceId}?flash=updated`);
     } catch (error) {
       const formError = toFormMessage(error);
       if (!formError) throw error;
@@ -126,17 +144,32 @@ export class WorkspacesAdminController {
     }
   }
 
-  @Post(':id/delete')
-  @Redirect('/admin/workspaces?flash=deleted')
-  async remove(@Param() { id }: IdParams) {
-    await this.workspaces.remove(id);
+  @Post(':workspaceId/delete')
+  @Roles(Role.OWNER)
+  async remove(@Param() { workspaceId }: WorkspaceParams, @Res() res: Response) {
+    await this.workspaces.remove(workspaceId);
+    return res.redirect('/admin/workspaces?flash=deleted');
+  }
+
+  @Post(':workspaceId/plan')
+  @Roles(Role.OWNER)
+  async changePlan(
+    @Param() { workspaceId }: WorkspaceParams,
+    @Body() body: Record<string, unknown>,
+    @Res() res: Response,
+  ) {
+    const { value, ok } = await parseForm(PlanForm, body);
+    if (ok) await this.workspaces.setPlan(workspaceId, value.plan);
+    return res.redirect(`/admin/workspaces/${workspaceId}?flash=updated`);
   }
 
   // ---- members -------------------------------------------------------------------------------
 
-  @Post(':id/members')
+  /** Support tool: add any existing user by id. Everyone else invites people by e-mail. */
+  @Post(':workspaceId/members')
+  @PlatformAdminOnly()
   async addMember(
-    @Param() { id }: IdParams,
+    @Param() { workspaceId }: WorkspaceParams,
     @Body() body: Record<string, unknown>,
     @Res() res: Response,
   ) {
@@ -148,25 +181,108 @@ export class WorkspacesAdminController {
         message: Object.values(errors).join(', '),
       });
     }
-    await this.members.add(id, value);
-    return res.redirect(`/admin/workspaces/${id}?flash=created`);
+    await this.members.add(workspaceId, value);
+    return res.redirect(`/admin/workspaces/${workspaceId}?flash=created`);
   }
 
-  @Post(':id/members/:memberId')
+  @Post(':workspaceId/members/:memberId')
+  @Roles(Role.OWNER, Role.ADMIN)
   async changeRole(
-    @Param() { id, memberId }: MemberParams,
+    @Param() { workspaceId, memberId }: MemberParams,
     @Body() body: Record<string, unknown>,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
     const { value, ok } = await parseForm(RoleForm, body);
-    if (ok) await this.members.updateRole(id, memberId, value);
-    return res.redirect(`/admin/workspaces/${id}?flash=updated`);
+    if (ok) await this.members.updateRole(workspaceId, memberId, value, req.membership!.role);
+    return res.redirect(`/admin/workspaces/${workspaceId}?flash=updated`);
   }
 
-  @Post(':id/members/:memberId/delete')
-  async removeMember(@Param() { id, memberId }: MemberParams, @Res() res: Response) {
-    await this.members.remove(id, memberId);
-    return res.redirect(`/admin/workspaces/${id}?flash=deleted`);
+  @Post(':workspaceId/members/:memberId/delete')
+  @Roles(Role.OWNER, Role.ADMIN)
+  async removeMember(
+    @Param() { workspaceId, memberId }: MemberParams,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    await this.members.remove(workspaceId, memberId, req.membership!.role);
+    return res.redirect(`/admin/workspaces/${workspaceId}?flash=deleted`);
+  }
+
+  // ---- invitations ---------------------------------------------------------------------------
+
+  /** Shows the invite link once, on the response itself, so the secret never travels through a URL. */
+  @Post(':workspaceId/invitations')
+  @Roles(Role.OWNER, Role.ADMIN)
+  async invite(
+    @Param() { workspaceId }: WorkspaceParams,
+    @Body() body: Record<string, unknown>,
+    @CurrentUser() user: AuthUser,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const { value, errors, ok } = await parseForm(CreateInvitationDto, body);
+    let extra: Record<string, unknown> = { inviteErrors: errors };
+    let status = 400;
+    if (ok) {
+      try {
+        const invitation = await this.invitations.create(workspaceId, user.id, value);
+        extra = {
+          newInvite: {
+            email: invitation.email,
+            link: `${req.protocol}://${req.get('host')}/admin/invite/${invitation.token}`,
+          },
+        };
+        status = 201;
+      } catch (error) {
+        const formError = toFormMessage(error);
+        if (!formError) throw error;
+        extra = { formError };
+      }
+    }
+    return res
+      .status(status)
+      .render('admin/workspaces/show', await this.showView(workspaceId, req, extra));
+  }
+
+  @Post(':workspaceId/invitations/:invitationId/delete')
+  @Roles(Role.OWNER, Role.ADMIN)
+  async revokeInvitation(
+    @Param() { workspaceId, invitationId }: InvitationParams,
+    @Res() res: Response,
+  ) {
+    await this.invitations.revoke(workspaceId, invitationId);
+    return res.redirect(`/admin/workspaces/${workspaceId}?flash=deleted`);
+  }
+
+  // ---- views ---------------------------------------------------------------------------------
+
+  private async showView(workspaceId: string, req: Request, extra: Record<string, unknown> = {}) {
+    const workspace = await this.prisma.workspace.findUniqueOrThrow({
+      where: { id: workspaceId },
+      include: { _count: { select: { pages: true, tasks: true, tags: true, attachments: true } } },
+    });
+    const role = req.membership?.role;
+    const canManage = role === Role.OWNER || role === Role.ADMIN;
+    const [members, pendingInvitations] = await Promise.all([
+      this.members.list(workspaceId),
+      canManage ? this.invitations.list(workspaceId) : [],
+    ]);
+    return {
+      title: workspace.name,
+      section: 'overview',
+      ws: workspace,
+      counts: workspace._count,
+      canManage,
+      isOwner: role === Role.OWNER,
+      isPlatformAdmin: req.user?.isPlatformAdmin === true,
+      otherPlan: workspace.plan === Plan.PRO ? Plan.FREE : Plan.PRO,
+      members: members.map((m) => ({ ...m, roles: enumOptions(Object.values(Role), m.role) })),
+      newRoles: enumOptions(Object.values(Role), Role.MEMBER),
+      inviteRoles: enumOptions([Role.MEMBER, Role.ADMIN], Role.MEMBER),
+      pendingInvitations,
+      ...extra,
+    };
   }
 
   private formView(view: {
@@ -177,14 +293,12 @@ export class WorkspacesAdminController {
     formError?: string;
     ws?: { id: string; name: string };
   }) {
-    const plan = (view.form?.plan as string | undefined) ?? Plan.FREE;
     return {
       ...view,
       nav: 'workspaces',
       section: 'overview',
       form: view.form ?? {},
       errors: view.errors ?? {},
-      plans: enumOptions(Object.values(Plan), plan),
     };
   }
 }
