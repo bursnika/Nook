@@ -27,7 +27,7 @@
           </ul>
           <a class="nav-link" href="/api/docs">API docs ↗</a>
           {{#if currentUser}}
-            <form class="d-flex align-items-center gap-2 ms-md-3" method="post" action="/admin/logout">
+            <form class="d-flex align-items-center gap-2 ms-md-3" method="post" action="/api/auth/logout?returnTo=/admin/signed-out">
               <span class="small user-email" title="{{currentUser.email}}">{{currentUser.email}}{{#if currentUser.isPlatformAdmin}} <span class="chip chip-high">admin</span>{{/if}}</span>
               <button class="btn btn-sm btn-outline-primary" type="submit">Sign out</button>
             </form>

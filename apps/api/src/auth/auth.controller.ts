@@ -121,12 +121,18 @@ export class AuthController {
     return { accessToken: tokens.accessToken, tokenType: 'Bearer', expiresIn: tokens.expiresIn };
   }
 
+  /**
+   * Revokes the refresh token and clears the cookies. The refresh cookie only travels to /api/auth,
+   * so every sign-out (including the admin's form) has to come through here. With `returnTo` (a
+   * same-site path) a form post gets redirected, otherwise the answer is 204.
+   */
   @Public()
   @Post('logout')
-  @HttpCode(204)
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: Request, @Res() res: Response, @Query('returnTo') returnTo?: string) {
     await this.auth.logout(req.cookies?.[REFRESH_COOKIE]);
     clearSessionCookies(res);
+    if (returnTo) return res.redirect(safeReturnTo(returnTo));
+    return res.status(204).end();
   }
 
   @Get('me')
