@@ -3,6 +3,7 @@ import {
   type ExecutionContext,
   type INestApplication,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { Request } from 'express';
@@ -69,7 +70,7 @@ export class FakeOAuthProvider implements OAuthProvider {
 
   async exchangeCode({ code }: { code: string; codeVerifier: string; redirectUri: string }) {
     const profile = this.profiles.get(code);
-    if (!profile) throw new Error('unknown code');
+    if (!profile) throw new UnauthorizedException('Google rejected the sign-in code');
     return profile;
   }
 }
@@ -94,13 +95,29 @@ export async function createTestApp(options: { auth?: 'bypass' | 'real' } = {}):
   return { app, prisma: app.get(PrismaService), oauth };
 }
 
-/** Empties every table (except Prisma's own bookkeeping) between tests. */
+const FEATURE_FLAGS = [
+  { key: 'insights', description: 'Insights page with productivity statistics' },
+  { key: 'google-two-way-sync', description: 'Two-way Google Calendar synchronisation' },
+  { key: 'ai-assistant', description: 'AI planning assistant' },
+];
+
+/**
+ * Empties every table between tests, except Prisma's bookkeeping. The feature flags are seeded by a
+ * migration, so they are put back to their defaults instead of being deleted.
+ */
 export async function resetDb(prisma: PrismaService) {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
     SELECT tablename FROM pg_tables
-    WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
+    WHERE schemaname = 'public' AND tablename NOT IN ('_prisma_migrations', 'FeatureFlag')`;
   const list = tables.map((t) => `"${t.tablename}"`).join(', ');
   await prisma.$executeRawUnsafe(`TRUNCATE ${list} RESTART IDENTITY CASCADE`);
+  for (const flag of FEATURE_FLAGS) {
+    await prisma.featureFlag.upsert({
+      where: { key: flag.key },
+      update: { enabled: true },
+      create: { ...flag, minPlan: 'PRO', enabled: true },
+    });
+  }
 }
 
 let counter = 0;
