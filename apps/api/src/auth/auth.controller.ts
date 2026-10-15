@@ -37,18 +37,13 @@ class StartQuery {
   returnTo?: string;
 }
 
-class CallbackQuery {
-  @IsOptional()
-  @IsString()
-  code?: string;
-
-  @IsOptional()
-  @IsString()
-  state?: string;
-
-  @IsOptional()
-  @IsString()
-  error?: string;
+function pickStrings<K extends string>(query: Request['query'], keys: K[]) {
+  const result: Partial<Record<K, string>> = {};
+  for (const key of keys) {
+    const value = query[key];
+    if (typeof value === 'string') result[key] = value;
+  }
+  return result;
 }
 
 const base64url = (buffer: Buffer) => buffer.toString('base64url');
@@ -83,11 +78,10 @@ export class AuthController {
   /** Step 2: Google sends the browser back with a code. Verify `state`, exchange the code, open a session. */
   @Public()
   @Get('google/callback')
-  async callback(
-    @Query() { code, state, error }: CallbackQuery,
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
+  async callback(@Req() req: Request, @Res() res: Response) {
+    // Read straight from the request: Google decides which parameters it appends (iss, scope,
+    // authuser, prompt, hd, ...), so the global whitelist validation must not apply here.
+    const { code, state, error } = pickStrings(req.query, ['code', 'state', 'error']);
     const expectedState = req.cookies?.[OAUTH_STATE_COOKIE] as string | undefined;
     const verifier = req.cookies?.[OAUTH_VERIFIER_COOKIE] as string | undefined;
     const returnTo = safeReturnTo(req.cookies?.[OAUTH_RETURN_COOKIE]);

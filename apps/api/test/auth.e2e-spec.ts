@@ -224,6 +224,29 @@ describe('Authentication', () => {
       expect(await ctx.prisma.user.count()).toBe(0);
     });
 
+    it('accepts the extra parameters Google appends to the callback', async () => {
+      const agent = request.agent(app.getHttpServer());
+      const start = await agent.get('/api/auth/google');
+      const state = new URL(start.headers.location).searchParams.get('state') ?? '';
+      ctx.oauth.profiles.set('with-extras', {
+        subject: 'google-extras',
+        email: 'extras@example.com',
+        emailVerified: true,
+        name: 'Extras',
+      });
+      const query = new URLSearchParams({
+        state,
+        code: 'with-extras',
+        scope: 'openid email profile',
+        authuser: '0',
+        prompt: 'consent',
+        iss: 'https://accounts.google.com',
+        hd: 'example.com',
+      });
+      const res = await agent.get(`/api/auth/google/callback?${query}`);
+      expect(res.status).toBe(302);
+    });
+
     it('rejects a callback that did not start here (no cookies), a replay and a cancelled consent', async () => {
       ctx.oauth.profiles.set('c1', {
         subject: 's',
