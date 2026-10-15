@@ -216,36 +216,58 @@ describe('Tenants, roles, invitations and feature flags', () => {
       expect(res.status).toBe(expected);
     });
 
-    it('stops an admin from touching owners or minting new ones', async () => {
+    it('lets only owners hand out roles', async () => {
       const members = await ctx.prisma.membership.findMany({ where: { workspaceId: wsA.id } });
       const idOf = (u: User) => members.find((m) => m.userId === u.id)!.id;
-      await as(tok.admin)
-        .patch(`${A()}/members/${idOf(owner)}`, { role: 'MEMBER' })
-        .expect(403);
-      await as(tok.admin)
-        .delete(`${A()}/members/${idOf(owner)}`)
-        .expect(403);
-      await as(tok.admin)
-        .patch(`${A()}/members/${idOf(member)}`, { role: 'OWNER' })
-        .expect(403);
-      await as(tok.admin)
-        .patch(`${A()}/members/${idOf(member)}`, { role: 'ADMIN' })
-        .expect(200);
+      const roleOf = async (u: User) =>
+        (await ctx.prisma.membership.findUniqueOrThrow({ where: { id: idOf(u) } })).role;
+
+      for (const who of ['member', 'admin'] as const) {
+        await as(tok[who])
+          .patch(`${A()}/members/${idOf(member)}`, { role: 'ADMIN' })
+          .expect(403);
+        await as(tok[who])
+          .patch(`${A()}/members/${idOf(owner)}`, { role: 'MEMBER' })
+          .expect(403);
+      }
+      expect(await roleOf(member)).toBe('MEMBER');
+      expect(await roleOf(owner)).toBe('OWNER');
 
       await as(tok.owner)
-        .patch(`${A()}/members/${idOf(member)}`, { role: 'OWNER' })
+        .patch(`${A()}/members/${idOf(member)}`, { role: 'ADMIN' })
         .expect(200);
-      expect(
-        (await ctx.prisma.membership.findUniqueOrThrow({ where: { id: idOf(member) } })).role,
-      ).toBe('OWNER');
+      expect(await roleOf(member)).toBe('ADMIN');
+    });
+
+    it('never lets anyone change their own role', async () => {
+      const mine = await ctx.prisma.membership.findFirstOrThrow({
+        where: { workspaceId: wsA.id, userId: admin.id },
+      });
+      await as(tok.admin).patch(`${A()}/members/${mine.id}`, { role: 'OWNER' }).expect(403);
+      const ownerMembership = await ctx.prisma.membership.findFirstOrThrow({
+        where: { workspaceId: wsA.id, userId: owner.id },
+      });
+      await as(tok.owner)
+        .patch(`${A()}/members/${ownerMembership.id}`, { role: 'MEMBER' })
+        .expect(403);
+      expect((await ctx.prisma.membership.findUniqueOrThrow({ where: { id: mine.id } })).role).toBe(
+        'ADMIN',
+      );
+    });
+
+    it('stops an admin from removing owners', async () => {
+      const ownerMembership = await ctx.prisma.membership.findFirstOrThrow({
+        where: { workspaceId: wsA.id, userId: owner.id },
+      });
+      await as(tok.admin).delete(`${A()}/members/${ownerMembership.id}`).expect(403);
     });
 
     it('never lets a workspace lose its last owner', async () => {
       const mine = await ctx.prisma.membership.findFirstOrThrow({
         where: { workspaceId: wsA.id, userId: owner.id },
       });
-      await as(tok.owner).patch(`${A()}/members/${mine.id}`, { role: 'MEMBER' }).expect(409);
       await as(tok.owner).delete(`${A()}/members/${mine.id}`).expect(409);
+      await as(tok.platform).patch(`${A()}/members/${mine.id}`, { role: 'MEMBER' }).expect(409);
     });
 
     it('reserves the user list and adding arbitrary users to platform admins', async () => {
@@ -269,6 +291,13 @@ describe('Tenants, roles, invitations and feature flags', () => {
       expect(JSON.stringify(stored)).not.toContain(res.body.token);
       const listed = await as(tok.owner).get(`${A()}/invitations`).expect(200);
       expect(JSON.stringify(listed.body)).not.toContain(res.body.token);
+    });
+
+    it('lets admins invite members but not other admins', async () => {
+      await invite('a@example.com', tok.admin, 'ADMIN').expect(403);
+      await invite('a@example.com', tok.admin, 'MEMBER').expect(201);
+      await invite('b@example.com', tok.admin).expect(201);
+      await invite('c@example.com', tok.owner, 'ADMIN').expect(201);
     });
 
     it('validates the invitation request', async () => {
@@ -479,6 +508,24 @@ describe('Tenants, roles, invitations and feature flags', () => {
       expect(asOwner.text).toContain('Create invitation');
       expect(asOwner.text).toContain('Switch to PRO');
       expect(asOwner.text).not.toContain('Add any user'); // support tool for platform admins
+    });
+
+    it('offers the role selector only to owners, and never on their own row', async () => {
+      const selectors = (html: string) =>
+        (html.match(/name="role" aria-label="Role"/g) ?? []).length;
+      const asOwner = await page(tok.owner, `/admin/workspaces/${wsA.id}`).expect(200);
+      expect(selectors(asOwner.text)).toBe(2); // admin and member, not the owner's own row
+      expect(asOwner.text).toContain('(you)');
+      const asAdmin = await page(tok.admin, `/admin/workspaces/${wsA.id}`).expect(200);
+      expect(selectors(asAdmin.text)).toBe(0);
+      await http()
+        .post(
+          `/admin/workspaces/${wsA.id}/members/${(await ctx.prisma.membership.findFirstOrThrow({ where: { userId: member.id } })).id}`,
+        )
+        .set('Authorization', tok.admin)
+        .type('form')
+        .send({ role: 'ADMIN' })
+        .expect(403);
     });
 
     it('switches the plan through the form, for owners only', async () => {

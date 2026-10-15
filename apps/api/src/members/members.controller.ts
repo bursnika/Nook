@@ -25,13 +25,16 @@ export class MembersController {
   }
 
   @Patch(':id')
-  @Roles(Role.OWNER, Role.ADMIN)
+  @Roles(Role.OWNER)
   updateRole(
     @Param() { workspaceId, id }: WorkspaceItemParams,
     @Body() dto: UpdateMemberDto,
     @Req() req: Request,
   ) {
-    return this.members.updateRole(workspaceId, id, dto, req.membership!.role);
+    return this.members.updateRole(workspaceId, id, dto, {
+      userId: req.user!.id,
+      role: req.membership!.role,
+    });
   }
 
   @Delete(':id')

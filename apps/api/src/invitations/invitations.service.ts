@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import type { AuthUser } from '../auth/auth.types.js';
+import { Role } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateInvitationDto } from './invitation.dto.js';
 
@@ -18,7 +19,16 @@ export class InvitationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Creates an invitation and returns its secret token once. Only the hash is stored. */
-  async create(workspaceId: string, invitedById: string, dto: CreateInvitationDto) {
+  async create(
+    workspaceId: string,
+    invitedById: string,
+    dto: CreateInvitationDto,
+    actorRole: Role,
+  ) {
+    // An admin can bring people in, but only an owner decides who gets more than the basic role.
+    if ((dto.role ?? Role.MEMBER) !== Role.MEMBER && actorRole !== Role.OWNER) {
+      throw new ForbiddenException('Only an owner can invite someone as an admin');
+    }
     const email = dto.email.toLowerCase();
     const alreadyMember = await this.prisma.membership.findFirst({
       where: { workspaceId, user: { email } },

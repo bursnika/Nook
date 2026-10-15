@@ -23,10 +23,17 @@ export class MembersService {
     });
   }
 
-  async updateRole(workspaceId: string, id: string, dto: UpdateMemberDto, actorRole: Role) {
+  /** Roles are handed out by owners only, and never to oneself. */
+  async updateRole(
+    workspaceId: string,
+    id: string,
+    dto: UpdateMemberDto,
+    actor: { userId: string; role: Role },
+  ) {
+    if (actor.role !== Role.OWNER) throw new ForbiddenException('Only an owner can change roles');
     const member = await this.prisma.membership.findFirstOrThrow({ where: { id, workspaceId } });
-    if ((member.role === Role.OWNER || dto.role === Role.OWNER) && actorRole !== Role.OWNER) {
-      throw new ForbiddenException('Only an owner can change owners');
+    if (member.userId === actor.userId) {
+      throw new ForbiddenException('You cannot change your own role');
     }
     if (member.role === Role.OWNER && dto.role !== Role.OWNER) {
       await this.assertAnotherOwnerExists(workspaceId, id);

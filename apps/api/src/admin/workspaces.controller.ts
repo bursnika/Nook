@@ -186,7 +186,7 @@ export class WorkspacesAdminController {
   }
 
   @Post(':workspaceId/members/:memberId')
-  @Roles(Role.OWNER, Role.ADMIN)
+  @Roles(Role.OWNER)
   async changeRole(
     @Param() { workspaceId, memberId }: MemberParams,
     @Body() body: Record<string, unknown>,
@@ -194,7 +194,12 @@ export class WorkspacesAdminController {
     @Res() res: Response,
   ) {
     const { value, ok } = await parseForm(RoleForm, body);
-    if (ok) await this.members.updateRole(workspaceId, memberId, value, req.membership!.role);
+    if (ok) {
+      await this.members.updateRole(workspaceId, memberId, value, {
+        userId: req.user!.id,
+        role: req.membership!.role,
+      });
+    }
     return res.redirect(`/admin/workspaces/${workspaceId}?flash=updated`);
   }
 
@@ -226,7 +231,12 @@ export class WorkspacesAdminController {
     let status = 400;
     if (ok) {
       try {
-        const invitation = await this.invitations.create(workspaceId, user.id, value);
+        const invitation = await this.invitations.create(
+          workspaceId,
+          user.id,
+          value,
+          req.membership!.role,
+        );
         extra = {
           newInvite: {
             email: invitation.email,
@@ -277,9 +287,18 @@ export class WorkspacesAdminController {
       isOwner: role === Role.OWNER,
       isPlatformAdmin: req.user?.isPlatformAdmin === true,
       otherPlan: workspace.plan === Plan.PRO ? Plan.FREE : Plan.PRO,
-      members: members.map((m) => ({ ...m, roles: enumOptions(Object.values(Role), m.role) })),
+      members: members.map((m) => ({
+        ...m,
+        roles: enumOptions(Object.values(Role), m.role),
+        isSelf: m.userId === req.user?.id,
+        // roles are handed out by owners only, and never to oneself
+        canChangeRole: role === Role.OWNER && m.userId !== req.user?.id,
+      })),
       newRoles: enumOptions(Object.values(Role), Role.MEMBER),
-      inviteRoles: enumOptions([Role.MEMBER, Role.ADMIN], Role.MEMBER),
+      inviteRoles: enumOptions(
+        role === Role.OWNER ? [Role.MEMBER, Role.ADMIN] : [Role.MEMBER],
+        Role.MEMBER,
+      ),
       pendingInvitations,
       ...extra,
     };

@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import type { Request } from 'express';
 import type { AuthUser } from '../auth/auth.types.js';
 import { CurrentUser, Roles } from '../auth/decorators.js';
 import { WorkspaceItemParams, WorkspaceParams } from '../common/params.js';
@@ -24,8 +25,9 @@ export class InvitationsController {
     @Param() { workspaceId }: WorkspaceParams,
     @Body() dto: CreateInvitationDto,
     @CurrentUser() user: AuthUser,
+    @Req() req: Request,
   ) {
-    return this.invitations.create(workspaceId, user.id, dto);
+    return this.invitations.create(workspaceId, user.id, dto, req.membership!.role);
   }
 
   @Delete('workspaces/:workspaceId/invitations/:id')

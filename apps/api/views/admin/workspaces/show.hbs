@@ -51,7 +51,7 @@
         <tr>
           <td>{{user.name}}<br><small class="text-muted">{{user.email}}</small></td>
           <td>
-            {{#if ../canManage}}
+            {{#if canChangeRole}}
               <form class="d-flex gap-2" method="post" action="/admin/workspaces/{{../ws.id}}/members/{{id}}">
                 <select class="form-select form-select-sm" name="role" aria-label="Role">
                   {{#each roles}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
@@ -59,7 +59,7 @@
                 <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
               </form>
             {{else}}
-              <span class="chip chip-todo">{{nice role}}</span>
+              <span class="chip chip-todo">{{nice role}}</span>{{#if isSelf}} <small class="text-muted">(you)</small>{{/if}}
             {{/if}}
           </td>
           <td class="text-end">
