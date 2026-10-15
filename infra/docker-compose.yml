@@ -41,6 +41,15 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://nook:nook@postgres:5432/nook?schema=public
+      # Required: copy infra/.env.example to infra/.env and fill it in (docker compose reads it automatically)
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in infra/.env (see infra/.env.example)}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      # Google sign-in stays disabled until both are set
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:3000/api/auth/google/callback}
+      # Plain http on localhost; set to true once the stack is served over HTTPS
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     ports:
       - '3000:3000'
     volumes:
