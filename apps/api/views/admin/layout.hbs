@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{title}} · Nook admin</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23b8326f' d='M2 4h3v1h1v1h1V5h1V4h3v1h1v3h-1v1h-1v1h-1v1H9v1H8v1H7v-1H6v-1H5v-1H4V9H3V8H2z'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -45,6 +46,7 @@
             <li class="nav-item"><a class="nav-link{{#if (eq section 'pages')}} active{{/if}}" href="/admin/workspaces/{{ws.id}}/pages">Pages</a></li>
             <li class="nav-item"><a class="nav-link{{#if (eq section 'tasks')}} active{{/if}}" href="/admin/workspaces/{{ws.id}}/tasks">Tasks</a></li>
             <li class="nav-item"><a class="nav-link{{#if (eq section 'attachments')}} active{{/if}}" href="/admin/workspaces/{{ws.id}}/attachments">Attachments</a></li>
+            <li class="nav-item"><a class="nav-link{{#if (eq section 'team')}} active{{/if}}" href="/admin/workspaces/{{ws.id}}/team">Team</a></li>
           </ul>
         </div>
       </div>

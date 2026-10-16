@@ -1,0 +1,19 @@
+{{#if tasks.length}}
+  <ul class="task-list list-unstyled mb-0">
+    {{#each tasks}}
+      <li class="task-row{{#if isOverdue}} is-overdue{{/if}}">
+        <a class="task-title" href="/admin/workspaces/{{../wsId}}/tasks/{{id}}">{{title}}</a>
+        <span class="task-meta">
+          <span class="chip chip-{{lower priority}}">{{nice priority}}</span>
+          {{#if dueDate}}
+            <time class="local-time{{#if isOverdue}} text-danger fw-bold{{/if}}" datetime="{{iso dueDate}}">{{datetime dueDate}} UTC</time>{{#if isOverdue}} <span class="chip chip-high">overdue</span>{{/if}}
+          {{else}}
+            <span class="text-muted">no due date</span>
+          {{/if}}
+        </span>
+      </li>
+    {{/each}}
+  </ul>
+{{else}}
+  <p class="text-muted mb-0">{{empty}}</p>
+{{/if}}

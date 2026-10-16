@@ -152,7 +152,7 @@ describe('Admin (MVC) pages', () => {
         .expect(302);
       const added = await ctx.prisma.membership.findFirstOrThrow({ where: { userId: other.id } });
       expect(added.role).toBe('ADMIN');
-      expect((await http().get(base).expect(200)).text).toContain('new@example.com');
+      expect((await http().get(`${base}/team`).expect(200)).text).toContain('new@example.com');
 
       await http()
         .post(`${base}/members/${added.id}`)

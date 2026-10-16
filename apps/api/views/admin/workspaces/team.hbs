@@ -1,7 +1,7 @@
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
   <div>
-    <h1 class="mb-1">{{ws.name}}</h1>
-    <span class="text-muted">{{ws.slug}}</span> · <span class="chip chip-{{lower ws.plan}}">{{ws.plan}}</span>
+    <h1 class="mb-1">Team &amp; plan</h1>
+    <span class="text-muted">{{ws.name}} · {{ws.slug}}</span> · <span class="chip chip-{{lower ws.plan}}">{{ws.plan}}</span>
   </div>
   <div class="d-flex gap-2">
     {{#if canManage}}<a class="btn btn-outline-primary" href="/admin/workspaces/{{ws.id}}/edit">Edit</a>{{/if}}
@@ -11,12 +11,6 @@
       </form>
     {{/if}}
   </div>
-</div>
-
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3"><a class="text-decoration-none" href="/admin/workspaces/{{ws.id}}/pages"><div class="card p-3"><div class="stat">{{counts.pages}}</div><div class="text-muted">Pages</div></div></a></div>
-  <div class="col-6 col-md-3"><a class="text-decoration-none" href="/admin/workspaces/{{ws.id}}/tasks"><div class="card p-3"><div class="stat">{{counts.tasks}}</div><div class="text-muted">Tasks</div></div></a></div>
-  <div class="col-6 col-md-3"><a class="text-decoration-none" href="/admin/workspaces/{{ws.id}}/attachments"><div class="card p-3"><div class="stat">{{counts.attachments}}</div><div class="text-muted">Attachments</div></div></a></div>
 </div>
 
 <div class="card p-3 mb-4">

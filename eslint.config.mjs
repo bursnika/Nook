@@ -12,7 +12,7 @@ export default tseslint.config(
     files: ['apps/api/public/**/*.js'],
     languageOptions: {
       sourceType: 'script',
-      globals: { window: 'readonly', document: 'readonly' },
+      globals: { window: 'readonly', document: 'readonly', fetch: 'readonly' },
     },
   },
 );

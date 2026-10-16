@@ -499,10 +499,10 @@ describe('Tenants, roles, invitations and feature flags', () => {
         .set('Authorization', tok.admin)
         .expect(403);
 
-      const asMember = await page(tok.member, `/admin/workspaces/${wsA.id}`).expect(200);
+      const asMember = await page(tok.member, `/admin/workspaces/${wsA.id}/team`).expect(200);
       expect(asMember.text).not.toContain('Create invitation');
       expect(asMember.text).not.toContain('Switch to');
-      const asOwner = await page(tok.owner, `/admin/workspaces/${wsA.id}`).expect(200);
+      const asOwner = await page(tok.owner, `/admin/workspaces/${wsA.id}/team`).expect(200);
       expect(asOwner.text).toContain('Create invitation');
       expect(asOwner.text).toContain('Switch to PRO');
       expect(asOwner.text).not.toContain('Add any user'); // support tool for platform admins
@@ -511,10 +511,10 @@ describe('Tenants, roles, invitations and feature flags', () => {
     it('offers the role selector only to owners, and never on their own row', async () => {
       const selectors = (html: string) =>
         (html.match(/name="role" aria-label="Role"/g) ?? []).length;
-      const asOwner = await page(tok.owner, `/admin/workspaces/${wsA.id}`).expect(200);
+      const asOwner = await page(tok.owner, `/admin/workspaces/${wsA.id}/team`).expect(200);
       expect(selectors(asOwner.text)).toBe(2); // admin and member, not the owner's own row
       expect(asOwner.text).toContain('(you)');
-      const asAdmin = await page(tok.admin, `/admin/workspaces/${wsA.id}`).expect(200);
+      const asAdmin = await page(tok.admin, `/admin/workspaces/${wsA.id}/team`).expect(200);
       expect(selectors(asAdmin.text)).toBe(0);
       await http()
         .post(
@@ -573,9 +573,9 @@ describe('Tenants, roles, invitations and feature flags', () => {
 
       // the link is not repeated anywhere else, and not in a redirect URL
       expect(created.headers.location).toBeUndefined();
-      expect((await page(tok.owner, `/admin/workspaces/${wsA.id}`).expect(200)).text).not.toContain(
-        token,
-      );
+      expect(
+        (await page(tok.owner, `/admin/workspaces/${wsA.id}/team`).expect(200)).text,
+      ).not.toContain(token);
 
       const friendTok = await bearer(app, friend);
       const landing = await page(friendTok, `/admin/invite/${token}`).expect(200);

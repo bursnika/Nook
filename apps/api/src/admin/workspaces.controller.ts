@@ -9,7 +9,7 @@ import { CreateInvitationDto } from '../invitations/invitation.dto.js';
 import { InvitationsService } from '../invitations/invitations.service.js';
 import { AddMemberDto, UpdateMemberDto } from '../members/member.dto.js';
 import { MembersService } from '../members/members.service.js';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { OverviewService } from '../overview/overview.service.js';
 import { CreateWorkspaceDto, UpdateWorkspaceDto } from '../workspaces/workspace.dto.js';
 import { WorkspacesService } from '../workspaces/workspaces.service.js';
 import { AdminController } from './admin-controller.decorator.js';
@@ -42,7 +42,7 @@ export class WorkspacesAdminController {
     private readonly workspaces: WorkspacesService,
     private readonly members: MembersService,
     private readonly invitations: InvitationsService,
-    private readonly prisma: PrismaService,
+    private readonly overview: OverviewService,
   ) {}
 
   @Get()
@@ -96,12 +96,19 @@ export class WorkspacesAdminController {
 
   @Get(':workspaceId')
   @Render('admin/workspaces/show')
-  async show(
+  async show(@Param() { workspaceId }: WorkspaceParams, @Query() { flash }: AdminListQuery) {
+    return this.homeView(workspaceId, { flash: flashMessage(flash) });
+  }
+
+  /** Members, invitations and the plan: the part of a workspace people rarely need. */
+  @Get(':workspaceId/team')
+  @Render('admin/workspaces/team')
+  async team(
     @Param() { workspaceId }: WorkspaceParams,
     @Query() { flash }: AdminListQuery,
     @Req() req: Request,
   ) {
-    return this.showView(workspaceId, req, { flash: flashMessage(flash) });
+    return this.teamView(workspaceId, req, { flash: flashMessage(flash) });
   }
 
   @Get(':workspaceId/edit')
@@ -160,7 +167,7 @@ export class WorkspacesAdminController {
   ) {
     const { value, ok } = await parseForm(PlanForm, body);
     if (ok) await this.workspaces.setPlan(workspaceId, value.plan);
-    return res.redirect(`/admin/workspaces/${workspaceId}?flash=updated`);
+    return res.redirect(`/admin/workspaces/${workspaceId}/team?flash=updated`);
   }
 
   // ---- members -------------------------------------------------------------------------------
@@ -182,7 +189,7 @@ export class WorkspacesAdminController {
       });
     }
     await this.members.add(workspaceId, value);
-    return res.redirect(`/admin/workspaces/${workspaceId}?flash=created`);
+    return res.redirect(`/admin/workspaces/${workspaceId}/team?flash=created`);
   }
 
   @Post(':workspaceId/members/:memberId')
@@ -200,7 +207,7 @@ export class WorkspacesAdminController {
         role: req.membership!.role,
       });
     }
-    return res.redirect(`/admin/workspaces/${workspaceId}?flash=updated`);
+    return res.redirect(`/admin/workspaces/${workspaceId}/team?flash=updated`);
   }
 
   @Post(':workspaceId/members/:memberId/delete')
@@ -211,7 +218,7 @@ export class WorkspacesAdminController {
     @Res() res: Response,
   ) {
     await this.members.remove(workspaceId, memberId, req.membership!.role);
-    return res.redirect(`/admin/workspaces/${workspaceId}?flash=deleted`);
+    return res.redirect(`/admin/workspaces/${workspaceId}/team?flash=deleted`);
   }
 
   // ---- invitations ---------------------------------------------------------------------------
@@ -252,7 +259,7 @@ export class WorkspacesAdminController {
     }
     return res
       .status(status)
-      .render('admin/workspaces/show', await this.showView(workspaceId, req, extra));
+      .render('admin/workspaces/team', await this.teamView(workspaceId, req, extra));
   }
 
   @Post(':workspaceId/invitations/:invitationId/delete')
@@ -262,16 +269,21 @@ export class WorkspacesAdminController {
     @Res() res: Response,
   ) {
     await this.invitations.revoke(workspaceId, invitationId);
-    return res.redirect(`/admin/workspaces/${workspaceId}?flash=deleted`);
+    return res.redirect(`/admin/workspaces/${workspaceId}/team?flash=deleted`);
   }
 
   // ---- views ---------------------------------------------------------------------------------
 
-  private async showView(workspaceId: string, req: Request, extra: Record<string, unknown> = {}) {
-    const workspace = await this.prisma.workspace.findUniqueOrThrow({
-      where: { id: workspaceId },
-      include: { _count: { select: { pages: true, tasks: true, attachments: true } } },
-    });
+  private async homeView(workspaceId: string, extra: Record<string, unknown> = {}) {
+    const [ws, summary] = await Promise.all([
+      this.workspaces.get(workspaceId),
+      this.overview.summary(workspaceId),
+    ]);
+    return { title: ws.name, section: 'overview', ws, summary, ...extra };
+  }
+
+  private async teamView(workspaceId: string, req: Request, extra: Record<string, unknown> = {}) {
+    const workspace = await this.workspaces.get(workspaceId);
     const role = req.membership?.role;
     const canManage = role === Role.OWNER || role === Role.ADMIN;
     const [members, pendingInvitations] = await Promise.all([
@@ -279,10 +291,9 @@ export class WorkspacesAdminController {
       canManage ? this.invitations.list(workspaceId) : [],
     ]);
     return {
-      title: workspace.name,
-      section: 'overview',
+      title: `Team · ${workspace.name}`,
+      section: 'team',
       ws: workspace,
-      counts: workspace._count,
       canManage,
       isOwner: role === Role.OWNER,
       isPlatformAdmin: req.user?.isPlatformAdmin === true,

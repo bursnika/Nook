@@ -1,0 +1,9 @@
+<form method="post" action="/admin/workspaces/{{wsId}}/notes">
+  <div class="mb-2">
+    <input class="form-control" type="text" name="title" maxlength="200" placeholder="Title (optional)" aria-label="Note title">
+  </div>
+  <div class="mb-2">
+    <textarea class="form-control" name="text" rows="{{#if rows}}{{rows}}{{else}}4{{/if}}" maxlength="20000" required placeholder="Jot something down. Every line becomes a block of the note." aria-label="Note text"></textarea>
+  </div>
+  <button class="btn btn-primary" type="submit">Save note</button>
+</form>

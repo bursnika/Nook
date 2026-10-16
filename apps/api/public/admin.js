@@ -43,4 +43,12 @@
   $(document).on('submit', 'form[data-confirm]', function (event) {
     if (!window.confirm($(this).data('confirm'))) event.preventDefault();
   });
+
+  // <time class="local-time" datetime="ISO"> is rendered in UTC by the server and shown in the viewer's time zone.
+  $('time.local-time').each(function () {
+    var date = new Date(this.getAttribute('datetime'));
+    if (!isNaN(date.getTime())) {
+      this.textContent = date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    }
+  });
 })(window.jQuery);

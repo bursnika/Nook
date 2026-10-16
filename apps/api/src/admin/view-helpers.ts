@@ -7,6 +7,9 @@ const isoDate = (value: unknown) =>
 export function registerViewHelpers(engine: typeof hbs) {
   engine.registerHelper('eq', (a: unknown, b: unknown) => a === b);
   engine.registerHelper('date', isoDate);
+  engine.registerHelper('iso', (value: unknown) =>
+    value ? new Date(value as string).toISOString() : '',
+  );
   engine.registerHelper('datetime', (value: unknown) =>
     value ? new Date(value as string).toISOString().replace('T', ' ').slice(0, 16) : '',
   );

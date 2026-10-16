@@ -37,6 +37,11 @@
         </tbody>
       </table>
     </div>
+    <form class="mb-4" method="post" action="/admin/workspaces/{{ws.id}}/pages/{{page.id}}/blocks">
+      <label class="form-label fw-bold" for="append-text">Add to this note</label>
+      <textarea class="form-control mb-2" id="append-text" name="text" rows="3" maxlength="20000" required placeholder="Every line becomes a block."></textarea>
+      <button class="btn btn-primary" type="submit">Add</button>
+    </form>
     <h2 class="h5">Attachments ({{page.attachments.length}})</h2>
     <ul>
       {{#each page.attachments}}
