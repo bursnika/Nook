@@ -75,7 +75,7 @@ export class TasksAdminController {
       action: `/admin/workspaces/${workspaceId}/tasks`,
       form: body,
     };
-    const { value, errors, ok } = await parseForm(CreateTaskDto, body, { arrays: ['tagIds'] });
+    const { value, errors, ok } = await parseForm(CreateTaskDto, body);
     if (!ok)
       return res
         .status(400)
@@ -120,10 +120,7 @@ export class TasksAdminController {
   @Get(':id/edit')
   async editForm(@Param() { workspaceId, id }: WorkspaceItemParams, @Res() res: Response) {
     const task = await this.tasks.get(workspaceId, id);
-    const form = { ...task, tagIds: task.tags.map((t) => t.id) } as unknown as Record<
-      string,
-      unknown
-    >;
+    const form = task as unknown as Record<string, unknown>;
     return res.render(
       'admin/tasks/form',
       await this.formView(workspaceId, {
@@ -147,7 +144,6 @@ export class TasksAdminController {
       form: body,
     };
     const { value, errors, ok } = await parseForm(UpdateTaskDto, body, {
-      arrays: ['tagIds'],
       nullable: ['description', 'dueDate', 'pageId', 'assigneeId'],
     });
     if (!ok)
@@ -183,11 +179,10 @@ export class TasksAdminController {
     },
   ) {
     const form = view.form ?? {};
-    const [ws, assignees, pages, tags] = await Promise.all([
+    const [ws, assignees, pages] = await Promise.all([
       this.workspaces.get(workspaceId),
       this.lookup.userOption(form.assigneeId),
       this.lookup.pageOption(workspaceId, form.pageId),
-      this.lookup.tagOptions(workspaceId, form.tagIds),
     ]);
     return {
       ...view,
@@ -203,7 +198,6 @@ export class TasksAdminController {
       dueDate: form.dueDate ? new Date(form.dueDate as string).toISOString().slice(0, 10) : '',
       assignees,
       pages,
-      tags,
     };
   }
 }

@@ -9,7 +9,6 @@
   {{> field-text name="dueDate" type="date" label="Due date" value=dueDate error=errors.dueDate}}
   {{> field-ajax name="assigneeId" label="Assignee" src=(concat "/admin/workspaces/" ws.id "/lookup/members") minLength=1 placeholder="Unassigned" selected=assignees error=errors.assigneeId hint="Members of this workspace."}}
   {{> field-ajax name="pageId" label="Linked page" src=(concat "/admin/workspaces/" ws.id "/lookup/pages") minLength=1 placeholder="No page" selected=pages error=errors.pageId}}
-  {{> field-ajax name="tagIds" label="Tags" multiple=true src=(concat "/admin/workspaces/" ws.id "/lookup/tags") minLength=1 placeholder="Add tags…" selected=tags error=errors.tagIds}}
   <div class="d-flex gap-2">
     <button class="btn btn-primary" type="submit">Save</button>
     <a class="btn btn-link" href="/admin/workspaces/{{ws.id}}/tasks">Cancel</a>

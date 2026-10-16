@@ -38,9 +38,4 @@ export class LookupController {
   pages(@Param() { workspaceId }: WorkspaceParams, @Query() { q, page }: LookupQuery) {
     return this.lookup.pages(workspaceId, q.trim(), page);
   }
-
-  @Get('workspaces/:workspaceId/lookup/tags')
-  tags(@Param() { workspaceId }: WorkspaceParams, @Query() { q, page }: LookupQuery) {
-    return this.lookup.tags(workspaceId, q.trim(), page);
-  }
 }

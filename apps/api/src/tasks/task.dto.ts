@@ -1,9 +1,6 @@
 import { PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  ArrayMaxSize,
-  ArrayUnique,
-  IsArray,
   IsDate,
   IsEnum,
   IsNumber,
@@ -48,13 +45,6 @@ export class CreateTaskDto {
   @IsUUID()
   assigneeId?: string;
 
-  @IsOptional()
-  @IsArray()
-  @ArrayUnique()
-  @ArrayMaxSize(20)
-  @IsUUID('all', { each: true })
-  tagIds?: string[];
-
   /** Order inside the Kanban column. Omit to put the task at the end of its column. */
   @IsOptional()
   @IsNumber()
@@ -84,10 +74,6 @@ export class ListTasksQuery extends PaginationQuery {
   @IsOptional()
   @IsUUID()
   pageId?: string;
-
-  @IsOptional()
-  @IsUUID()
-  tagId?: string;
 
   @IsOptional()
   @Type(() => Date)

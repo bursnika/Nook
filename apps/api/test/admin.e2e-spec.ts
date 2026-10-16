@@ -53,8 +53,6 @@ describe('Admin (MVC) pages', () => {
         '/pages/new',
         '/tasks',
         '/tasks/new',
-        '/tags',
-        '/tags/new',
         '/attachments',
         '/attachments/new',
       ]) {
@@ -257,12 +255,10 @@ describe('Admin (MVC) pages', () => {
     });
   });
 
-  describe('tasks, tags and attachments', () => {
-    it('creates a task with tags, an assignee and a due date, then clears them', async () => {
+  describe('tasks and attachments', () => {
+    it('creates a task with an assignee and a due date, then clears them', async () => {
       const { user, workspace } = await seedWorkspace(ctx.prisma);
       const base = `/admin/workspaces/${workspace.id}`;
-      const t1 = await ctx.prisma.tag.create({ data: { workspaceId: workspace.id, name: 'one' } });
-      const t2 = await ctx.prisma.tag.create({ data: { workspaceId: workspace.id, name: 'two' } });
 
       const created = await http()
         .post(`${base}/tasks`)
@@ -273,14 +269,10 @@ describe('Admin (MVC) pages', () => {
           priority: 'HIGH',
           dueDate: '2026-11-20',
           assigneeId: user.id,
-          tagIds: [t1.id, t2.id],
         })
         .expect(302);
       const id = idFrom(created.headers.location);
-      const task = await ctx.prisma.task.findUniqueOrThrow({
-        where: { id },
-        include: { tags: true },
-      });
+      const task = await ctx.prisma.task.findUniqueOrThrow({ where: { id } });
       expect(task).toMatchObject({
         title: 'Lab',
         status: 'IN_PROGRESS',
@@ -288,7 +280,6 @@ describe('Admin (MVC) pages', () => {
         assigneeId: user.id,
       });
       expect(task.dueDate?.toISOString().slice(0, 10)).toBe('2026-11-20');
-      expect(task.tags).toHaveLength(2);
 
       const edit = await http().get(`${base}/tasks/${id}/edit`).expect(200);
       expect(edit.text).toContain('<option value="IN_PROGRESS" selected>');
@@ -299,13 +290,9 @@ describe('Admin (MVC) pages', () => {
         .type('form')
         .send({ title: 'Lab', status: 'DONE', priority: 'HIGH', dueDate: '', assigneeId: '' })
         .expect(302);
-      const cleared = await ctx.prisma.task.findUniqueOrThrow({
-        where: { id },
-        include: { tags: true },
-      });
+      const cleared = await ctx.prisma.task.findUniqueOrThrow({ where: { id } });
       expect(cleared).toMatchObject({ status: 'DONE', assigneeId: null, dueDate: null });
       expect(cleared.completedAt).not.toBeNull();
-      expect(cleared.tags).toHaveLength(0);
     });
 
     it('filters the task list by status and rejects foreign references', async () => {
@@ -330,23 +317,6 @@ describe('Admin (MVC) pages', () => {
         .send({ title: 'x', assigneeId: b.user.id })
         .expect(400);
       expect(bad.text).toContain('must be a member');
-    });
-
-    it('manages tags and reports duplicates on the form', async () => {
-      const { workspace } = await seedWorkspace(ctx.prisma);
-      const base = `/admin/workspaces/${workspace.id}/tags`;
-      await http().post(base).type('form').send({ name: 'uni', color: '#9d7bc9' }).expect(302);
-      const dup = await http().post(base).type('form').send({ name: 'uni' }).expect(400);
-      expect(dup.text).toContain('already exists');
-      await http().post(base).type('form').send({ name: 'x', color: 'pink' }).expect(400);
-
-      const tag = await ctx.prisma.tag.findFirstOrThrow();
-      await http().post(`${base}/${tag.id}`).type('form').send({ name: 'university' }).expect(302);
-      expect((await ctx.prisma.tag.findUniqueOrThrow({ where: { id: tag.id } })).name).toBe(
-        'university',
-      );
-      await http().post(`${base}/${tag.id}/delete`).expect(302);
-      expect(await ctx.prisma.tag.count()).toBe(0);
     });
 
     it('uploads, renames and deletes an attachment together with its file', async () => {
@@ -398,7 +368,7 @@ describe('Admin (MVC) pages', () => {
       expect(byEmail.body.results).toHaveLength(1);
     });
 
-    it('scopes members, pages and tags lookups to the workspace', async () => {
+    it('scopes members and pages lookups to the workspace', async () => {
       const a = await seedWorkspace(ctx.prisma, 'alpha');
       const b = await seedWorkspace(ctx.prisma, 'beta');
       await ctx.prisma.page.create({
@@ -407,17 +377,13 @@ describe('Admin (MVC) pages', () => {
       await ctx.prisma.page.create({
         data: { title: 'Beta plan', workspaceId: b.workspace.id, authorId: b.user.id },
       });
-      await ctx.prisma.tag.create({ data: { workspaceId: a.workspace.id, name: 'alpha-tag' } });
-      await ctx.prisma.tag.create({ data: { workspaceId: b.workspace.id, name: 'beta-tag' } });
 
       const base = `/admin/workspaces/${a.workspace.id}/lookup`;
       const members = await http().get(`${base}/members`).expect(200);
       expect(members.body.results.map((r: { id: string }) => r.id)).toEqual([a.user.id]);
       const pages = await http().get(`${base}/pages?q=plan`).expect(200);
       expect(pages.body.results.map((r: { text: string }) => r.text)).toEqual(['Alpha plan']);
-      const tags = await http().get(`${base}/tags`).expect(200);
-      expect(tags.body.results.map((r: { text: string }) => r.text)).toEqual(['alpha-tag']);
-      await http().get(`/admin/workspaces/not-a-uuid/lookup/tags`).expect(400);
+      await http().get(`/admin/workspaces/not-a-uuid/lookup/pages`).expect(400);
     });
   });
 });

@@ -84,7 +84,6 @@ describe('Tenants, roles, invitations and feature flags', () => {
         ['get', `${A()}/pages/${pageA.id}`],
         ['get', `${A()}/pages/${pageA.id}/blocks`],
         ['get', `${A()}/tasks`],
-        ['get', `${A()}/tags`],
         ['get', `${A()}/events`],
         ['get', `${A()}/attachments`],
         ['get', `${A()}/members`],
@@ -94,7 +93,6 @@ describe('Tenants, roles, invitations and feature flags', () => {
         ['post', `${A()}/pages`, { title: 'planted' }],
         ['post', `${A()}/pages/${pageA.id}/blocks`, {}],
         ['post', `${A()}/tasks`, { title: 'planted' }],
-        ['post', `${A()}/tags`, { name: 'planted' }],
         [
           'post',
           `${A()}/events`,
@@ -142,11 +140,11 @@ describe('Tenants, roles, invitations and feature flags', () => {
     });
 
     it('keeps content references inside the workspace', async () => {
-      const tag = await ctx.prisma.tag.create({ data: { workspaceId: wsB.id, name: 'beta-tag' } });
+      const foreignPage = await ctx.prisma.page.create({
+        data: { title: 'Beta page', workspaceId: wsB.id, authorId: outsider.id },
+      });
       await as(tok.owner).post(`${A()}/tasks`, { title: 't', assigneeId: outsider.id }).expect(400);
-      await as(tok.owner)
-        .post(`${A()}/tasks`, { title: 't', tagIds: [tag.id] })
-        .expect(400);
+      await as(tok.owner).post(`${A()}/tasks`, { title: 't', pageId: foreignPage.id }).expect(400);
     });
 
     it('lets a platform admin open any workspace', async () => {

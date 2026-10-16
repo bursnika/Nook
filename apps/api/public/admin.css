@@ -191,14 +191,6 @@ h4,
   border: 2px solid var(--nook-ink);
   image-rendering: auto;
 }
-.tag-dot {
-  display: inline-block;
-  width: 0.75rem;
-  height: 0.75rem;
-  border: 1px solid var(--nook-ink);
-  vertical-align: middle;
-  margin-right: 0.35rem;
-}
 
 @media (max-width: 576px) {
   .form-frame {

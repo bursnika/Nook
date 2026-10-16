@@ -14,7 +14,7 @@
 </form>
 <div class="table-frame">
   <table class="table table-hover align-middle">
-    <thead><tr><th>Title</th><th>Status</th><th>Priority</th><th>Due</th><th>Tags</th><th></th></tr></thead>
+    <thead><tr><th>Title</th><th>Status</th><th>Priority</th><th>Due</th><th></th></tr></thead>
     <tbody>
       {{#each tasks}}
         <tr>
@@ -22,7 +22,6 @@
           <td><span class="chip chip-{{lower status}}">{{nice status}}</span></td>
           <td><span class="chip chip-{{lower priority}}">{{nice priority}}</span></td>
           <td>{{date dueDate}}</td>
-          <td>{{#each tags}}<span class="tag-dot" style="background: {{color}}"></span>{{name}} {{/each}}</td>
           <td class="text-end">
             <a class="btn btn-sm btn-outline-primary" href="/admin/workspaces/{{../ws.id}}/tasks/{{id}}/edit">Edit</a>
             <form class="d-inline" method="post" action="/admin/workspaces/{{../ws.id}}/tasks/{{id}}/delete" data-confirm="Delete task “{{title}}”?">
@@ -31,7 +30,7 @@
           </td>
         </tr>
       {{else}}
-        <tr><td colspan="6" class="text-muted p-4">No tasks found.</td></tr>
+        <tr><td colspan="5" class="text-muted p-4">No tasks found.</td></tr>
       {{/each}}
     </tbody>
   </table>

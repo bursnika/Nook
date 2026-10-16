@@ -5,14 +5,13 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateTaskDto, ListTasksQuery, UpdateTaskDto } from './task.dto.js';
 
 const POSITION_STEP = 1024;
-const include = { tags: true } satisfies Prisma.TaskInclude;
 
 @Injectable()
 export class TasksService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(workspaceId: string, query: ListTasksQuery) {
-    const { q, status, priority, assigneeId, pageId, tagId, dueFrom, dueTo, skip, limit } = query;
+    const { q, status, priority, assigneeId, pageId, dueFrom, dueTo, skip, limit } = query;
     const where: Prisma.TaskWhereInput = {
       workspaceId,
       status,
@@ -20,13 +19,11 @@ export class TasksService {
       assigneeId,
       pageId,
       ...(q ? { title: { contains: q, mode: 'insensitive' } } : {}),
-      ...(tagId ? { tags: { some: { id: tagId } } } : {}),
       ...(dueFrom || dueTo ? { dueDate: { gte: dueFrom, lte: dueTo } } : {}),
     };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.task.findMany({
         where,
-        include,
         skip,
         take: limit,
         orderBy: [{ position: 'asc' }, { id: 'asc' }],
@@ -37,30 +34,26 @@ export class TasksService {
   }
 
   get(workspaceId: string, id: string) {
-    return this.prisma.task.findFirstOrThrow({ where: { id, workspaceId }, include });
+    return this.prisma.task.findFirstOrThrow({ where: { id, workspaceId } });
   }
 
   async create(workspaceId: string, dto: CreateTaskDto) {
     await this.assertRefs(workspaceId, dto);
     const status = dto.status ?? TaskStatus.TODO;
-    const { tagIds, ...fields } = dto;
     return this.prisma.task.create({
       data: {
-        ...fields,
+        ...dto,
         workspaceId,
         status,
         position: dto.position ?? (await this.nextPosition(workspaceId, status)),
         completedAt: status === TaskStatus.DONE ? new Date() : null,
-        tags: tagIds ? { connect: tagIds.map((id) => ({ id })) } : undefined,
       },
-      include,
     });
   }
 
   async update(workspaceId: string, id: string, dto: UpdateTaskDto) {
     const current = await this.prisma.task.findFirstOrThrow({ where: { id, workspaceId } });
     await this.assertRefs(workspaceId, dto);
-    const { tagIds, ...fields } = dto;
 
     let completedAt: Date | null | undefined;
     if (dto.status && dto.status !== current.status) {
@@ -70,11 +63,9 @@ export class TasksService {
     return this.prisma.task.update({
       where: { id },
       data: {
-        ...fields,
+        ...dto,
         completedAt,
-        tags: tagIds ? { set: tagIds.map((tagId) => ({ id: tagId })) } : undefined,
       },
-      include,
     });
   }
 
@@ -97,14 +88,6 @@ export class TasksService {
         select: { id: true },
       });
       if (!member) throw new BadRequestException('assigneeId must be a member of this workspace');
-    }
-    if (dto.tagIds?.length) {
-      const found = await this.prisma.tag.count({
-        where: { workspaceId, id: { in: dto.tagIds } },
-      });
-      if (found !== dto.tagIds.length) {
-        throw new BadRequestException('tagIds contains tags outside this workspace');
-      }
     }
   }
 

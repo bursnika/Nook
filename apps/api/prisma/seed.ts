@@ -39,10 +39,6 @@ async function main() {
   });
   const workspaceId = workspace.id;
 
-  const uni = await prisma.tag.create({ data: { workspaceId, name: 'uni', color: '#9D7BC9' } });
-  const life = await prisma.tag.create({ data: { workspaceId, name: 'life', color: '#EC4E95' } });
-  const code = await prisma.tag.create({ data: { workspaceId, name: 'code', color: '#5B8FD6' } });
-
   const plan = await prisma.page.create({
     data: {
       workspaceId,
@@ -83,35 +79,30 @@ async function main() {
       status: TaskStatus.IN_PROGRESS,
       priority: TaskPriority.HIGH,
       due: at(2, 18),
-      tags: [uni],
     },
     {
       title: 'Prepare the API demo',
       status: TaskStatus.TODO,
       priority: TaskPriority.MEDIUM,
       due: at(4, 12),
-      tags: [uni, code],
     },
     {
       title: 'Buy coffee',
       status: TaskStatus.TODO,
       priority: TaskPriority.LOW,
       due: at(0, 17),
-      tags: [life],
     },
     {
       title: 'Gym',
       status: TaskStatus.DONE,
       priority: TaskPriority.MEDIUM,
       due: at(-1, 9),
-      tags: [life],
     },
     {
       title: 'Set up the repository',
       status: TaskStatus.DONE,
       priority: TaskPriority.HIGH,
       due: at(-3, 12),
-      tags: [code],
     },
   ];
   for (const [i, t] of tasks.entries()) {
@@ -126,7 +117,6 @@ async function main() {
         assigneeId: owner.id,
         pageId: plan.id,
         completedAt: t.status === TaskStatus.DONE ? t.due : null,
-        tags: { connect: t.tags.map(({ id }) => ({ id })) },
       },
     });
   }

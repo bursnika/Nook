@@ -78,7 +78,6 @@ model Workspace {
   memberships Membership[]
   pages       Page[]
   tasks       Task[]
-  tags        Tag[]
   events      CalendarEvent[]
   attachments Attachment[]
   invitations Invitation[]
@@ -159,25 +158,11 @@ model Task {
   workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   page      Page?           @relation(fields: [pageId], references: [id], onDelete: SetNull)
   assignee  User?           @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  tags      Tag[]
   events    CalendarEvent[]
 
   @@index([workspaceId, status, position])
   @@index([workspaceId, dueDate])
   @@index([assigneeId])
-}
-
-model Tag {
-  id          String   @id @default(uuid(7))
-  name        String
-  color       String   @default("#EC4E95")
-  createdAt   DateTime @default(now())
-  workspaceId String
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  tasks     Task[]
-
-  @@unique([workspaceId, name])
 }
 
 model CalendarEvent {

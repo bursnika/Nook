@@ -69,16 +69,6 @@ export class LookupService {
     );
   }
 
-  async tags(workspaceId: string, q: string, page: number): Promise<LookupResult> {
-    const rows = await this.prisma.tag.findMany({
-      where: { workspaceId, ...(q ? { name: { contains: q, mode: 'insensitive' } } : {}) },
-      orderBy: { name: 'asc' },
-      select: { id: true, name: true },
-      ...this.window(page),
-    });
-    return this.toResult(rows.map((t) => ({ id: t.id, text: t.name })));
-  }
-
   // ---- labels of already chosen values, used to re-render a form with its selection --------------
 
   async userOption(id?: unknown): Promise<LookupResult['results']> {
@@ -97,18 +87,6 @@ export class LookupService {
       select: { id: true, title: true, icon: true },
     });
     return page ? [{ id: page.id, text: `${page.icon ? `${page.icon} ` : ''}${page.title}` }] : [];
-  }
-
-  async tagOptions(workspaceId: string, ids?: unknown): Promise<LookupResult['results']> {
-    const list = (Array.isArray(ids) ? ids : ids ? [ids] : []).filter(
-      (v): v is string => typeof v === 'string',
-    );
-    if (!list.length) return [];
-    const tags = await this.prisma.tag.findMany({
-      where: { workspaceId, id: { in: list } },
-      select: { id: true, name: true },
-    });
-    return tags.map((t) => ({ id: t.id, text: t.name }));
   }
 
   // One extra row tells Select2 whether another page exists.

@@ -270,7 +270,7 @@ export class WorkspacesAdminController {
   private async showView(workspaceId: string, req: Request, extra: Record<string, unknown> = {}) {
     const workspace = await this.prisma.workspace.findUniqueOrThrow({
       where: { id: workspaceId },
-      include: { _count: { select: { pages: true, tasks: true, tags: true, attachments: true } } },
+      include: { _count: { select: { pages: true, tasks: true, attachments: true } } },
     });
     const role = req.membership?.role;
     const canManage = role === Role.OWNER || role === Role.ADMIN;

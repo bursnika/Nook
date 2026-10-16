@@ -17,7 +17,6 @@
     <dt>Due date</dt><dd>{{#if task.dueDate}}{{date task.dueDate}}{{else}}<span class="text-muted">none</span>{{/if}}</dd>
     <dt>Assignee</dt><dd>{{#if assignee}}{{assignee.text}}{{else}}<span class="text-muted">unassigned</span>{{/if}}</dd>
     <dt>Page</dt><dd>{{#if page}}<a href="/admin/workspaces/{{ws.id}}/pages/{{page.id}}">{{page.text}}</a>{{else}}<span class="text-muted">none</span>{{/if}}</dd>
-    <dt>Tags</dt><dd>{{#each task.tags}}<span class="tag-dot" style="background: {{color}}"></span>{{name}} {{else}}<span class="text-muted">none</span>{{/each}}</dd>
     <dt>Completed</dt><dd class="mb-0">{{#if task.completedAt}}{{datetime task.completedAt}}{{else}}<span class="text-muted">not yet</span>{{/if}}</dd>
   </dl>
 </div>
