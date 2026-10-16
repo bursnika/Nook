@@ -8,6 +8,7 @@ import { FeaturesModule } from './features/features.module.js';
 import { HealthController } from './health/health.controller.js';
 import { InvitationsModule } from './invitations/invitations.module.js';
 import { MembersModule } from './members/members.module.js';
+import { OverviewModule } from './overview/overview.module.js';
 import { PagesModule } from './pages/pages.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { TasksModule } from './tasks/tasks.module.js';
@@ -28,6 +29,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     AttachmentsModule,
     InvitationsModule,
     FeaturesModule,
+    OverviewModule,
     AdminModule,
   ],
   controllers: [HealthController],
