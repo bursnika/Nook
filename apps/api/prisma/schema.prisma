@@ -56,15 +56,30 @@ model User {
   updatedAt DateTime @updatedAt
 
   memberships     Membership[]
-  authoredPages   Page[]         @relation("PageAuthor")
-  assignedTasks   Task[]         @relation("TaskAssignee")
+  authoredPages   Page[]            @relation("PageAuthor")
+  assignedTasks   Task[]            @relation("TaskAssignee")
   refreshTokens   RefreshToken[]
-  sentInvitations Invitation[]   @relation("InvitedBy")
+  sentInvitations Invitation[]      @relation("InvitedBy")
+  importedEvents  CalendarEvent[]   @relation("EventImporter")
+  googleCalendar  GoogleConnection?
 
   @@index([name])
   // Trigram indexes for fast substring search (created by the user_search_indexes migration).
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "User_name_trgm_idx")
   @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "User_email_trgm_idx")
+}
+
+/// A person's link to their Google Calendar. The refresh token is stored encrypted (see google-calendar/token-crypto.ts).
+model GoogleConnection {
+  id              String    @id @default(uuid(7))
+  userId          String    @unique
+  refreshTokenEnc String
+  scope           String
+  lastSyncAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Workspace {
@@ -172,17 +187,22 @@ model CalendarEvent {
   startsAt      DateTime
   endsAt        DateTime
   allDay        Boolean  @default(false)
-  // Set when the event is synced with Google Calendar.
-  googleEventId String?  @unique
+  // Set when the event was imported from Google Calendar.
+  googleEventId String?
+  // Whose Google Calendar it came from; only that person's sync may remove it again.
+  importedById  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   workspaceId   String
   taskId        String?
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  task      Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  task       Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  importedBy User?     @relation("EventImporter", fields: [importedById], references: [id], onDelete: SetNull)
 
+  @@unique([workspaceId, googleEventId])
   @@index([workspaceId, startsAt])
+  @@index([importedById])
 }
 
 model Attachment {
