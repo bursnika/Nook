@@ -17,4 +17,9 @@ export class AdminListQuery {
   @IsOptional()
   @IsString()
   flash?: string;
+
+  /** Set by a redirect after something went wrong (shown as a red banner). */
+  @IsOptional()
+  @IsString()
+  problem?: string;
 }

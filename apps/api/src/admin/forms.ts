@@ -69,7 +69,19 @@ const FLASH_MESSAGES: Record<string, string> = {
   created: 'Created successfully.',
   updated: 'Changes saved.',
   deleted: 'Deleted.',
+  connected: 'Google Calendar connected. Press “Sync now” to import your events.',
+  synced: 'Google Calendar synced.',
+  disconnected: 'Google Calendar disconnected and the events it imported were removed.',
 };
+
+const PROBLEM_MESSAGES: Record<string, string> = {
+  calendar:
+    'Google Calendar could not be connected. Allow access to your calendar on the Google screen and try again.',
+  'calendar-sync': 'Google Calendar could not be synced. Connect it again or try later.',
+};
+
+/** Same idea for errors shown in the red banner. */
+export const problemMessage = (key?: string) => (key ? PROBLEM_MESSAGES[key] : undefined);
 
 /** Only known keys map to text, so a crafted `?flash=` can never inject content. */
 export const flashMessage = (key?: string) => (key ? FLASH_MESSAGES[key] : undefined);

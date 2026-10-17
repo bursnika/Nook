@@ -219,6 +219,12 @@ h4,
 }
 
 /* calendar */
+.gcal-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
 .cal-month {
   font-family: 'Pixelify Sans', sans-serif;
   min-width: 9rem;

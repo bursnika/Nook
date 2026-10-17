@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { GoogleCalendarModule } from '../google-calendar/google-calendar.module.js';
 import { InvitationsModule } from '../invitations/invitations.module.js';
 import { AttachmentsModule } from '../attachments/attachments.module.js';
 import { MembersModule } from '../members/members.module.js';
@@ -10,6 +11,7 @@ import { UsersModule } from '../users/users.module.js';
 import { WorkspacesModule } from '../workspaces/workspaces.module.js';
 import { AttachmentsAdminController } from './attachments.controller.js';
 import { DashboardController } from './dashboard.controller.js';
+import { GoogleCalendarAdminController } from './google-calendar.controller.js';
 import { InviteAdminController } from './invite-admin.controller.js';
 import { LookupController } from './lookup.controller.js';
 import { LookupService } from './lookup.service.js';
@@ -30,6 +32,7 @@ import { WorkspacesAdminController } from './workspaces.controller.js';
     InvitationsModule,
     UploadsModule,
     OverviewModule,
+    GoogleCalendarModule,
   ],
   controllers: [
     DashboardController,
@@ -37,6 +40,7 @@ import { WorkspacesAdminController } from './workspaces.controller.js';
     WorkspacesAdminController,
     PagesAdminController,
     NotesAdminController,
+    GoogleCalendarAdminController,
     TasksAdminController,
     AttachmentsAdminController,
     InviteAdminController,

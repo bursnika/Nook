@@ -8,13 +8,22 @@ import { Plan, Role } from '../generated/prisma/enums.js';
 import { CreateInvitationDto } from '../invitations/invitation.dto.js';
 import { InvitationsService } from '../invitations/invitations.service.js';
 import { AddMemberDto, UpdateMemberDto } from '../members/member.dto.js';
+import { GoogleCalendarService } from '../google-calendar/google-calendar.service.js';
 import { MembersService } from '../members/members.service.js';
 import { OverviewService } from '../overview/overview.service.js';
 import { CreateWorkspaceDto, UpdateWorkspaceDto } from '../workspaces/workspace.dto.js';
 import { WorkspacesService } from '../workspaces/workspaces.service.js';
 import { AdminController } from './admin-controller.decorator.js';
 import { AdminListQuery } from './admin-query.js';
-import { enumOptions, flashMessage, PAGE_SIZE, pager, parseForm, toFormMessage } from './forms.js';
+import {
+  enumOptions,
+  flashMessage,
+  PAGE_SIZE,
+  pager,
+  parseForm,
+  problemMessage,
+  toFormMessage,
+} from './forms.js';
 
 class MemberParams extends WorkspaceParams {
   @IsUUID()
@@ -43,6 +52,7 @@ export class WorkspacesAdminController {
     private readonly members: MembersService,
     private readonly invitations: InvitationsService,
     private readonly overview: OverviewService,
+    private readonly googleCalendar: GoogleCalendarService,
   ) {}
 
   @Get()
@@ -96,8 +106,15 @@ export class WorkspacesAdminController {
 
   @Get(':workspaceId')
   @Render('admin/workspaces/show')
-  async show(@Param() { workspaceId }: WorkspaceParams, @Query() { flash }: AdminListQuery) {
-    return this.homeView(workspaceId, { flash: flashMessage(flash) });
+  async show(
+    @Param() { workspaceId }: WorkspaceParams,
+    @Query() { flash, problem }: AdminListQuery,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.homeView(workspaceId, user.id, {
+      flash: flashMessage(flash),
+      formError: problemMessage(problem),
+    });
   }
 
   /** Members, invitations and the plan: the part of a workspace people rarely need. */
@@ -274,12 +291,13 @@ export class WorkspacesAdminController {
 
   // ---- views ---------------------------------------------------------------------------------
 
-  private async homeView(workspaceId: string, extra: Record<string, unknown> = {}) {
-    const [ws, summary] = await Promise.all([
+  private async homeView(workspaceId: string, userId: string, extra: Record<string, unknown> = {}) {
+    const [ws, summary, google] = await Promise.all([
       this.workspaces.get(workspaceId),
       this.overview.summary(workspaceId),
+      this.googleCalendar.status(userId),
     ]);
-    return { title: ws.name, section: 'overview', ws, summary, ...extra };
+    return { title: ws.name, section: 'overview', ws, summary, google, ...extra };
   }
 
   private async teamView(workspaceId: string, req: Request, extra: Record<string, unknown> = {}) {
