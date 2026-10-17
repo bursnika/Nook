@@ -79,6 +79,7 @@ export class OverviewService {
           endsAt: true,
           allDay: true,
           googleEventId: true,
+          calendarName: true,
         },
       }),
       this.prisma.task.findMany({

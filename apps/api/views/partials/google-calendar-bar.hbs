@@ -6,13 +6,16 @@
       <form class="d-inline" method="post" action="/admin/workspaces/{{ws.id}}/google-calendar/sync">
         <button class="btn btn-sm btn-primary" type="submit">Sync now</button>
       </form>
-      <form class="d-inline" method="post" action="/admin/google-calendar/disconnect?returnTo=/admin/workspaces/{{ws.id}}" data-confirm="Disconnect Google Calendar? The events imported from it will be removed from every workspace.">
+      <form class="d-inline" method="post" action="/admin/google-calendar/disconnect?returnTo=/admin/workspaces/{{ws.id}}" data-confirm="Disconnect Google Calendar? Everything imported from it (events and tasks) will be removed from every workspace.">
         <button class="btn btn-sm btn-outline-danger" type="submit">Disconnect</button>
       </form>
-      <small class="text-muted w-100">Imported events are visible to everyone in this workspace.</small>
+      <small class="text-muted w-100">Events from all your visible calendars{{#if google.tasksGranted}} and your Google Tasks{{/if}} are imported. Imported items are visible to everyone in this workspace{{#if google.tasksGranted}}, and imported tasks are refreshed from Google on every sync{{/if}}.</small>
+      {{#unless google.tasksGranted}}
+        <small class="w-100"><a href="/api/google-calendar/connect?returnTo=/admin/workspaces/{{ws.id}}">Also import Google Tasks</a> (needs one more permission).</small>
+      {{/unless}}
     {{else}}
       <a class="btn btn-sm btn-outline-primary" href="/api/google-calendar/connect?returnTo=/admin/workspaces/{{ws.id}}">Connect Google Calendar</a>
-      <small class="text-muted">Imports your events (read-only).</small>
+      <small class="text-muted">Imports your events and Google Tasks (read-only).</small>
     {{/if}}
   {{else}}
     <small class="text-muted">Google Calendar sync is not configured on this server.</small>

@@ -80,6 +80,19 @@ const PROBLEM_MESSAGES: Record<string, string> = {
   'calendar-sync': 'Google Calendar could not be synced. Connect it again or try later.',
 };
 
+/** The text after a Google sync: only numbers and known keys go in, so nothing in the URL can inject content. */
+export function syncMessage(counts: { events?: number; tasks?: number; tasksNote?: string }) {
+  const parts = [`${counts.events ?? 0} events`];
+  if (counts.tasks !== undefined) parts.push(`${counts.tasks} tasks`);
+  let text = `Google Calendar synced: ${parts.join(' and ')}.`;
+  if (counts.tasksNote === 'not-granted') {
+    text += ' Google Tasks were not imported: use Connect again and allow access to Google Tasks.';
+  } else if (counts.tasksNote === 'unavailable') {
+    text += ' Google Tasks could not be read: check that the Google Tasks API is enabled.';
+  }
+  return text;
+}
+
 /** Same idea for errors shown in the red banner. */
 export const problemMessage = (key?: string) => (key ? PROBLEM_MESSAGES[key] : undefined);
 

@@ -19,13 +19,23 @@ export class GoogleCalendarAdminController {
     @Res() res: Response,
   ) {
     const home = `/admin/workspaces/${workspaceId}`;
+    let result;
     try {
-      await this.calendar.sync(workspaceId, user.id);
+      result = await this.calendar.sync(workspaceId, user.id);
     } catch (error) {
       if (!(error instanceof HttpException)) throw error;
       return res.redirect(`${home}?problem=calendar-sync`);
     }
-    return res.redirect(`${home}?flash=synced`);
+    const query = new URLSearchParams({
+      flash: 'synced',
+      events: String(result.created + result.updated),
+    });
+    if (result.tasks.status === 'synced') {
+      query.set('tasks', String(result.tasks.created + result.tasks.updated));
+    } else {
+      query.set('tasksNote', result.tasks.status);
+    }
+    return res.redirect(`${home}?${query}`);
   }
 
   @Post('google-calendar/disconnect')

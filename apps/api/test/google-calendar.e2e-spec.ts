@@ -2,7 +2,9 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import {
   CALENDAR_SCOPE,
+  TASKS_SCOPE,
   type GoogleEvent,
+  type GoogleTask,
 } from '../src/google-calendar/google-calendar.provider.js';
 import { bearer, setCookieLine, signIn } from './auth-helpers.js';
 import { createTestApp, resetDb, type TestApp } from './helpers.js';
@@ -24,14 +26,25 @@ describe('Google Calendar', () => {
     ctx.googleCalendar.configured = true;
     ctx.googleCalendar.codes.clear();
     ctx.googleCalendar.calendars.clear();
+    ctx.googleCalendar.failedCalendars.clear();
+    ctx.googleCalendar.tasks.clear();
+    ctx.googleCalendar.failedLists.clear();
+    ctx.googleCalendar.tasksUnavailable.clear();
     ctx.googleCalendar.revokedByUser.clear();
     ctx.googleCalendar.forgotten = [];
   });
 
   const http = () => request(app.getHttpServer());
   const at = (days: number, hour = 10) => new Date(Date.now() + days * DAY + hour * 3600_000);
-  const event = (id: string, title: string, days: number, extra: Partial<GoogleEvent> = {}) => ({
-    id,
+  const event = (
+    id: string,
+    title: string,
+    days: number,
+    extra: Partial<GoogleEvent> = {},
+  ): GoogleEvent => ({
+    id: `primary/${id}`,
+    calendarId: 'primary',
+    calendarName: 'Personal',
     title,
     startsAt: at(days),
     endsAt: at(days, 11),
@@ -57,7 +70,7 @@ describe('Google Calendar', () => {
   ) {
     ctx.googleCalendar.codes.set(code, {
       refreshToken: grant.refreshToken,
-      scope: grant.scope ?? `openid ${CALENDAR_SCOPE}`,
+      scope: grant.scope ?? `openid ${CALENDAR_SCOPE} ${TASKS_SCOPE}`,
     });
     const start = await who.agent.get(
       `/api/google-calendar/connect?returnTo=/admin/workspaces/${who.workspaceId}`,
@@ -114,7 +127,12 @@ describe('Google Calendar', () => {
         .get(`/api/workspaces/${who.workspaceId}/google-calendar`)
         .set('Authorization', who.token)
         .expect(200);
-      expect(status.body).toEqual({ configured: true, connected: true, lastSyncAt: null });
+      expect(status.body).toEqual({
+        configured: true,
+        connected: true,
+        tasksGranted: true,
+        lastSyncAt: null,
+      });
     });
 
     it('replaces the previous connection when connecting again', async () => {
@@ -238,8 +256,8 @@ describe('Google Calendar', () => {
       expect(res.body).toMatchObject({ created: 2, updated: 0, removed: 0 });
       const rows = await ctx.prisma.calendarEvent.findMany({ orderBy: { title: 'desc' } });
       expect(rows.map((r) => [r.title, r.googleEventId, r.allDay, r.importedById])).toEqual([
-        ['Lecture', 'g1', false, who.user.id],
-        ['Holiday', 'g2', true, who.user.id],
+        ['Lecture', 'primary/g1', false, who.user.id],
+        ['Holiday', 'primary/g2', true, who.user.id],
       ]);
       expect(rows[0].description).toBe('Room 4');
 
@@ -330,6 +348,283 @@ describe('Google Calendar', () => {
       expect(await titles(second.id)).toEqual([]);
     });
 
+    describe('every calendar, not only the main one', () => {
+      const inCalendar = (
+        calendarId: string,
+        calendarName: string,
+        id: string,
+        title: string,
+        days: number,
+      ) => event(id, title, days, { id: `${calendarId}/${id}`, calendarId, calendarName });
+
+      it('imports events of all calendars and remembers which calendar each came from', async () => {
+        const who = await connected();
+        ctx.googleCalendar.calendars.set(who.refreshToken, [
+          event('e1', 'Main event', 2),
+          inCalendar('uni', 'University', 'e1', 'Lecture', 3),
+          inCalendar('holidays', 'Holidays in Ukraine', 'h1', 'Independence Day', 4),
+          inCalendar('birthdays', 'Birthdays', 'b1', 'Olena’s birthday', 5),
+        ]);
+        const res = await sync(who).expect(200);
+        expect(res.body).toMatchObject({ created: 4, updated: 0, removed: 0 });
+
+        const rows = await ctx.prisma.calendarEvent.findMany({ orderBy: { title: 'asc' } });
+        expect(rows.map((r) => [r.title, r.calendarName, r.googleCalendarId])).toEqual([
+          ['Independence Day', 'Holidays in Ukraine', 'holidays'],
+          ['Lecture', 'University', 'uni'],
+          ['Main event', 'Personal', 'primary'],
+          ['Olena’s birthday', 'Birthdays', 'birthdays'],
+        ]);
+        // the same Google event id in two calendars stays two different events
+        expect(new Set(rows.map((r) => r.googleEventId)).size).toBe(4);
+      });
+
+      it('shows the calendar name in the calendar endpoint', async () => {
+        const who = await connected();
+        ctx.googleCalendar.calendars.set(who.refreshToken, [
+          inCalendar('uni', 'University', 'e1', 'Lecture', 2),
+        ]);
+        await sync(who).expect(200);
+        const res = await http()
+          .get(
+            `/api/workspaces/${who.workspaceId}/calendar?from=${encodeURIComponent(at(0).toISOString())}&to=${encodeURIComponent(at(10).toISOString())}`,
+          )
+          .set('Authorization', who.token)
+          .expect(200);
+        expect(res.body.events).toMatchObject([{ title: 'Lecture', calendarName: 'University' }]);
+      });
+
+      it('keeps what was imported from a calendar Google could not read this time', async () => {
+        const who = await connected();
+        ctx.googleCalendar.calendars.set(who.refreshToken, [
+          event('e1', 'Main event', 2),
+          inCalendar('uni', 'University', 'e1', 'Lecture', 3),
+        ]);
+        await sync(who).expect(200);
+
+        ctx.googleCalendar.failedCalendars.set(who.refreshToken, ['uni']);
+        const res = await sync(who).expect(200);
+        expect(res.body.removed).toBe(0);
+        expect(await titles(who.workspaceId)).toEqual(['Lecture', 'Main event']);
+
+        // once readable again, a deletion in Google is mirrored as usual
+        ctx.googleCalendar.failedCalendars.clear();
+        ctx.googleCalendar.calendars.set(who.refreshToken, [event('e1', 'Main event', 2)]);
+        expect((await sync(who).expect(200)).body.removed).toBe(1);
+        expect(await titles(who.workspaceId)).toEqual(['Main event']);
+      });
+
+      it('removes events of a calendar that was switched off in Google Calendar', async () => {
+        const who = await connected();
+        ctx.googleCalendar.calendars.set(who.refreshToken, [
+          event('e1', 'Main event', 2),
+          inCalendar('uni', 'University', 'e1', 'Lecture', 3),
+        ]);
+        await sync(who).expect(200);
+        ctx.googleCalendar.calendars.set(who.refreshToken, [event('e1', 'Main event', 2)]);
+        await sync(who).expect(200);
+        expect(await titles(who.workspaceId)).toEqual(['Main event']);
+      });
+
+      it('replaces events imported by the first version, which had no calendar id', async () => {
+        const who = await connected();
+        await ctx.prisma.calendarEvent.create({
+          data: {
+            workspaceId: who.workspaceId,
+            title: 'Old import',
+            googleEventId: 'legacy-id',
+            importedById: who.user.id,
+            startsAt: at(2),
+            endsAt: at(2, 11),
+          },
+        });
+        ctx.googleCalendar.calendars.set(who.refreshToken, [event('e1', 'Same thing', 2)]);
+        const res = await sync(who).expect(200);
+        expect(res.body).toMatchObject({ created: 1, removed: 1 });
+        expect(await titles(who.workspaceId)).toEqual(['Same thing']);
+      });
+    });
+
+    describe('Google Tasks', () => {
+      const task = (
+        listId: string,
+        id: string,
+        title: string,
+        extra: Partial<GoogleTask> = {},
+      ): GoogleTask => ({
+        id: `${listId}/${id}`,
+        title,
+        completed: false,
+        ...extra,
+      });
+      const taskRows = (workspaceId: string) =>
+        ctx.prisma.task.findMany({ where: { workspaceId }, orderBy: { title: 'asc' } });
+
+      it('imports tasks with notes, due date and done state', async () => {
+        const who = await connected();
+        const due = new Date(Date.UTC(2030, 5, 3, 12));
+        ctx.googleCalendar.tasks.set(who.refreshToken, [
+          task('list1', 't1', 'Buy milk', { notes: 'two litres', due }),
+          task('list1', 't2', 'Finished thing', { completed: true, completedAt: at(-1) }),
+          task('list2', 't3', 'No date'),
+        ]);
+        const res = await sync(who).expect(200);
+        expect(res.body.tasks).toEqual({ status: 'synced', created: 3, updated: 0, removed: 0 });
+
+        const rows = await taskRows(who.workspaceId);
+        expect(
+          rows.map((r) => [r.title, r.status, r.googleTaskId, r.importedById, r.description]),
+        ).toEqual([
+          ['Buy milk', 'TODO', 'list1/t1', who.user.id, 'two litres'],
+          ['Finished thing', 'DONE', 'list1/t2', who.user.id, null],
+          ['No date', 'TODO', 'list2/t3', who.user.id, null],
+        ]);
+        expect(rows[0].dueDate).toEqual(due);
+        expect(rows[1].completedAt).not.toBeNull();
+        expect(rows[2].dueDate).toBeNull();
+      });
+
+      it('shows imported tasks on the home page lists', async () => {
+        const who = await connected();
+        ctx.googleCalendar.tasks.set(who.refreshToken, [
+          task('l', 't1', 'Soon from Google', { due: new Date(Date.now() + 3600_000) }),
+        ]);
+        await sync(who).expect(200);
+        const overview = await http()
+          .get(`/api/workspaces/${who.workspaceId}/overview`)
+          .set('Authorization', who.token)
+          .expect(200);
+        expect(overview.body.openTasks.map((t: { title: string }) => t.title)).toEqual([
+          'Soon from Google',
+        ]);
+      });
+
+      it('updates, completes and removes tasks, and keeps a local in-progress state', async () => {
+        const who = await connected();
+        ctx.googleCalendar.tasks.set(who.refreshToken, [
+          task('l', 'a', 'Write report'),
+          task('l', 'b', 'Delete me'),
+          task('l', 'c', 'Reopen me', { completed: true, completedAt: at(-1) }),
+        ]);
+        await sync(who).expect(200);
+        await ctx.prisma.task.updateMany({
+          where: { title: 'Write report' },
+          data: { status: 'IN_PROGRESS' },
+        });
+
+        ctx.googleCalendar.tasks.set(who.refreshToken, [
+          task('l', 'a', 'Write the report', { notes: 'new notes' }),
+          task('l', 'c', 'Reopen me'),
+          task('l', 'd', 'Brand new'),
+        ]);
+        const res = await sync(who).expect(200);
+        expect(res.body.tasks).toEqual({ status: 'synced', created: 1, updated: 2, removed: 1 });
+
+        const rows = await taskRows(who.workspaceId);
+        expect(rows.map((r) => [r.title, r.status])).toEqual([
+          ['Brand new', 'TODO'],
+          ['Reopen me', 'TODO'], // done in Google yesterday, open again now
+          ['Write the report', 'IN_PROGRESS'], // local progress survives a rename in Google
+        ]);
+        expect(rows.find((r) => r.title === 'Reopen me')?.completedAt).toBeNull();
+
+        ctx.googleCalendar.tasks.set(who.refreshToken, [
+          task('l', 'a', 'Write the report', { completed: true, completedAt: new Date() }),
+        ]);
+        await sync(who).expect(200);
+        expect((await taskRows(who.workspaceId)).map((r) => [r.title, r.status])).toEqual([
+          ['Write the report', 'DONE'],
+        ]);
+      });
+
+      it('skips tasks completed long ago, and leaves local tasks alone', async () => {
+        const who = await connected();
+        await ctx.prisma.task.create({
+          data: { workspaceId: who.workspaceId, title: 'My own task' },
+        });
+        ctx.googleCalendar.tasks.set(who.refreshToken, [
+          task('l', 'old', 'Ancient', { completed: true, completedAt: at(-200) }),
+          task('l', 'new', 'Recent'),
+        ]);
+        await sync(who).expect(200);
+        expect((await taskRows(who.workspaceId)).map((r) => r.title)).toEqual([
+          'My own task',
+          'Recent',
+        ]);
+        await sync(who).expect(200);
+        expect(await ctx.prisma.task.count()).toBe(2);
+      });
+
+      it('keeps tasks of a list Google could not read this time', async () => {
+        const who = await connected();
+        ctx.googleCalendar.tasks.set(who.refreshToken, [
+          task('l1', 'a', 'List one'),
+          task('l2', 'b', 'List two'),
+        ]);
+        await sync(who).expect(200);
+        ctx.googleCalendar.failedLists.set(who.refreshToken, ['l2']);
+        const res = await sync(who).expect(200);
+        expect(res.body.tasks.removed).toBe(0);
+        expect((await taskRows(who.workspaceId)).map((r) => r.title)).toEqual([
+          'List one',
+          'List two',
+        ]);
+      });
+
+      it('never touches another person’s imported tasks', async () => {
+        const a = await connected('a@example.com');
+        const b = await connected('b@example.com');
+        await ctx.prisma.membership.create({
+          data: { userId: b.user.id, workspaceId: a.workspaceId, role: 'MEMBER' },
+        });
+        ctx.googleCalendar.tasks.set(a.refreshToken, [task('la', 'x', 'A task')]);
+        ctx.googleCalendar.tasks.set(b.refreshToken, [task('lb', 'y', 'B task')]);
+        await sync({ workspaceId: a.workspaceId, token: b.token }).expect(200);
+        await sync(a).expect(200);
+        expect((await taskRows(a.workspaceId)).map((r) => r.title)).toEqual(['A task', 'B task']);
+      });
+
+      it('still imports events when the Tasks API is unavailable, and says so', async () => {
+        const who = await connected();
+        ctx.googleCalendar.calendars.set(who.refreshToken, [event('e1', 'Lecture', 2)]);
+        ctx.googleCalendar.tasks.set(who.refreshToken, [task('l', 'a', 'Never seen')]);
+        ctx.googleCalendar.tasksUnavailable.add(who.refreshToken);
+        const res = await sync(who).expect(200);
+        expect(res.body).toMatchObject({ created: 1, tasks: { status: 'unavailable' } });
+        expect(await titles(who.workspaceId)).toEqual(['Lecture']);
+        expect(await ctx.prisma.task.count()).toBe(0);
+      });
+
+      it('skips tasks when the person did not allow them, and offers to ask again', async () => {
+        const who = await person('a@example.com');
+        await connect(who, { refreshToken: 'cal-only', scope: `openid ${CALENDAR_SCOPE}` });
+        ctx.googleCalendar.calendars.set('cal-only', [event('e1', 'Lecture', 2)]);
+        ctx.googleCalendar.tasks.set('cal-only', [task('l', 'a', 'Should stay in Google')]);
+
+        const res = await sync(who).expect(200);
+        expect(res.body.tasks).toEqual({ status: 'not-granted' });
+        expect(await ctx.prisma.task.count()).toBe(0);
+
+        const status = await http()
+          .get(`/api/workspaces/${who.workspaceId}/google-calendar`)
+          .set('Authorization', who.token);
+        expect(status.body).toMatchObject({ connected: true, tasksGranted: false });
+        const home = await http()
+          .get(`/admin/workspaces/${who.workspaceId}`)
+          .set('Authorization', who.token)
+          .set('Accept', 'text/html')
+          .expect(200);
+        expect(home.text).toContain('Also import Google Tasks');
+      });
+
+      it('forgets a revoked grant also when the failure shows up while reading tasks', async () => {
+        const who = await connected();
+        ctx.googleCalendar.revokedByUser.add(who.refreshToken);
+        await sync(who).expect(409);
+        expect(await ctx.prisma.googleConnection.count()).toBe(0);
+      });
+    });
+
     it('asks to connect first, and forgets a grant Google has revoked', async () => {
       const who = await person('a@example.com');
       await sync(who).expect(409);
@@ -365,7 +660,7 @@ describe('Google Calendar', () => {
   });
 
   describe('disconnecting', () => {
-    it('forgets the connection and only that person’s imported events, and tells Google', async () => {
+    it('forgets the connection and only that person’s imports (events and tasks), and tells Google', async () => {
       const a = await person('a@example.com');
       const b = await person('b@example.com');
       await connect(a, { refreshToken: 'token-a' });
@@ -383,6 +678,21 @@ describe('Google Calendar', () => {
       await ctx.prisma.calendarEvent.create({
         data: { workspaceId: a.workspaceId, title: 'Manual', startsAt: at(2), endsAt: at(2, 11) },
       });
+      await ctx.prisma.task.create({ data: { workspaceId: a.workspaceId, title: 'Manual task' } });
+      ctx.googleCalendar.tasks.set('token-a', [
+        { id: 'l/ta', title: 'A google task', completed: false },
+      ]);
+      ctx.googleCalendar.tasks.set('token-b', [
+        { id: 'l/tb', title: 'B google task', completed: false },
+      ]);
+      await http()
+        .post(`/api/workspaces/${a.workspaceId}/google-calendar/sync`)
+        .set('Authorization', a.token)
+        .expect(200);
+      await http()
+        .post(`/api/workspaces/${b.workspaceId}/google-calendar/sync`)
+        .set('Authorization', b.token)
+        .expect(200);
 
       await http().delete('/api/google-calendar').set('Authorization', a.token).expect(204);
 
@@ -394,6 +704,10 @@ describe('Google Calendar', () => {
       ).not.toBeNull();
       const left = (await ctx.prisma.calendarEvent.findMany()).map((e) => e.title).sort();
       expect(left).toEqual(['B event', 'Manual']);
+      expect((await ctx.prisma.task.findMany()).map((t) => t.title).sort()).toEqual([
+        'B google task',
+        'Manual task',
+      ]);
       expect(ctx.googleCalendar.forgotten).toEqual(['token-a']);
 
       await http().delete('/api/google-calendar').set('Authorization', a.token).expect(204); // idempotent
@@ -445,7 +759,15 @@ describe('Google Calendar', () => {
         .post(`/admin/workspaces/${who.workspaceId}/google-calendar/sync`)
         .set('Authorization', who.token)
         .expect(302);
-      expect(synced.headers.location).toBe(`/admin/workspaces/${who.workspaceId}?flash=synced`);
+      expect(synced.headers.location).toBe(
+        `/admin/workspaces/${who.workspaceId}?flash=synced&events=1&tasks=0`,
+      );
+      const after = await http()
+        .get(synced.headers.location)
+        .set('Authorization', who.token)
+        .set('Accept', 'text/html')
+        .expect(200);
+      expect(after.text).toContain('Google Calendar synced: 1 events and 0 tasks.');
       expect(await ctx.prisma.calendarEvent.count()).toBe(1);
 
       const out = await http()
@@ -466,6 +788,24 @@ describe('Google Calendar', () => {
       expect(res.headers.location).toBe(
         `/admin/workspaces/${who.workspaceId}?problem=calendar-sync`,
       );
+    });
+
+    it('explains when tasks were left out, and ignores anything else in the URL', async () => {
+      const who = await person('a@example.com');
+      const note = (query: string) =>
+        http()
+          .get(`/admin/workspaces/${who.workspaceId}?${query}`)
+          .set('Authorization', who.token)
+          .set('Accept', 'text/html');
+      expect((await note('flash=synced&events=3&tasksNote=not-granted')).text).toContain(
+        'Google Tasks were not imported',
+      );
+      expect((await note('flash=synced&events=3&tasksNote=unavailable')).text).toContain(
+        'Google Tasks API is enabled',
+      );
+      expect((await note('flash=synced&events=3&tasks=2')).text).toContain('3 events and 2 tasks');
+      await note('flash=synced&events=<script>').expect(400);
+      await note('flash=synced&tasksNote=<b>x</b>').expect(400);
     });
 
     it('shows the messages for known flash and problem keys only', async () => {

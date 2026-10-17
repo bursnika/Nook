@@ -3,20 +3,25 @@ import { env } from '../env.js';
 import {
   CALENDAR_SCOPE,
   GoogleAccessRevokedError,
+  GoogleTasksUnavailableError,
+  TASKS_SCOPE,
   type GoogleCalendarProvider,
   type GoogleEvent,
+  type GoogleTask,
 } from './google-calendar.provider.js';
 
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
-const EVENTS_URL = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
+const TASKS_API = 'https://tasks.googleapis.com/tasks/v1';
 const TIMEOUT_MS = 10_000;
 const PAGE_SIZE = 250;
 const MAX_PAGES = 10;
 
 interface RawEvent {
   id: string;
+  iCalUID?: string;
   status?: string;
   summary?: string;
   description?: string;
@@ -24,7 +29,28 @@ interface RawEvent {
   end?: { date?: string; dateTime?: string };
 }
 
-/** Google Calendar over its REST API, using the same OAuth client as sign-in. */
+interface RawCalendar {
+  id: string;
+  summary?: string;
+  summaryOverride?: string;
+  selected?: boolean;
+  primary?: boolean;
+}
+
+interface RawTask {
+  id: string;
+  title?: string;
+  notes?: string;
+  status?: string;
+  due?: string;
+  completed?: string;
+  deleted?: boolean;
+}
+
+/** One calendar or task list answered 403/404/410: skip it, keep everything else. */
+class Unreadable extends Error {}
+
+/** Google Calendar and Google Tasks over their REST APIs, using the same OAuth client as sign-in. */
 @Injectable()
 export class GoogleCalendarGoogle implements GoogleCalendarProvider {
   get configured() {
@@ -46,7 +72,7 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
       client_id: env.google.clientId!,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: CALENDAR_SCOPE,
+      scope: `${CALENDAR_SCOPE} ${TASKS_SCOPE}`,
       state,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
@@ -83,41 +109,95 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
 
   async listEvents({ refreshToken, from, to }: { refreshToken: string; from: Date; to: Date }) {
     this.assertConfigured();
-    const { access_token: accessToken } = await this.token({
-      refresh_token: refreshToken,
-      grant_type: 'refresh_token',
-    });
-    if (!accessToken) throw new BadGatewayException('Google returned no access token');
+    const accessToken = await this.accessToken(refreshToken);
+    const calendars = await this.calendars(accessToken);
 
     const events: GoogleEvent[] = [];
+    const failedCalendarIds: string[] = [];
+    const seen = new Set<string>();
+    for (const calendar of calendars) {
+      try {
+        for (const raw of await this.calendarEvents(accessToken, calendar.id, from, to)) {
+          const event = toEvent(raw, calendar);
+          if (!event) continue;
+          // An event you were invited to can sit in several calendars; show it once.
+          const key = raw.iCalUID
+            ? `${raw.iCalUID}|${raw.start?.dateTime ?? raw.start?.date}`
+            : null;
+          if (key && seen.has(key)) continue;
+          if (key) seen.add(key);
+          events.push(event);
+        }
+      } catch (error) {
+        if (!(error instanceof Unreadable)) throw error;
+        failedCalendarIds.push(calendar.id);
+      }
+    }
+    return { events, failedCalendarIds };
+  }
+
+  async listTasks({
+    refreshToken,
+    completedSince,
+  }: {
+    refreshToken: string;
+    completedSince: Date;
+  }) {
+    this.assertConfigured();
+    const accessToken = await this.accessToken(refreshToken);
+
+    const lists: { id: string }[] = [];
     let pageToken: string | undefined;
     for (let page = 0; page < MAX_PAGES; page++) {
-      const url = new URL(EVENTS_URL);
-      url.search = new URLSearchParams({
-        singleEvents: 'true',
-        orderBy: 'startTime',
-        timeMin: from.toISOString(),
-        timeMax: to.toISOString(),
-        maxResults: String(PAGE_SIZE),
+      const response = await this.get(`${TASKS_API}/users/@me/lists`, accessToken, {
+        maxResults: '100',
         ...(pageToken ? { pageToken } : {}),
-      }).toString();
-      const response = await fetch(url, {
-        headers: { authorization: `Bearer ${accessToken}` },
-        signal: AbortSignal.timeout(TIMEOUT_MS),
       });
-      if (response.status === 401 || response.status === 403) {
-        throw new GoogleAccessRevokedError(`Google answered ${response.status}`);
+      if (response.status === 401) throw new GoogleAccessRevokedError('Google answered 401');
+      // 403/404 here means the Tasks API is off for the project or its scope was not granted
+      if (response.status === 403 || response.status === 404) {
+        throw new GoogleTasksUnavailableError(`Google answered ${response.status}`);
       }
-      if (!response.ok) throw new BadGatewayException('Google Calendar is not available');
-      const data = (await response.json()) as { items?: RawEvent[]; nextPageToken?: string };
-      for (const raw of data.items ?? []) {
-        const event = toEvent(raw);
-        if (event) events.push(event);
-      }
+      if (!response.ok) throw new BadGatewayException('Google Tasks is not available');
+      const data = (await response.json()) as { items?: { id: string }[]; nextPageToken?: string };
+      lists.push(...(data.items ?? []));
       pageToken = data.nextPageToken;
       if (!pageToken) break;
     }
-    return events;
+
+    const tasks: GoogleTask[] = [];
+    const failedListIds: string[] = [];
+    for (const list of lists) {
+      try {
+        let token: string | undefined;
+        for (let page = 0; page < MAX_PAGES; page++) {
+          const response = await this.get(
+            `${TASKS_API}/lists/${encodeURIComponent(list.id)}/tasks`,
+            accessToken,
+            {
+              showCompleted: 'true',
+              showHidden: 'true',
+              maxResults: '100',
+              ...(token ? { pageToken: token } : {}),
+            },
+          );
+          if (response.status === 401) throw new GoogleAccessRevokedError('Google answered 401');
+          if ([403, 404, 410].includes(response.status)) throw new Unreadable();
+          if (!response.ok) throw new BadGatewayException('Google Tasks is not available');
+          const data = (await response.json()) as { items?: RawTask[]; nextPageToken?: string };
+          for (const raw of data.items ?? []) {
+            const task = toTask(raw, list.id, completedSince);
+            if (task) tasks.push(task);
+          }
+          token = data.nextPageToken;
+          if (!token) break;
+        }
+      } catch (error) {
+        if (!(error instanceof Unreadable)) throw error;
+        failedListIds.push(list.id);
+      }
+    }
+    return { tasks, failedListIds };
   }
 
   async revoke(refreshToken: string) {
@@ -131,6 +211,84 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
     } catch {
       // The connection is deleted locally either way.
     }
+  }
+
+  /** The calendars the person has switched on in Google Calendar, their own first. */
+  private async calendars(accessToken: string) {
+    const found: { id: string; name: string; primary: boolean }[] = [];
+    let pageToken: string | undefined;
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const response = await this.get(`${CALENDAR_API}/users/me/calendarList`, accessToken, {
+        minAccessRole: 'reader', // calendars shared as "free/busy only" have no event details to import
+        maxResults: '250',
+        ...(pageToken ? { pageToken } : {}),
+      });
+      if (response.status === 401) throw new GoogleAccessRevokedError('Google answered 401');
+      // 403 is not "revoked": most often the Calendar API is not enabled for the project
+      if (response.status === 403) {
+        throw new BadGatewayException(
+          'Google refused to list calendars. Check that the Google Calendar API is enabled for the project.',
+        );
+      }
+      if (!response.ok) throw new BadGatewayException('Google Calendar is not available');
+      const data = (await response.json()) as { items?: RawCalendar[]; nextPageToken?: string };
+      for (const calendar of data.items ?? []) {
+        if (calendar.selected !== true && calendar.primary !== true) continue; // hidden in Google Calendar
+        found.push({
+          id: calendar.id,
+          name: calendar.summaryOverride || calendar.summary || calendar.id,
+          primary: calendar.primary === true,
+        });
+      }
+      pageToken = data.nextPageToken;
+      if (!pageToken) break;
+    }
+    return found.sort((a, b) => Number(b.primary) - Number(a.primary));
+  }
+
+  private async calendarEvents(accessToken: string, calendarId: string, from: Date, to: Date) {
+    const raws: RawEvent[] = [];
+    let pageToken: string | undefined;
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const response = await this.get(
+        `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events`,
+        accessToken,
+        {
+          singleEvents: 'true',
+          orderBy: 'startTime',
+          timeMin: from.toISOString(),
+          timeMax: to.toISOString(),
+          maxResults: String(PAGE_SIZE),
+          ...(pageToken ? { pageToken } : {}),
+        },
+      );
+      if (response.status === 401) throw new GoogleAccessRevokedError('Google answered 401');
+      if ([403, 404, 410].includes(response.status)) throw new Unreadable();
+      if (!response.ok) throw new BadGatewayException('Google Calendar is not available');
+      const data = (await response.json()) as { items?: RawEvent[]; nextPageToken?: string };
+      raws.push(...(data.items ?? []));
+      pageToken = data.nextPageToken;
+      if (!pageToken) break;
+    }
+    return raws;
+  }
+
+  private get(url: string, accessToken: string, params: Record<string, string>) {
+    const target = new URL(url);
+    target.search = new URLSearchParams(params).toString();
+    return fetch(target, {
+      headers: { authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  }
+
+  private async accessToken(refreshToken: string) {
+    const { access_token: accessToken } = await this.token({
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    });
+    if (!accessToken) throw new BadGatewayException('Google returned no access token');
+    return accessToken;
   }
 
   private async token(params: Record<string, string>) {
@@ -166,19 +324,52 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
 }
 
 /** All-day events carry plain dates (the end is exclusive), timed ones carry instants. */
-export function toEvent(raw: RawEvent): GoogleEvent | null {
+export function toEvent(raw: RawEvent, calendar: { id: string; name: string }): GoogleEvent | null {
   if (raw.status === 'cancelled' || !raw.id || !raw.start || !raw.end) return null;
   const allDay = Boolean(raw.start.date);
   const startsAt = new Date(raw.start.date ? `${raw.start.date}T00:00:00Z` : raw.start.dateTime!);
   const endsAt = new Date(raw.end.date ? `${raw.end.date}T00:00:00Z` : raw.end.dateTime!);
   if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) return null;
   return {
-    id: raw.id,
+    id: `${calendar.id}/${raw.id}`,
+    calendarId: calendar.id,
+    calendarName: calendar.name.slice(0, 200),
     title: (raw.summary ?? '').trim().slice(0, 200) || '(no title)',
     description: raw.description?.slice(0, 5000),
     startsAt,
     // the model requires an end after the start; an instant event gets one minute
     endsAt: endsAt > startsAt ? endsAt : new Date(startsAt.getTime() + 60_000),
     allDay,
+  };
+}
+
+/**
+ * Open tasks always; completed ones only if finished recently. Google stores just the date of a due
+ * time, so a due date becomes noon UTC: that is the same calendar day in almost every time zone.
+ */
+export function toTask(raw: RawTask, listId: string, completedSince: Date): GoogleTask | null {
+  if (raw.deleted || !raw.id) return null;
+  const completed = raw.status === 'completed';
+  const completedAt = raw.completed ? new Date(raw.completed) : undefined;
+  if (
+    completed &&
+    (!completedAt || Number.isNaN(completedAt.getTime()) || completedAt < completedSince)
+  ) {
+    return null;
+  }
+  let due: Date | undefined;
+  if (raw.due) {
+    const day = new Date(raw.due);
+    if (!Number.isNaN(day.getTime())) {
+      due = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 12));
+    }
+  }
+  return {
+    id: `${listId}/${raw.id}`,
+    title: (raw.title ?? '').trim().slice(0, 200) || '(no title)',
+    notes: raw.notes?.slice(0, 5000),
+    due,
+    completed,
+    completedAt: completed ? completedAt : undefined,
   };
 }

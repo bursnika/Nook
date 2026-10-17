@@ -17,10 +17,14 @@ import {
   type OAuthProvider,
 } from '../src/auth/oauth.provider.js';
 import {
+  CALENDAR_SCOPE,
   GOOGLE_CALENDAR_PROVIDER,
   GoogleAccessRevokedError,
+  GoogleTasksUnavailableError,
+  TASKS_SCOPE,
   type GoogleCalendarProvider,
   type GoogleEvent,
+  type GoogleTask,
 } from '../src/google-calendar/google-calendar.provider.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
@@ -82,13 +86,20 @@ export class FakeOAuthProvider implements OAuthProvider {
   }
 }
 
-/** A stand-in for Google Calendar: codes and the events behind each refresh token are described by the spec. */
+/** A stand-in for Google Calendar and Tasks: the spec describes what each refresh token can see. */
 export class FakeGoogleCalendarProvider implements GoogleCalendarProvider {
   configured = true;
   /** Authorization code -> what Google would hand back. */
   codes = new Map<string, { refreshToken: string; scope: string }>();
-  /** Refresh token -> that person's calendar. */
+  /** Refresh token -> events across all of that person's calendars. */
   calendars = new Map<string, GoogleEvent[]>();
+  /** Refresh token -> calendar ids Google refuses to read this time. */
+  failedCalendars = new Map<string, string[]>();
+  /** Refresh token -> that person's Google Tasks (list id is the part of the id before "/"). */
+  tasks = new Map<string, GoogleTask[]>();
+  failedLists = new Map<string, string[]>();
+  /** Refresh tokens for which the Tasks API is off or not granted. */
+  tasksUnavailable = new Set<string>();
   /** Refresh tokens Google no longer accepts. */
   revokedByUser = new Set<string>();
   /** Refresh tokens Nook asked Google to forget. */
@@ -111,6 +122,7 @@ export class FakeGoogleCalendarProvider implements GoogleCalendarProvider {
       redirect_uri: redirectUri,
       access_type: 'offline',
       prompt: 'consent',
+      scope: `${CALENDAR_SCOPE} ${TASKS_SCOPE}`,
     }).toString();
     this.lastAuthorizationUrl = url;
     return url.toString();
@@ -124,9 +136,30 @@ export class FakeGoogleCalendarProvider implements GoogleCalendarProvider {
 
   async listEvents({ refreshToken, from, to }: { refreshToken: string; from: Date; to: Date }) {
     if (this.revokedByUser.has(refreshToken)) throw new GoogleAccessRevokedError('revoked');
-    return (this.calendars.get(refreshToken) ?? []).filter(
-      (event) => event.startsAt < to && event.endsAt > from,
+    const failedCalendarIds = this.failedCalendars.get(refreshToken) ?? [];
+    const events = (this.calendars.get(refreshToken) ?? []).filter(
+      (event) =>
+        event.startsAt < to && event.endsAt > from && !failedCalendarIds.includes(event.calendarId),
     );
+    return { events, failedCalendarIds };
+  }
+
+  async listTasks({
+    refreshToken,
+    completedSince,
+  }: {
+    refreshToken: string;
+    completedSince: Date;
+  }) {
+    if (this.revokedByUser.has(refreshToken)) throw new GoogleAccessRevokedError('revoked');
+    if (this.tasksUnavailable.has(refreshToken)) throw new GoogleTasksUnavailableError('off');
+    const failedListIds = this.failedLists.get(refreshToken) ?? [];
+    const tasks = (this.tasks.get(refreshToken) ?? []).filter(
+      (task) =>
+        !failedListIds.includes(task.id.split('/')[0]) &&
+        (!task.completed || (task.completedAt !== undefined && task.completedAt >= completedSince)),
+    );
+    return { tasks, failedListIds };
   }
 
   async revoke(refreshToken: string) {

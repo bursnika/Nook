@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 /** `?page=` and `?q=` shared by every list screen. */
 export class AdminListQuery {
@@ -17,6 +17,25 @@ export class AdminListQuery {
   @IsOptional()
   @IsString()
   flash?: string;
+
+  /** How much the last Google sync brought in; shown in the flash message. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000)
+  events?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000)
+  tasks?: number;
+
+  @IsOptional()
+  @IsIn(['not-granted', 'unavailable'])
+  tasksNote?: string;
 
   /** Set by a redirect after something went wrong (shown as a red banner). */
   @IsOptional()

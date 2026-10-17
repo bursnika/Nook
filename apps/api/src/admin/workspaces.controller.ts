@@ -22,6 +22,7 @@ import {
   pager,
   parseForm,
   problemMessage,
+  syncMessage,
   toFormMessage,
 } from './forms.js';
 
@@ -108,11 +109,11 @@ export class WorkspacesAdminController {
   @Render('admin/workspaces/show')
   async show(
     @Param() { workspaceId }: WorkspaceParams,
-    @Query() { flash, problem }: AdminListQuery,
+    @Query() { flash, problem, events, tasks, tasksNote }: AdminListQuery,
     @CurrentUser() user: AuthUser,
   ) {
     return this.homeView(workspaceId, user.id, {
-      flash: flashMessage(flash),
+      flash: flash === 'synced' ? syncMessage({ events, tasks, tasksNote }) : flashMessage(flash),
       formError: problemMessage(problem),
     });
   }

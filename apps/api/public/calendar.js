@@ -206,7 +206,7 @@
         row.appendChild(el('span', 'cal-when', when));
         row.appendChild(el('span', 'cal-title', ev.title));
         if (ev.imported) {
-          row.appendChild(el('span', 'chip chip-done', 'Google'));
+          row.appendChild(el('span', 'chip chip-done', ev.calendarName || 'Google'));
         } else {
           var del = el('button', 'btn btn-sm btn-outline-danger ms-auto', 'Delete');
           del.type = 'button';
