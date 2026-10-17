@@ -5,6 +5,7 @@ import { AttachmentsModule } from './attachments/attachments.module.js';
 import { BlocksModule } from './blocks/blocks.module.js';
 import { EventsModule } from './events/events.module.js';
 import { FeaturesModule } from './features/features.module.js';
+import { GoogleCalendarModule } from './google-calendar/google-calendar.module.js';
 import { HealthController } from './health/health.controller.js';
 import { InvitationsModule } from './invitations/invitations.module.js';
 import { MembersModule } from './members/members.module.js';
@@ -30,6 +31,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     InvitationsModule,
     FeaturesModule,
     OverviewModule,
+    GoogleCalendarModule,
     AdminModule,
   ],
   controllers: [HealthController],

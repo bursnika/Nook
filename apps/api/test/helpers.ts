@@ -1,4 +1,5 @@
 import {
+  BadGatewayException,
   type CanActivate,
   type ExecutionContext,
   type INestApplication,
@@ -15,6 +16,12 @@ import {
   type OAuthProfile,
   type OAuthProvider,
 } from '../src/auth/oauth.provider.js';
+import {
+  GOOGLE_CALENDAR_PROVIDER,
+  GoogleAccessRevokedError,
+  type GoogleCalendarProvider,
+  type GoogleEvent,
+} from '../src/google-calendar/google-calendar.provider.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
 export const PLATFORM_ADMIN_EMAIL = 'platform-admin@example.com';
@@ -75,24 +82,80 @@ export class FakeOAuthProvider implements OAuthProvider {
   }
 }
 
+/** A stand-in for Google Calendar: codes and the events behind each refresh token are described by the spec. */
+export class FakeGoogleCalendarProvider implements GoogleCalendarProvider {
+  configured = true;
+  /** Authorization code -> what Google would hand back. */
+  codes = new Map<string, { refreshToken: string; scope: string }>();
+  /** Refresh token -> that person's calendar. */
+  calendars = new Map<string, GoogleEvent[]>();
+  /** Refresh tokens Google no longer accepts. */
+  revokedByUser = new Set<string>();
+  /** Refresh tokens Nook asked Google to forget. */
+  forgotten: string[] = [];
+  lastAuthorizationUrl?: URL;
+
+  authorizationUrl({
+    state,
+    codeChallenge,
+    redirectUri,
+  }: {
+    state: string;
+    codeChallenge: string;
+    redirectUri: string;
+  }) {
+    const url = new URL('https://accounts.example.test/calendar-consent');
+    url.search = new URLSearchParams({
+      state,
+      code_challenge: codeChallenge,
+      redirect_uri: redirectUri,
+      access_type: 'offline',
+      prompt: 'consent',
+    }).toString();
+    this.lastAuthorizationUrl = url;
+    return url.toString();
+  }
+
+  async exchangeCode({ code }: { code: string; codeVerifier: string; redirectUri: string }) {
+    const grant = this.codes.get(code);
+    if (!grant) throw new BadGatewayException('Google rejected the request');
+    return grant;
+  }
+
+  async listEvents({ refreshToken, from, to }: { refreshToken: string; from: Date; to: Date }) {
+    if (this.revokedByUser.has(refreshToken)) throw new GoogleAccessRevokedError('revoked');
+    return (this.calendars.get(refreshToken) ?? []).filter(
+      (event) => event.startsAt < to && event.endsAt > from,
+    );
+  }
+
+  async revoke(refreshToken: string) {
+    this.forgotten.push(refreshToken);
+  }
+}
+
 export interface TestApp {
   app: INestApplication;
   prisma: PrismaService;
   oauth: FakeOAuthProvider;
+  googleCalendar: FakeGoogleCalendarProvider;
 }
 
 export async function createTestApp(options: { auth?: 'bypass' | 'real' } = {}): Promise<TestApp> {
   const oauth = new FakeOAuthProvider();
+  const googleCalendar = new FakeGoogleCalendarProvider();
   let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(OAUTH_PROVIDER)
-    .useValue(oauth);
+    .useValue(oauth)
+    .overrideProvider(GOOGLE_CALENDAR_PROVIDER)
+    .useValue(googleCalendar);
   if (options.auth !== 'real')
     builder = builder.overrideProvider(AuthGuard).useClass(PlatformAdminGuard);
   const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication();
   configureApp(app);
   await app.init();
-  return { app, prisma: app.get(PrismaService), oauth };
+  return { app, prisma: app.get(PrismaService), oauth, googleCalendar };
 }
 
 const FEATURE_FLAGS = [

@@ -3,19 +3,23 @@ import {
   Controller,
   Get,
   HttpCode,
+  HttpException,
   Inject,
   Post,
   Query,
   Req,
   Res,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
-import { createHash, randomBytes } from 'node:crypto';
 import type { Request, Response } from 'express';
+import { GoogleCalendarService } from '../google-calendar/google-calendar.service.js';
 import { AuthService } from './auth.service.js';
 import {
+  ACCESS_COOKIE,
+  OAUTH_PURPOSE_COOKIE,
   OAUTH_RETURN_COOKIE,
   OAUTH_STATE_COOKIE,
   OAUTH_VERIFIER_COOKIE,
@@ -29,6 +33,8 @@ import {
 import { CurrentUser, Public } from './decorators.js';
 import type { AuthUser } from './auth.types.js';
 import { OAUTH_PROVIDER, type OAuthProvider } from './oauth.provider.js';
+import { newPkce } from './pkce.js';
+import { TokenService } from './token.service.js';
 import { env } from '../env.js';
 
 class StartQuery {
@@ -46,13 +52,20 @@ function pickStrings<K extends string>(query: Request['query'], keys: K[]) {
   return result;
 }
 
-const base64url = (buffer: Buffer) => buffer.toString('base64url');
+/** `/admin/workspaces/x` + flash=connected -> `/admin/workspaces/x?flash=connected` */
+function withParam(path: string, key: string, value: string) {
+  const url = new URL(path, 'http://nook.local');
+  url.searchParams.set(key, value);
+  return url.pathname + url.search;
+}
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
+    private readonly tokens: TokenService,
+    private readonly calendar: GoogleCalendarService,
     @Inject(OAUTH_PROVIDER) private readonly oauth: OAuthProvider,
   ) {}
 
@@ -62,9 +75,7 @@ export class AuthController {
   start(@Query() { returnTo }: StartQuery, @Res() res: Response) {
     if (!this.oauth.configured)
       throw new ServiceUnavailableException('Google sign-in is not configured');
-    const state = base64url(randomBytes(24));
-    const verifier = base64url(randomBytes(48));
-    const challenge = base64url(createHash('sha256').update(verifier).digest());
+    const { state, verifier, challenge } = newPkce();
     setOAuthCookies(res, { state, verifier, returnTo: safeReturnTo(returnTo) });
     res.redirect(
       this.oauth.authorizationUrl({
@@ -85,8 +96,19 @@ export class AuthController {
     const expectedState = req.cookies?.[OAUTH_STATE_COOKIE] as string | undefined;
     const verifier = req.cookies?.[OAUTH_VERIFIER_COOKIE] as string | undefined;
     const returnTo = safeReturnTo(req.cookies?.[OAUTH_RETURN_COOKIE]);
+    const purpose = req.cookies?.[OAUTH_PURPOSE_COOKIE] as string | undefined;
     clearOAuthCookies(res);
 
+    if (purpose === 'calendar') {
+      return this.finishCalendar(req, res, {
+        code,
+        state,
+        error,
+        expectedState,
+        verifier,
+        returnTo,
+      });
+    }
     if (error) throw new BadRequestException(`Google sign-in was cancelled (${error})`);
     if (!code || !state || !expectedState || !verifier || state !== expectedState) {
       throw new BadRequestException('Invalid or expired sign-in attempt, please start again');
@@ -100,6 +122,46 @@ export class AuthController {
     const { tokens } = await this.auth.loginWithProfile(profile, req.headers['user-agent']);
     setSessionCookies(res, tokens);
     res.redirect(returnTo);
+  }
+
+  /** The second kind of flow ending here: a signed-in person granting access to their Google Calendar. */
+  private async finishCalendar(
+    req: Request,
+    res: Response,
+    flow: {
+      code?: string;
+      state?: string;
+      error?: string;
+      expectedState?: string;
+      verifier?: string;
+      returnTo: string;
+    },
+  ) {
+    const { code, state, error, expectedState, verifier, returnTo } = flow;
+    // Who is connecting comes from the session, never from anything the callback URL says.
+    const user = await this.tokens.verifyAccessToken(req.cookies?.[ACCESS_COOKIE] ?? '');
+    if (!user) throw new UnauthorizedException('Sign in before connecting Google Calendar');
+    if (!state || !expectedState || !verifier || state !== expectedState) {
+      throw new BadRequestException('Invalid or expired attempt, please start again');
+    }
+
+    let granted = false;
+    if (!error && code) {
+      try {
+        ({ granted } = await this.calendar.connect(user.id, {
+          code,
+          codeVerifier: verifier,
+          redirectUri: env.google.callbackUrl,
+        }));
+      } catch (failure) {
+        if (!(failure instanceof HttpException)) throw failure;
+      }
+    }
+    res.redirect(
+      granted
+        ? withParam(returnTo, 'flash', 'connected')
+        : withParam(returnTo, 'problem', 'calendar'),
+    );
   }
 
   /** Rotates the session: needs the refresh cookie, returns a fresh access token (also set as a cookie). */

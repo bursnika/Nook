@@ -6,6 +6,8 @@ export const REFRESH_COOKIE = 'nook_rt';
 export const OAUTH_STATE_COOKIE = 'nook_oauth_state';
 export const OAUTH_VERIFIER_COOKIE = 'nook_oauth_verifier';
 export const OAUTH_RETURN_COOKIE = 'nook_oauth_return';
+/** Why the flow was started: absent for sign-in, 'calendar' when connecting Google Calendar. */
+export const OAUTH_PURPOSE_COOKIE = 'nook_oauth_purpose';
 
 const base = (): CookieOptions => ({
   httpOnly: true, // never readable from JavaScript, so an XSS bug cannot steal the session
@@ -39,16 +41,22 @@ export function clearSessionCookies(res: Response) {
 
 export function setOAuthCookies(
   res: Response,
-  values: { state: string; verifier: string; returnTo: string },
+  values: { state: string; verifier: string; returnTo: string; purpose?: 'calendar' },
 ) {
   const options = { ...base(), path: OAUTH_PATH, maxAge: 10 * 60 * 1000 };
+  if (values.purpose) res.cookie(OAUTH_PURPOSE_COOKIE, values.purpose, options);
   res.cookie(OAUTH_STATE_COOKIE, values.state, options);
   res.cookie(OAUTH_VERIFIER_COOKIE, values.verifier, options);
   res.cookie(OAUTH_RETURN_COOKIE, values.returnTo, options);
 }
 
 export function clearOAuthCookies(res: Response) {
-  for (const name of [OAUTH_STATE_COOKIE, OAUTH_VERIFIER_COOKIE, OAUTH_RETURN_COOKIE]) {
+  for (const name of [
+    OAUTH_STATE_COOKIE,
+    OAUTH_VERIFIER_COOKIE,
+    OAUTH_RETURN_COOKIE,
+    OAUTH_PURPOSE_COOKIE,
+  ]) {
     res.clearCookie(name, { ...base(), path: OAUTH_PATH });
   }
 }
