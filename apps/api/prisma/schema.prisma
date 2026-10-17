@@ -61,6 +61,7 @@ model User {
   refreshTokens   RefreshToken[]
   sentInvitations Invitation[]      @relation("InvitedBy")
   importedEvents  CalendarEvent[]   @relation("EventImporter")
+  importedTasks   Task[]            @relation("TaskImporter")
   googleCalendar  GoogleConnection?
 
   @@index([name])
@@ -155,46 +156,55 @@ model Block {
 }
 
 model Task {
-  id          String       @id @default(uuid(7))
-  title       String
-  description String?
-  status      TaskStatus   @default(TODO)
-  priority    TaskPriority @default(MEDIUM)
-  dueDate     DateTime?
+  id           String       @id @default(uuid(7))
+  title        String
+  description  String?
+  status       TaskStatus   @default(TODO)
+  priority     TaskPriority @default(MEDIUM)
+  dueDate      DateTime?
   // Order inside a Kanban column.
-  position    Float        @default(0)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  completedAt DateTime?
-  workspaceId String
-  pageId      String?
-  assigneeId  String?
+  position     Float        @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  completedAt  DateTime?
+  workspaceId  String
+  pageId       String?
+  assigneeId   String?
+  // Set when the task was imported from Google Tasks (`<list id>/<task id>`) by this person.
+  googleTaskId String?
+  importedById String?
 
-  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  page      Page?           @relation(fields: [pageId], references: [id], onDelete: SetNull)
-  assignee  User?           @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  events    CalendarEvent[]
+  workspace  Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  page       Page?           @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  assignee   User?           @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  events     CalendarEvent[]
+  importedBy User?           @relation("TaskImporter", fields: [importedById], references: [id], onDelete: SetNull)
 
+  @@unique([workspaceId, googleTaskId])
+  @@index([importedById])
   @@index([workspaceId, status, position])
   @@index([workspaceId, dueDate])
   @@index([assigneeId])
 }
 
 model CalendarEvent {
-  id            String   @id @default(uuid(7))
-  title         String
-  description   String?
-  startsAt      DateTime
-  endsAt        DateTime
-  allDay        Boolean  @default(false)
+  id               String   @id @default(uuid(7))
+  title            String
+  description      String?
+  startsAt         DateTime
+  endsAt           DateTime
+  allDay           Boolean  @default(false)
   // Set when the event was imported from Google Calendar.
-  googleEventId String?
+  googleEventId    String?
   // Whose Google Calendar it came from; only that person's sync may remove it again.
-  importedById  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  workspaceId   String
-  taskId        String?
+  importedById     String?
+  // Which of their calendars (primary, holidays, a shared one, ...) and what it is called.
+  googleCalendarId String?
+  calendarName     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  workspaceId      String
+  taskId           String?
 
   workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   task       Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
