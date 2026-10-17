@@ -207,6 +207,20 @@ describe('Authentication', () => {
       expect(await ctx.prisma.user.count()).toBe(0);
     });
 
+    it('explains an expired attempt to a browser and keeps JSON for API clients', async () => {
+      const url = '/api/auth/google/callback?code=c1&state=whatever';
+      const page = await http().get(url).set('Accept', 'text/html,application/xhtml+xml');
+      expect(page.status).toBe(400);
+      expect(page.headers['content-type']).toContain('text/html');
+      expect(page.text).toContain('expired or was already used');
+      expect(page.text).toContain('Try again');
+
+      const json = await http().get(url).set('Accept', 'application/json');
+      expect(json.status).toBe(400);
+      expect(json.body.message).toContain('Invalid or expired');
+      expect((await http().get(url)).body.message).toContain('Invalid or expired');
+    });
+
     it('rejects a callback whose state does not match the cookie', async () => {
       const code = 'forged-code';
       ctx.oauth.profiles.set(code, {

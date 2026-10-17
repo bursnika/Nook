@@ -132,6 +132,17 @@ describe('Google Calendar', () => {
       expect(await ctx.prisma.googleConnection.count()).toBe(0);
     });
 
+    it('shows a browser an explanation when the calendar attempt expired', async () => {
+      const who = await person('a@example.com');
+      await who.agent.get('/api/google-calendar/connect');
+      const res = await who.agent
+        .get('/api/auth/google/callback?code=c&state=another-tab')
+        .set('Accept', 'text/html');
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('Try again');
+      expect(await ctx.prisma.googleConnection.count()).toBe(0);
+    });
+
     it('does not trust a callback without a session', async () => {
       const who = await person('a@example.com');
       ctx.googleCalendar.codes.set('c', { refreshToken: 'r', scope: CALENDAR_SCOPE });

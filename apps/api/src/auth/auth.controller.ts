@@ -111,7 +111,7 @@ export class AuthController {
     }
     if (error) throw new BadRequestException(`Google sign-in was cancelled (${error})`);
     if (!code || !state || !expectedState || !verifier || state !== expectedState) {
-      throw new BadRequestException('Invalid or expired sign-in attempt, please start again');
+      return this.expired(req, res, 'Invalid or expired sign-in attempt, please start again');
     }
 
     const profile = await this.oauth.exchangeCode({
@@ -122,6 +122,22 @@ export class AuthController {
     const { tokens } = await this.auth.loginWithProfile(profile, req.headers['user-agent']);
     setSessionCookies(res, tokens);
     res.redirect(returnTo);
+  }
+
+  /**
+   * The state cookie is missing or different: the attempt is older than 10 minutes, was already used
+   * (reloaded callback, two tabs) or the browser dropped the cookie. API clients get JSON; a person in
+   * a browser gets a page that explains it and offers a fresh start instead of raw JSON.
+   */
+  private expired(req: Request, res: Response, message: string) {
+    if (req.accepts(['json', 'html']) !== 'html') throw new BadRequestException(message);
+    return res.status(400).render('admin/error', {
+      title: 'Sign-in expired',
+      status: 400,
+      message:
+        'This sign-in attempt expired or was already used (it must be finished within 10 minutes, in the same tab, without reloading). Nothing was changed, just start again.',
+      retryLabel: 'Try again',
+    });
   }
 
   /** The second kind of flow ending here: a signed-in person granting access to their Google Calendar. */
@@ -142,7 +158,7 @@ export class AuthController {
     const user = await this.tokens.verifyAccessToken(req.cookies?.[ACCESS_COOKIE] ?? '');
     if (!user) throw new UnauthorizedException('Sign in before connecting Google Calendar');
     if (!state || !expectedState || !verifier || state !== expectedState) {
-      throw new BadRequestException('Invalid or expired attempt, please start again');
+      return this.expired(req, res, 'Invalid or expired attempt, please start again');
     }
 
     let granted = false;
