@@ -1,9 +1,11 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
   Res,
@@ -14,16 +16,22 @@ import { IsOptional, IsString } from 'class-validator';
 import type { Response } from 'express';
 import type { AuthUser } from '../auth/auth.types.js';
 import { safeReturnTo, setOAuthCookies } from '../auth/cookies.js';
-import { CurrentUser } from '../auth/decorators.js';
+import { CurrentUser, RequireFeature } from '../auth/decorators.js';
 import { newPkce } from '../auth/pkce.js';
-import { WorkspaceParams } from '../common/params.js';
+import { WorkspaceItemParams, WorkspaceParams } from '../common/params.js';
 import { env } from '../env.js';
+import { UpdateGoogleEventDto } from './google-event.dto.js';
 import { GoogleCalendarService } from './google-calendar.service.js';
 
 class ConnectQuery {
   @IsOptional()
   @IsString()
   returnTo?: string;
+
+  /** `1` also asks for permission to change Google events (the optional, second consent). */
+  @IsOptional()
+  @IsString()
+  edit?: string;
 }
 
 @ApiTags('google-calendar')
@@ -36,7 +44,7 @@ export class GoogleCalendarController {
    * needs one authorised callback; the `purpose` cookie tells the callback which flow it is finishing.
    */
   @Get('google-calendar/connect')
-  connect(@Query() { returnTo }: ConnectQuery, @Res() res: Response) {
+  connect(@Query() { returnTo, edit }: ConnectQuery, @Res() res: Response) {
     if (!this.calendar.provider.configured) {
       throw new ServiceUnavailableException('Google is not configured');
     }
@@ -52,19 +60,38 @@ export class GoogleCalendarController {
         state,
         codeChallenge: challenge,
         redirectUri: env.google.callbackUrl,
+        write: edit === '1',
       }),
     );
   }
 
   @Get('workspaces/:workspaceId/google-calendar')
-  status(@CurrentUser() user: AuthUser) {
-    return this.calendar.status(user.id);
+  status(@CurrentUser() user: AuthUser, @Param() { workspaceId }: WorkspaceParams) {
+    return this.calendar.status(user.id, workspaceId);
   }
 
   @Post('workspaces/:workspaceId/google-calendar/sync')
   @HttpCode(200)
   sync(@CurrentUser() user: AuthUser, @Param() { workspaceId }: WorkspaceParams) {
     return this.calendar.sync(workspaceId, user.id);
+  }
+
+  /** Changes an imported event in Google Calendar itself. Pro only; see GoogleCalendarService.updateEvent. */
+  @Patch('workspaces/:workspaceId/google-calendar/events/:id')
+  @RequireFeature('google-two-way-sync')
+  updateEvent(
+    @CurrentUser() user: AuthUser,
+    @Param() { workspaceId, id }: WorkspaceItemParams,
+    @Body() dto: UpdateGoogleEventDto,
+  ) {
+    return this.calendar.updateEvent(workspaceId, user.id, id, dto);
+  }
+
+  @Delete('workspaces/:workspaceId/google-calendar/events/:id')
+  @HttpCode(204)
+  @RequireFeature('google-two-way-sync')
+  deleteEvent(@CurrentUser() user: AuthUser, @Param() { workspaceId, id }: WorkspaceItemParams) {
+    return this.calendar.deleteEvent(workspaceId, user.id, id);
   }
 
   @Delete('google-calendar')

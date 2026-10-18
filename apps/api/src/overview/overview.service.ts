@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { TaskPriority, TaskStatus } from '../generated/prisma/enums.js';
+import { GoogleCalendarService } from '../google-calendar/google-calendar.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 /** Tasks due within this many hours are "about to expire". Overdue ones stay in the list until done. */
@@ -20,7 +21,10 @@ const dueFirst = [{ dueDate: { sort: 'asc', nulls: 'last' } }, { id: 'desc' }] a
 
 @Injectable()
 export class OverviewService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly googleCalendar: GoogleCalendarService,
+  ) {}
 
   /** Everything the workspace home page shows besides the calendar. */
   async summary(workspaceId: string, now = new Date()) {
@@ -61,12 +65,12 @@ export class OverviewService {
   }
 
   /** Events and task deadlines inside a window, for drawing a calendar. */
-  async calendar(workspaceId: string, from: Date, to: Date) {
+  async calendar(workspaceId: string, viewerId: string, from: Date, to: Date) {
     if (to <= from) throw new BadRequestException('"to" must be after "from"');
     if (to.getTime() - from.getTime() > MAX_CALENDAR_DAYS * 24 * 60 * 60 * 1000) {
       throw new BadRequestException(`The window can span at most ${MAX_CALENDAR_DAYS} days`);
     }
-    const [events, tasks] = await Promise.all([
+    const [events, tasks, google] = await Promise.all([
       this.prisma.calendarEvent.findMany({
         where: { workspaceId, startsAt: { lt: to }, endsAt: { gt: from } },
         orderBy: { startsAt: 'asc' },
@@ -80,6 +84,10 @@ export class OverviewService {
           allDay: true,
           googleEventId: true,
           calendarName: true,
+          importedById: true,
+          googleEditable: true,
+          recurring: true,
+          googleUrl: true,
         },
       }),
       this.prisma.task.findMany({
@@ -88,13 +96,25 @@ export class OverviewService {
         take: CALENDAR_LIMIT,
         select: taskCard,
       }),
+      this.googleCalendar.status(viewerId, workspaceId),
     ]);
     return {
-      events: events.map(({ googleEventId, ...event }) => ({
-        ...event,
-        imported: googleEventId !== null,
-      })),
+      events: events.map(
+        ({ googleEventId, importedById, googleEditable, googleUrl, ...event }) => ({
+          ...event,
+          imported: googleEventId !== null,
+          // Google rights of the person looking: the client decides what to offer from these
+          mine: googleEventId !== null && importedById === viewerId,
+          editable: googleEditable,
+          url: googleUrl,
+        }),
+      ),
       tasks,
+      google: {
+        connected: google.connected,
+        editGranted: google.editGranted,
+        twoWay: google.twoWay,
+      },
     };
   }
 }

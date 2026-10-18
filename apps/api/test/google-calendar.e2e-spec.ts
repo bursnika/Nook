@@ -2,6 +2,9 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import {
   CALENDAR_SCOPE,
+  EVENTS_WRITE_SCOPE,
+  GoogleEventGoneError,
+  GoogleForbiddenError,
   TASKS_SCOPE,
   type GoogleEvent,
   type GoogleTask,
@@ -32,6 +35,9 @@ describe('Google Calendar', () => {
     ctx.googleCalendar.tasksUnavailable.clear();
     ctx.googleCalendar.revokedByUser.clear();
     ctx.googleCalendar.forgotten = [];
+    ctx.googleCalendar.updates = [];
+    ctx.googleCalendar.deletions = [];
+    ctx.googleCalendar.writeError = null;
   });
 
   const http = () => request(app.getHttpServer());
@@ -49,6 +55,8 @@ describe('Google Calendar', () => {
     startsAt: at(days),
     endsAt: at(days, 11),
     allDay: false,
+    editable: true,
+    recurring: false,
     ...extra,
   });
 
@@ -131,6 +139,8 @@ describe('Google Calendar', () => {
         configured: true,
         connected: true,
         tasksGranted: true,
+        editGranted: false,
+        twoWay: false,
         lastSyncAt: null,
       });
     });
@@ -656,6 +666,285 @@ describe('Google Calendar', () => {
         .set('Authorization', who.token)
         .expect(200);
       expect(res.body.events).toMatchObject([{ title: 'Lecture', imported: true }]);
+    });
+  });
+
+  describe('editing Google events from Nook', () => {
+    const WRITE = `openid ${CALENDAR_SCOPE} ${TASKS_SCOPE} ${EVENTS_WRITE_SCOPE}`;
+    // fixed once: asserting against a clock that keeps moving would be flaky
+    const newStart = at(3);
+    const newEnd = at(3, 12);
+    const body = (extra: Record<string, unknown> = {}) => ({
+      title: 'Lecture (moved)',
+      description: 'Room 5',
+      startsAt: newStart.toISOString(),
+      endsAt: newEnd.toISOString(),
+      allDay: false,
+      ...extra,
+    });
+
+    /** Imports one editable event for a person who may (or may not) change Google events, on a Pro or Free plan. */
+    async function withEvent(
+      options: {
+        plan?: 'PRO' | 'FREE';
+        scope?: string;
+        extra?: Partial<GoogleEvent>;
+        email?: string;
+      } = {},
+    ) {
+      const who = await person(options.email ?? 'a@example.com');
+      await ctx.prisma.workspace.update({
+        where: { id: who.workspaceId },
+        data: { plan: options.plan ?? 'PRO' },
+      });
+      await connect(who, { refreshToken: `rt-${who.user.email}`, scope: options.scope ?? WRITE });
+      ctx.googleCalendar.calendars.set(`rt-${who.user.email}`, [
+        event('e1', 'Lecture', 2, { description: 'Room 4', recurring: true, ...options.extra }),
+      ]);
+      await http()
+        .post(`/api/workspaces/${who.workspaceId}/google-calendar/sync`)
+        .set('Authorization', who.token)
+        .expect(200);
+      const row = await ctx.prisma.calendarEvent.findFirstOrThrow({
+        where: { workspaceId: who.workspaceId },
+      });
+      const url = `/api/workspaces/${who.workspaceId}/google-calendar/events/${row.id}`;
+      return {
+        ...who,
+        row,
+        url,
+        patch: (payload: object = body(), token = who.token) =>
+          http().patch(url).set('Authorization', token).send(payload),
+        del: (token = who.token) => http().delete(url).set('Authorization', token),
+      };
+    }
+
+    it('remembers what Google says about an imported event: editable, repeating, link', async () => {
+      const w = await withEvent({ extra: { url: 'https://calendar.google.com/e/1' } });
+      expect(w.row).toMatchObject({
+        googleEditable: true,
+        recurring: true,
+        googleUrl: 'https://calendar.google.com/e/1',
+        googleCalendarId: 'primary',
+      });
+    });
+
+    it('sends the change to Google and mirrors Google’s answer here', async () => {
+      const w = await withEvent();
+      const res = await w.patch().expect(200);
+      expect(res.body).toMatchObject({ title: 'Lecture (moved)', description: 'Room 5' });
+
+      expect(ctx.googleCalendar.updates).toHaveLength(1);
+      expect(ctx.googleCalendar.updates[0]).toMatchObject({
+        calendarId: 'primary',
+        eventId: 'e1', // Google's own id, not Nook's composite one
+        changes: { title: 'Lecture (moved)', description: 'Room 5', allDay: false },
+      });
+      const stored = await ctx.prisma.calendarEvent.findUniqueOrThrow({ where: { id: w.row.id } });
+      expect(stored.title).toBe('Lecture (moved)');
+      expect(stored.startsAt.toISOString()).toBe(newStart.toISOString());
+      expect(stored.googleUrl).toContain('updated');
+      expect(stored.googleEventId).toBe(w.row.googleEventId); // still the same event
+    });
+
+    it('can turn an event into an all-day one, and clear its description', async () => {
+      const w = await withEvent();
+      const midnight = (days: number) => new Date(new Date(at(days)).setUTCHours(0, 0, 0, 0));
+      await w
+        .patch(
+          body({
+            description: '',
+            allDay: true,
+            startsAt: midnight(3).toISOString(),
+            endsAt: midnight(4).toISOString(),
+          }),
+        )
+        .expect(200);
+      expect(ctx.googleCalendar.updates[0].changes).toMatchObject({
+        description: null,
+        allDay: true,
+      });
+      expect(
+        await ctx.prisma.calendarEvent.findUniqueOrThrow({ where: { id: w.row.id } }),
+      ).toMatchObject({ allDay: true, description: null });
+    });
+
+    it('validates the change before bothering Google', async () => {
+      const w = await withEvent();
+      await w.patch(body({ endsAt: at(3, 8).toISOString() })).expect(400); // ends before it starts
+      await w.patch(body({ title: '' })).expect(400);
+      await w.patch(body({ title: 'x'.repeat(201) })).expect(400);
+      await w.patch(body({ startsAt: 'tomorrow' })).expect(400);
+      await w.patch({ title: 'only a title' }).expect(400);
+      const day = new Date(new Date(at(3)).setUTCHours(0, 0, 0, 0));
+      await w
+        .patch(body({ allDay: true, startsAt: day.toISOString(), endsAt: day.toISOString() }))
+        .expect(400); // an all-day event lasts at least a day
+      expect(ctx.googleCalendar.updates).toHaveLength(0);
+    });
+
+    it('is a Pro feature', async () => {
+      const w = await withEvent({ plan: 'FREE' });
+      const res = await w.patch().expect(403);
+      expect(res.body).toMatchObject({
+        code: 'FEATURE_NOT_AVAILABLE',
+        feature: 'google-two-way-sync',
+        requiredPlan: 'PRO',
+      });
+      await w.del().expect(403);
+      expect(ctx.googleCalendar.updates).toHaveLength(0);
+      expect(ctx.googleCalendar.deletions).toHaveLength(0);
+    });
+
+    it('needs the separate permission to change Google events, and says how to get it', async () => {
+      const w = await withEvent({ scope: `openid ${CALENDAR_SCOPE} ${TASKS_SCOPE}` });
+      const res = await w.patch().expect(403);
+      expect(res.body.code).toBe('GOOGLE_WRITE_NOT_GRANTED');
+      await w.del().expect(403);
+      expect(ctx.googleCalendar.updates).toHaveLength(0);
+    });
+
+    it('asks for that permission only when the person chooses to', async () => {
+      const who = await person('a@example.com');
+      await who.agent.get('/api/google-calendar/connect');
+      expect(ctx.googleCalendar.lastAuthorizationUrl?.searchParams.get('scope')).not.toContain(
+        EVENTS_WRITE_SCOPE,
+      );
+      await who.agent.get('/api/google-calendar/connect?edit=1');
+      expect(ctx.googleCalendar.lastAuthorizationUrl?.searchParams.get('scope')).toContain(
+        EVENTS_WRITE_SCOPE,
+      );
+    });
+
+    it('lets only the person whose calendar it came from change it', async () => {
+      const w = await withEvent();
+      const colleague = await person('colleague@example.com');
+      await ctx.prisma.membership.create({
+        data: { userId: colleague.user.id, workspaceId: w.workspaceId, role: 'ADMIN' },
+      });
+      await connect(colleague, { refreshToken: 'rt-colleague', scope: WRITE });
+      const res = await w.patch(body(), colleague.token).expect(403);
+      expect(res.body.message).toContain('someone else');
+      await w.del(colleague.token).expect(403);
+      expect(ctx.googleCalendar.updates).toHaveLength(0);
+    });
+
+    it('refuses events Google would not let the person change', async () => {
+      const w = await withEvent({ extra: { editable: false } });
+      expect((await w.patch().expect(403)).body.message).toContain('read-only');
+      await w.del().expect(403);
+      expect(ctx.googleCalendar.updates).toHaveLength(0);
+    });
+
+    it('does not treat Nook’s own events as Google events, and keeps them off the Google routes', async () => {
+      const w = await withEvent();
+      const own = await ctx.prisma.calendarEvent.create({
+        data: { workspaceId: w.workspaceId, title: 'Mine', startsAt: at(1), endsAt: at(1, 11) },
+      });
+      const url = `/api/workspaces/${w.workspaceId}/google-calendar/events/${own.id}`;
+      await http().patch(url).set('Authorization', w.token).send(body()).expect(404);
+      await http().delete(url).set('Authorization', w.token).expect(404);
+    });
+
+    it('does not reach events of another workspace', async () => {
+      const w = await withEvent();
+      const stranger = await person('stranger@example.com');
+      await http().patch(w.url).set('Authorization', stranger.token).send(body()).expect(404);
+      await http()
+        .patch(`/api/workspaces/${stranger.workspaceId}/google-calendar/events/${w.row.id}`)
+        .set('Authorization', stranger.token)
+        .send(body())
+        .expect(403); // personal workspace on the Free plan, and still not their event
+      await http().patch(w.url).send(body()).expect(401);
+      expect(ctx.googleCalendar.updates).toHaveLength(0);
+    });
+
+    it('keeps the local event unchanged when Google refuses (for example a guest of the event)', async () => {
+      const w = await withEvent();
+      ctx.googleCalendar.writeError = new GoogleForbiddenError('guest');
+      const res = await w.patch().expect(403);
+      expect(res.body.message).toContain('only a guest');
+      await w.del().expect(403);
+      expect(
+        await ctx.prisma.calendarEvent.findUniqueOrThrow({ where: { id: w.row.id } }),
+      ).toMatchObject({ title: 'Lecture' });
+    });
+
+    it('removes the local copy when the event was already deleted in Google', async () => {
+      const w = await withEvent();
+      ctx.googleCalendar.writeError = new GoogleEventGoneError('gone');
+      await w.patch().expect(410);
+      expect(await ctx.prisma.calendarEvent.count()).toBe(0);
+    });
+
+    it('forgets the connection when Google no longer accepts it', async () => {
+      const w = await withEvent();
+      ctx.googleCalendar.revokedByUser.add(`rt-${w.user.email}`);
+      await w.patch().expect(409);
+      expect(await ctx.prisma.googleConnection.count()).toBe(0);
+    });
+
+    it('deletes in Google first, then here', async () => {
+      const w = await withEvent();
+      await w.del().expect(204);
+      expect(ctx.googleCalendar.deletions).toEqual([{ calendarId: 'primary', eventId: 'e1' }]);
+      expect(await ctx.prisma.calendarEvent.count()).toBe(0);
+    });
+
+    it('keeps the event here when deleting in Google failed', async () => {
+      const w = await withEvent();
+      ctx.googleCalendar.writeError = new GoogleForbiddenError('guest');
+      await w.del().expect(403);
+      expect(await ctx.prisma.calendarEvent.count()).toBe(1);
+    });
+
+    it('stops the general events API from editing or deleting events that belong to Google', async () => {
+      const w = await withEvent();
+      const base = `/api/workspaces/${w.workspaceId}/events/${w.row.id}`;
+      await http().patch(base).set('Authorization', w.token).send({ title: 'sneaky' }).expect(409);
+      await http().delete(base).set('Authorization', w.token).expect(409);
+      expect(
+        await ctx.prisma.calendarEvent.findUniqueOrThrow({ where: { id: w.row.id } }),
+      ).toMatchObject({ title: 'Lecture' });
+    });
+
+    it('tells the calendar what the viewer may do', async () => {
+      const w = await withEvent();
+      const window = `from=${encodeURIComponent(at(0).toISOString())}&to=${encodeURIComponent(at(10).toISOString())}`;
+      const mine = await http()
+        .get(`/api/workspaces/${w.workspaceId}/calendar?${window}`)
+        .set('Authorization', w.token)
+        .expect(200);
+      expect(mine.body.google).toEqual({ connected: true, editGranted: true, twoWay: true });
+      expect(mine.body.events[0]).toMatchObject({
+        imported: true,
+        mine: true,
+        editable: true,
+        recurring: true,
+      });
+      expect(JSON.stringify(mine.body)).not.toContain('importedById');
+
+      const other = await person('other@example.com');
+      await ctx.prisma.membership.create({
+        data: { userId: other.user.id, workspaceId: w.workspaceId, role: 'MEMBER' },
+      });
+      const theirs = await http()
+        .get(`/api/workspaces/${w.workspaceId}/calendar?${window}`)
+        .set('Authorization', other.token)
+        .expect(200);
+      expect(theirs.body.events[0]).toMatchObject({ imported: true, mine: false });
+      expect(theirs.body.google.connected).toBe(false);
+    });
+
+    it('offers the permission on the workspace home when it is missing', async () => {
+      const w = await withEvent({ scope: `openid ${CALENDAR_SCOPE} ${TASKS_SCOPE}` });
+      const home = await http()
+        .get(`/admin/workspaces/${w.workspaceId}`)
+        .set('Authorization', w.token)
+        .set('Accept', 'text/html')
+        .expect(200);
+      expect(home.text).toContain('connect?edit=1');
+      expect(home.text).toContain('Allow editing Google events');
     });
   });
 

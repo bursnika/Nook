@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateEventDto, ListEventsQuery, UpdateEventDto } from './event.dto.js';
@@ -38,13 +38,24 @@ export class EventsService {
 
   async update(workspaceId: string, id: string, dto: UpdateEventDto) {
     const current = await this.get(workspaceId, id);
+    this.assertNotImported(current);
     this.assertRange(dto.startsAt ?? current.startsAt, dto.endsAt ?? current.endsAt);
     await this.assertTask(workspaceId, dto.taskId);
     return this.prisma.calendarEvent.update({ where: { id }, data: dto });
   }
 
   async remove(workspaceId: string, id: string) {
+    this.assertNotImported(await this.get(workspaceId, id));
     await this.prisma.calendarEvent.delete({ where: { id, workspaceId } });
+  }
+
+  /** Imported events belong to Google: changing only the local copy would be undone by the next sync. */
+  private assertNotImported(event: { googleEventId: string | null }) {
+    if (event.googleEventId !== null) {
+      throw new ConflictException(
+        'This event comes from Google Calendar. Change it through /google-calendar/events/:id (Pro) or in Google.',
+      );
+    }
   }
 
   private assertRange(startsAt: Date, endsAt: Date) {

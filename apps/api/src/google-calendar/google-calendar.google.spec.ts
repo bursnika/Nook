@@ -1,10 +1,14 @@
-import { BadGatewayException } from '@nestjs/common';
+import { BadGatewayException, BadRequestException } from '@nestjs/common';
 import { GoogleCalendarGoogle, toEvent, toTask } from './google-calendar.google.js';
 import {
   CALENDAR_SCOPE,
+  EVENTS_WRITE_SCOPE,
   GoogleAccessRevokedError,
+  GoogleEventGoneError,
+  GoogleForbiddenError,
   GoogleTasksUnavailableError,
   TASKS_SCOPE,
+  type EventChanges,
 } from './google-calendar.provider.js';
 
 const calendar = { id: 'primary', name: 'Personal' };
@@ -30,6 +34,9 @@ describe('toEvent', () => {
       startsAt: new Date('2030-05-01T07:00:00Z'),
       endsAt: new Date('2030-05-01T08:30:00Z'),
       allDay: false,
+      editable: false, // the test calendar is not marked writable
+      recurring: false,
+      url: undefined,
     });
   });
 
@@ -77,6 +84,43 @@ describe('toEvent', () => {
     );
     expect(event?.title).toHaveLength(200);
     expect(event?.calendarName).toHaveLength(200);
+  });
+});
+
+describe('toEvent: what may be changed', () => {
+  const when = {
+    start: { dateTime: '2030-05-01T10:00:00Z' },
+    end: { dateTime: '2030-05-01T11:00:00Z' },
+  };
+  const writable = { id: 'c', name: 'C', editable: true };
+
+  it('is editable only in a calendar the person can write to', () => {
+    expect(toEvent({ id: 'a', ...when }, writable)?.editable).toBe(true);
+    expect(toEvent({ id: 'a', ...when }, { id: 'c', name: 'C', editable: false })?.editable).toBe(
+      false,
+    );
+    expect(toEvent({ id: 'a', ...when }, { id: 'c', name: 'C' })?.editable).toBe(false);
+  });
+
+  it('is never editable for birthdays, events from Gmail and locked events', () => {
+    for (const extra of [{ eventType: 'birthday' }, { eventType: 'fromGmail' }, { locked: true }]) {
+      expect(toEvent({ id: 'a', ...when, ...extra }, writable)?.editable).toBe(false);
+    }
+    expect(toEvent({ id: 'a', ...when, eventType: 'default' }, writable)?.editable).toBe(true);
+  });
+
+  it('knows an occurrence of a repeating event, and keeps the link to Google', () => {
+    const event = toEvent(
+      {
+        id: 'a_20300501T100000Z',
+        recurringEventId: 'a',
+        htmlLink: 'https://calendar.google.com/e',
+        ...when,
+      },
+      writable,
+    );
+    expect(event).toMatchObject({ recurring: true, url: 'https://calendar.google.com/e' });
+    expect(toEvent({ id: 'b', ...when }, writable)?.recurring).toBe(false);
   });
 });
 
@@ -371,5 +415,177 @@ describe('GoogleCalendarGoogle', () => {
         provider.listTasks({ refreshToken: 'r', completedSince: since }),
       ).rejects.toBeInstanceOf(GoogleTasksUnavailableError);
     });
+  });
+
+  describe('writing events', () => {
+    const calendarRef = { id: 'me@x.com', name: 'Personal' };
+    const timed: EventChanges = {
+      title: 'Moved lecture',
+      description: 'Room 5',
+      startsAt: new Date('2030-05-10T10:00:00Z'),
+      endsAt: new Date('2030-05-10T11:30:00Z'),
+      allDay: false,
+    };
+    const answer = {
+      id: 'evt1',
+      summary: 'Moved lecture',
+      start: { dateTime: '2030-05-10T10:00:00Z' },
+      end: { dateTime: '2030-05-10T11:30:00Z' },
+      htmlLink: 'https://calendar.google.com/e',
+    };
+
+    /** Captures what is sent to the events endpoint. */
+    function stubWrite(status: number, body: unknown = answer) {
+      const sent: {
+        url: string;
+        method?: string;
+        headers?: Record<string, string>;
+        body?: string;
+      }[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: URL | string, init?: RequestInit) => {
+          const url = String(input);
+          if (url.includes('oauth2'))
+            return new Response(JSON.stringify({ access_token: 'access' }));
+          sent.push({
+            url,
+            method: init?.method,
+            headers: init?.headers as Record<string, string>,
+            body: init?.body as string | undefined,
+          });
+          return new Response(status === 204 ? null : JSON.stringify(body), { status });
+        }),
+      );
+      return sent;
+    }
+    const update = (changes = timed) =>
+      provider.updateEvent({ refreshToken: 'r', calendar: calendarRef, eventId: 'evt1', changes });
+
+    it('patches the right event without e-mailing guests, and returns it as Google now has it', async () => {
+      const sent = stubWrite(200);
+      const event = await update();
+      expect(sent).toHaveLength(1);
+      expect(sent[0].method).toBe('PATCH');
+      expect(sent[0].url).toBe(
+        'https://www.googleapis.com/calendar/v3/calendars/me%40x.com/events/evt1?sendUpdates=none',
+      );
+      expect(sent[0].headers).toMatchObject({ authorization: 'Bearer access' });
+      expect(event).toMatchObject({
+        id: 'me@x.com/evt1',
+        title: 'Moved lecture',
+        calendarName: 'Personal',
+        editable: true,
+        url: 'https://calendar.google.com/e',
+      });
+    });
+
+    it('sends instants for timed events and clears the date', async () => {
+      const sent = stubWrite(200);
+      await update();
+      expect(JSON.parse(sent[0].body!)).toEqual({
+        summary: 'Moved lecture',
+        description: 'Room 5',
+        start: { dateTime: '2030-05-10T10:00:00.000Z', date: null },
+        end: { dateTime: '2030-05-10T11:30:00.000Z', date: null },
+      });
+    });
+
+    it('sends plain dates for all-day events and clears the time', async () => {
+      const sent = stubWrite(200, {
+        ...answer,
+        start: { date: '2030-05-10' },
+        end: { date: '2030-05-12' },
+      });
+      const event = await update({
+        ...timed,
+        description: null,
+        allDay: true,
+        startsAt: new Date('2030-05-10T00:00:00Z'),
+        endsAt: new Date('2030-05-12T00:00:00Z'),
+      });
+      expect(JSON.parse(sent[0].body!)).toMatchObject({
+        description: null,
+        start: { date: '2030-05-10', dateTime: null },
+        end: { date: '2030-05-12', dateTime: null },
+      });
+      expect(event.allDay).toBe(true);
+    });
+
+    it('turns Google’s refusals into typed errors', async () => {
+      stubWrite(401);
+      await expect(update()).rejects.toBeInstanceOf(GoogleAccessRevokedError);
+      stubWrite(403);
+      await expect(update()).rejects.toBeInstanceOf(GoogleForbiddenError);
+      stubWrite(404);
+      await expect(update()).rejects.toBeInstanceOf(GoogleEventGoneError);
+      stubWrite(410);
+      await expect(update()).rejects.toBeInstanceOf(GoogleEventGoneError);
+      stubWrite(400);
+      await expect(update()).rejects.toBeInstanceOf(BadRequestException);
+      stubWrite(500);
+      await expect(update()).rejects.toBeInstanceOf(BadGatewayException);
+    });
+
+    it('treats a cancelled answer as gone', async () => {
+      stubWrite(200, { ...answer, status: 'cancelled' });
+      await expect(update()).rejects.toBeInstanceOf(GoogleEventGoneError);
+    });
+
+    it('deletes without e-mailing guests, and counts "already gone" as done', async () => {
+      const del = () =>
+        provider.deleteEvent({ refreshToken: 'r', calendarId: 'me@x.com', eventId: 'evt1' });
+      const sent = stubWrite(204);
+      await del();
+      expect(sent[0].method).toBe('DELETE');
+      expect(sent[0].url).toContain('/calendars/me%40x.com/events/evt1?sendUpdates=none');
+      stubWrite(410);
+      await expect(del()).resolves.toBeUndefined();
+      stubWrite(404);
+      await expect(del()).resolves.toBeUndefined();
+      stubWrite(403);
+      await expect(del()).rejects.toBeInstanceOf(GoogleForbiddenError);
+      stubWrite(401);
+      await expect(del()).rejects.toBeInstanceOf(GoogleAccessRevokedError);
+    });
+  });
+
+  it('asks for permission to change events only when told to', () => {
+    const scope = (write?: boolean) =>
+      new URL(
+        provider.authorizationUrl({
+          state: 's',
+          codeChallenge: 'c',
+          redirectUri: 'http://x/cb',
+          write,
+        }),
+      ).searchParams.get('scope')!;
+    expect(scope()).not.toContain(EVENTS_WRITE_SCOPE);
+    expect(scope(true).split(' ')).toContain(EVENTS_WRITE_SCOPE);
+  });
+
+  it('knows from the access role whether a calendar can be written to', async () => {
+    stubGoogle([
+      token,
+      {
+        match: 'calendarList',
+        body: {
+          items: [
+            { id: 'mine', primary: true, selected: true, accessRole: 'owner' },
+            { id: 'team', selected: true, accessRole: 'writer' },
+            { id: 'holidays', selected: true, accessRole: 'reader' },
+          ],
+        },
+      },
+      { match: 'calendars/mine/events', body: { items: [ev('a')] } },
+      { match: 'calendars/team/events', body: { items: [ev('b')] } },
+      { match: 'calendars/holidays/events', body: { items: [ev('c')] } },
+    ]);
+    const { events } = await provider.listEvents({ refreshToken: 'r', ...window });
+    expect(events.map((e) => [e.calendarId, e.editable])).toEqual([
+      ['mine', true],
+      ['team', true],
+      ['holidays', false],
+    ]);
   });
 });

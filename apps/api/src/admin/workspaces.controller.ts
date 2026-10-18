@@ -296,7 +296,7 @@ export class WorkspacesAdminController {
     const [ws, summary, google] = await Promise.all([
       this.workspaces.get(workspaceId),
       this.overview.summary(workspaceId),
-      this.googleCalendar.status(userId),
+      this.googleCalendar.status(userId, workspaceId),
     ]);
     return { title: ws.name, section: 'overview', ws, summary, google, ...extra };
   }

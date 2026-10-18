@@ -18,10 +18,12 @@ import {
 } from '../src/auth/oauth.provider.js';
 import {
   CALENDAR_SCOPE,
+  EVENTS_WRITE_SCOPE,
   GOOGLE_CALENDAR_PROVIDER,
   GoogleAccessRevokedError,
   GoogleTasksUnavailableError,
   TASKS_SCOPE,
+  type EventChanges,
   type GoogleCalendarProvider,
   type GoogleEvent,
   type GoogleTask,
@@ -104,16 +106,23 @@ export class FakeGoogleCalendarProvider implements GoogleCalendarProvider {
   revokedByUser = new Set<string>();
   /** Refresh tokens Nook asked Google to forget. */
   forgotten: string[] = [];
+  /** Changes and deletions Nook sent to Google. */
+  updates: { calendarId: string; eventId: string; changes: EventChanges }[] = [];
+  deletions: { calendarId: string; eventId: string }[] = [];
+  /** When set, the next writes fail with it (for example GoogleForbiddenError). */
+  writeError: Error | null = null;
   lastAuthorizationUrl?: URL;
 
   authorizationUrl({
     state,
     codeChallenge,
     redirectUri,
+    write,
   }: {
     state: string;
     codeChallenge: string;
     redirectUri: string;
+    write?: boolean;
   }) {
     const url = new URL('https://accounts.example.test/calendar-consent');
     url.search = new URLSearchParams({
@@ -122,7 +131,7 @@ export class FakeGoogleCalendarProvider implements GoogleCalendarProvider {
       redirect_uri: redirectUri,
       access_type: 'offline',
       prompt: 'consent',
-      scope: `${CALENDAR_SCOPE} ${TASKS_SCOPE}`,
+      scope: [CALENDAR_SCOPE, TASKS_SCOPE, ...(write ? [EVENTS_WRITE_SCOPE] : [])].join(' '),
     }).toString();
     this.lastAuthorizationUrl = url;
     return url.toString();
@@ -160,6 +169,49 @@ export class FakeGoogleCalendarProvider implements GoogleCalendarProvider {
         (!task.completed || (task.completedAt !== undefined && task.completedAt >= completedSince)),
     );
     return { tasks, failedListIds };
+  }
+
+  async updateEvent({
+    refreshToken,
+    calendar,
+    eventId,
+    changes,
+  }: {
+    refreshToken: string;
+    calendar: { id: string; name: string };
+    eventId: string;
+    changes: EventChanges;
+  }) {
+    if (this.revokedByUser.has(refreshToken)) throw new GoogleAccessRevokedError('revoked');
+    if (this.writeError) throw this.writeError;
+    this.updates.push({ calendarId: calendar.id, eventId, changes });
+    return {
+      id: `${calendar.id}/${eventId}`,
+      calendarId: calendar.id,
+      calendarName: calendar.name,
+      title: changes.title,
+      description: changes.description ?? undefined,
+      startsAt: changes.startsAt,
+      endsAt: changes.endsAt,
+      allDay: changes.allDay,
+      editable: true,
+      recurring: false,
+      url: 'https://calendar.google.com/calendar/event?eid=updated',
+    };
+  }
+
+  async deleteEvent({
+    refreshToken,
+    calendarId,
+    eventId,
+  }: {
+    refreshToken: string;
+    calendarId: string;
+    eventId: string;
+  }) {
+    if (this.revokedByUser.has(refreshToken)) throw new GoogleAccessRevokedError('revoked');
+    if (this.writeError) throw this.writeError;
+    this.deletions.push({ calendarId, eventId });
   }
 
   async revoke(refreshToken: string) {

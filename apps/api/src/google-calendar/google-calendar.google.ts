@@ -1,10 +1,19 @@
-import { BadGatewayException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { env } from '../env.js';
 import {
   CALENDAR_SCOPE,
+  EVENTS_WRITE_SCOPE,
   GoogleAccessRevokedError,
+  GoogleEventGoneError,
+  GoogleForbiddenError,
   GoogleTasksUnavailableError,
   TASKS_SCOPE,
+  type EventChanges,
   type GoogleCalendarProvider,
   type GoogleEvent,
   type GoogleTask,
@@ -22,6 +31,10 @@ const MAX_PAGES = 10;
 interface RawEvent {
   id: string;
   iCalUID?: string;
+  recurringEventId?: string;
+  htmlLink?: string;
+  eventType?: string;
+  locked?: boolean;
   status?: string;
   summary?: string;
   description?: string;
@@ -35,6 +48,7 @@ interface RawCalendar {
   summaryOverride?: string;
   selected?: boolean;
   primary?: boolean;
+  accessRole?: string;
 }
 
 interface RawTask {
@@ -61,10 +75,12 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
     state,
     codeChallenge,
     redirectUri,
+    write,
   }: {
     state: string;
     codeChallenge: string;
     redirectUri: string;
+    write?: boolean;
   }) {
     this.assertConfigured();
     const url = new URL(AUTH_URL);
@@ -72,7 +88,7 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
       client_id: env.google.clientId!,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: `${CALENDAR_SCOPE} ${TASKS_SCOPE}`,
+      scope: [CALENDAR_SCOPE, TASKS_SCOPE, ...(write ? [EVENTS_WRITE_SCOPE] : [])].join(' '),
       state,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
@@ -200,6 +216,63 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
     return { tasks, failedListIds };
   }
 
+  async updateEvent({
+    refreshToken,
+    calendar,
+    eventId,
+    changes,
+  }: {
+    refreshToken: string;
+    calendar: { id: string; name: string };
+    eventId: string;
+    changes: EventChanges;
+  }) {
+    this.assertConfigured();
+    const accessToken = await this.accessToken(refreshToken);
+    const day = (date: Date) => date.toISOString().slice(0, 10);
+    // PATCH merges objects, so the unused one of date / dateTime is cleared explicitly
+    const when = (date: Date) =>
+      changes.allDay
+        ? { date: day(date), dateTime: null }
+        : { dateTime: date.toISOString(), date: null };
+    const response = await fetch(this.eventUrl(calendar.id, eventId), {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        summary: changes.title,
+        description: changes.description,
+        start: when(changes.startsAt),
+        end: when(changes.endsAt),
+      }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    await this.assertWritten(response);
+    const event = toEvent((await response.json()) as RawEvent, { ...calendar, editable: true });
+    if (!event) throw new GoogleEventGoneError('The event was cancelled');
+    return event;
+  }
+
+  async deleteEvent({
+    refreshToken,
+    calendarId,
+    eventId,
+  }: {
+    refreshToken: string;
+    calendarId: string;
+    eventId: string;
+  }) {
+    this.assertConfigured();
+    const accessToken = await this.accessToken(refreshToken);
+    const response = await fetch(this.eventUrl(calendarId, eventId), {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    // already gone in Google is the outcome we wanted
+    if (response.status === 404 || response.status === 410) return;
+    await this.assertWritten(response);
+  }
+
   async revoke(refreshToken: string) {
     try {
       await fetch(REVOKE_URL, {
@@ -215,7 +288,7 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
 
   /** The calendars the person has switched on in Google Calendar, their own first. */
   private async calendars(accessToken: string) {
-    const found: { id: string; name: string; primary: boolean }[] = [];
+    const found: { id: string; name: string; primary: boolean; editable: boolean }[] = [];
     let pageToken: string | undefined;
     for (let page = 0; page < MAX_PAGES; page++) {
       const response = await this.get(`${CALENDAR_API}/users/me/calendarList`, accessToken, {
@@ -238,6 +311,7 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
           id: calendar.id,
           name: calendar.summaryOverride || calendar.summary || calendar.id,
           primary: calendar.primary === true,
+          editable: calendar.accessRole === 'owner' || calendar.accessRole === 'writer',
         });
       }
       pageToken = data.nextPageToken;
@@ -271,6 +345,23 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
       if (!pageToken) break;
     }
     return raws;
+  }
+
+  private eventUrl(calendarId: string, eventId: string) {
+    // sendUpdates=none: changing an event here must not e-mail its guests
+    return `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=none`;
+  }
+
+  /** Maps Google's answer to a write: success passes, everything else becomes a typed error. */
+  private async assertWritten(response: Response) {
+    if (response.ok) return;
+    if (response.status === 401) throw new GoogleAccessRevokedError('Google answered 401');
+    if (response.status === 403) throw new GoogleForbiddenError('Google answered 403');
+    if (response.status === 404 || response.status === 410) {
+      throw new GoogleEventGoneError(`Google answered ${response.status}`);
+    }
+    if (response.status === 400) throw new BadRequestException('Google rejected the change');
+    throw new BadGatewayException('Google Calendar is not available');
   }
 
   private get(url: string, accessToken: string, params: Record<string, string>) {
@@ -324,7 +415,10 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
 }
 
 /** All-day events carry plain dates (the end is exclusive), timed ones carry instants. */
-export function toEvent(raw: RawEvent, calendar: { id: string; name: string }): GoogleEvent | null {
+export function toEvent(
+  raw: RawEvent,
+  calendar: { id: string; name: string; editable?: boolean },
+): GoogleEvent | null {
   if (raw.status === 'cancelled' || !raw.id || !raw.start || !raw.end) return null;
   const allDay = Boolean(raw.start.date);
   const startsAt = new Date(raw.start.date ? `${raw.start.date}T00:00:00Z` : raw.start.dateTime!);
@@ -340,6 +434,14 @@ export function toEvent(raw: RawEvent, calendar: { id: string; name: string }): 
     // the model requires an end after the start; an instant event gets one minute
     endsAt: endsAt > startsAt ? endsAt : new Date(startsAt.getTime() + 60_000),
     allDay,
+    // birthdays and events made from Gmail cannot be changed through the API, nor can locked ones
+    editable:
+      calendar.editable === true &&
+      raw.locked !== true &&
+      raw.eventType !== 'birthday' &&
+      raw.eventType !== 'fromGmail',
+    recurring: Boolean(raw.recurringEventId),
+    url: raw.htmlLink,
   };
 }
 

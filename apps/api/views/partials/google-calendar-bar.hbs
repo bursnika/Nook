@@ -10,6 +10,11 @@
         <button class="btn btn-sm btn-outline-danger" type="submit">Disconnect</button>
       </form>
       <small class="text-muted w-100">Events from all your visible calendars{{#if google.tasksGranted}} and your Google Tasks{{/if}} are imported. Imported items are visible to everyone in this workspace{{#if google.tasksGranted}}, and imported tasks are refreshed from Google on every sync{{/if}}.</small>
+      {{#if google.twoWay}}
+        {{#unless google.editGranted}}
+          <small class="w-100"><a href="/api/google-calendar/connect?edit=1&amp;returnTo=/admin/workspaces/{{ws.id}}">Allow editing Google events</a> from Nook (one more permission); changes then go to Google Calendar.</small>
+        {{/unless}}
+      {{/if}}
       {{#unless google.tasksGranted}}
         <small class="w-100"><a href="/api/google-calendar/connect?returnTo=/admin/workspaces/{{ws.id}}">Also import Google Tasks</a> (needs one more permission).</small>
       {{/unless}}

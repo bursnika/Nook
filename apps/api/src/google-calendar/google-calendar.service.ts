@@ -1,22 +1,40 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  GoneException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { FeaturesService } from '../features/features.service.js';
+import type { CalendarEvent } from '../generated/prisma/client.js';
 import { TaskStatus } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   CALENDAR_SCOPE,
+  EVENTS_WRITE_SCOPE,
   GOOGLE_CALENDAR_PROVIDER,
   GoogleAccessRevokedError,
+  GoogleEventGoneError,
+  GoogleForbiddenError,
   GoogleTasksUnavailableError,
   TASKS_SCOPE,
   type GoogleCalendarProvider,
   type GoogleEvent,
   type GoogleTask,
 } from './google-calendar.provider.js';
+import { UpdateGoogleEventDto } from './google-event.dto.js';
 import { decryptToken, encryptToken } from './token-crypto.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** How far around "now" events are imported. */
 const PAST_DAYS = 30;
 const FUTURE_DAYS = 180;
+
+/** `<calendar id>/<event id>` back to the event id Google knows. */
+const rawEventId = (row: CalendarEvent) =>
+  row.googleEventId!.slice(row.googleCalendarId!.length + 1);
 
 /** The granted scope string is space-separated; the person may have unticked a box on the consent screen. */
 const grants = (scope: string, wanted: string) => scope.split(' ').includes(wanted);
@@ -32,10 +50,12 @@ export type TasksOutcome =
 export class GoogleCalendarService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly features: FeaturesService,
     @Inject(GOOGLE_CALENDAR_PROVIDER) readonly provider: GoogleCalendarProvider,
   ) {}
 
-  async status(userId: string) {
+  /** `workspaceId` adds whether that workspace's plan allows changing Google events from Nook. */
+  async status(userId: string, workspaceId?: string) {
     const connection = await this.prisma.googleConnection.findUnique({
       where: { userId },
       select: { lastSyncAt: true, scope: true },
@@ -44,6 +64,10 @@ export class GoogleCalendarService {
       configured: this.provider.configured,
       connected: connection !== null,
       tasksGranted: connection ? grants(connection.scope, TASKS_SCOPE) : false,
+      editGranted: connection ? grants(connection.scope, EVENTS_WRITE_SCOPE) : false,
+      twoWay: workspaceId
+        ? (await this.features.check(workspaceId, 'google-two-way-sync')).available
+        : false,
       lastSyncAt: connection?.lastSyncAt ?? null,
     };
   }
@@ -126,6 +150,9 @@ export class GoogleCalendarService {
           importedById: userId,
           googleCalendarId: event.calendarId,
           calendarName: event.calendarName,
+          googleEditable: event.editable,
+          recurring: event.recurring,
+          googleUrl: event.url ?? null,
           title: event.title,
           description: event.description,
           startsAt: event.startsAt,
@@ -232,6 +259,118 @@ export class GoogleCalendarService {
     });
     const created = tasks.filter((task) => !existing.has(task.id)).length;
     return { status: 'synced', created, updated: tasks.length - created, removed: removed.count };
+  }
+
+  /**
+   * Changes an imported event in Google first and mirrors Google's answer here, so the two never differ.
+   * Repeating events: only this occurrence changes (Google makes it an exception of the series).
+   */
+  async updateEvent(workspaceId: string, userId: string, id: string, dto: UpdateGoogleEventDto) {
+    const { row, refreshToken } = await this.writable(workspaceId, userId, id);
+    const minimum = dto.allDay ? DAY_MS : 1;
+    if (dto.endsAt.getTime() - dto.startsAt.getTime() < minimum) {
+      throw new BadRequestException(
+        dto.allDay
+          ? 'An all-day event lasts at least one day'
+          : 'The event must end after it starts',
+      );
+    }
+    try {
+      const updated = await this.provider.updateEvent({
+        refreshToken,
+        calendar: { id: row.googleCalendarId!, name: row.calendarName ?? row.googleCalendarId! },
+        eventId: rawEventId(row),
+        changes: {
+          title: dto.title.trim(),
+          description: dto.description?.trim() || null,
+          startsAt: dto.startsAt,
+          endsAt: dto.endsAt,
+          allDay: dto.allDay,
+        },
+      });
+      return await this.prisma.calendarEvent.update({
+        where: { id },
+        data: {
+          title: updated.title,
+          description: updated.description ?? null,
+          startsAt: updated.startsAt,
+          endsAt: updated.endsAt,
+          allDay: updated.allDay,
+          googleEditable: updated.editable,
+          recurring: updated.recurring,
+          googleUrl: updated.url ?? row.googleUrl,
+        },
+      });
+    } catch (error) {
+      return this.explainWriteFailure(error, userId, row);
+    }
+  }
+
+  async deleteEvent(workspaceId: string, userId: string, id: string) {
+    const { row, refreshToken } = await this.writable(workspaceId, userId, id);
+    try {
+      await this.provider.deleteEvent({
+        refreshToken,
+        calendarId: row.googleCalendarId!,
+        eventId: rawEventId(row),
+      });
+    } catch (error) {
+      return this.explainWriteFailure(error, userId, row);
+    }
+    await this.prisma.calendarEvent.delete({ where: { id } });
+  }
+
+  /** The event, its owner's decrypted token, and every reason the change might not be allowed. */
+  private async writable(workspaceId: string, userId: string, id: string) {
+    const row = await this.prisma.calendarEvent.findFirst({
+      where: { id, workspaceId, googleEventId: { not: null } },
+    });
+    if (!row) throw new NotFoundException('This is not an event imported from Google Calendar');
+    if (row.importedById !== userId) {
+      throw new ForbiddenException(
+        'This event came from someone else’s Google Calendar, so only they can change it',
+      );
+    }
+    if (!row.googleEditable || !row.googleCalendarId) {
+      throw new ForbiddenException(
+        'Google Calendar does not let you change this event (read-only calendar, birthday or similar)',
+      );
+    }
+    const connection = await this.prisma.googleConnection.findUnique({ where: { userId } });
+    if (!connection) throw new ConflictException('Connect Google Calendar first');
+    if (!grants(connection.scope, EVENTS_WRITE_SCOPE)) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'Forbidden',
+        code: 'GOOGLE_WRITE_NOT_GRANTED',
+        message:
+          'Allow editing Google events first: connect Google Calendar again and tick the permission',
+      });
+    }
+    return { row, refreshToken: decryptToken(connection.refreshTokenEnc) };
+  }
+
+  private async explainWriteFailure(
+    error: unknown,
+    userId: string,
+    row: CalendarEvent,
+  ): Promise<never> {
+    if (error instanceof GoogleAccessRevokedError) {
+      await this.prisma.googleConnection.deleteMany({ where: { userId } });
+      throw new ConflictException('Google no longer allows access. Connect Google Calendar again.');
+    }
+    if (error instanceof GoogleForbiddenError) {
+      throw new ForbiddenException(
+        'Google does not let you change this event. You may be only a guest of it.',
+      );
+    }
+    if (error instanceof GoogleEventGoneError) {
+      await this.prisma.calendarEvent.deleteMany({ where: { id: row.id } });
+      throw new GoneException(
+        'This event no longer exists in Google Calendar, so it was removed here too.',
+      );
+    }
+    throw error;
   }
 
   /** Forgets the connection and removes everything it imported, in every workspace. */
