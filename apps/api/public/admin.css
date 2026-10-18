@@ -387,6 +387,14 @@ h4,
   gap: 0.5rem;
   align-items: center;
 }
+/* second row under the quick form */
+.cal-form-extra {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+}
 .cal-form .text-danger {
   grid-column: 1 / -1;
 }

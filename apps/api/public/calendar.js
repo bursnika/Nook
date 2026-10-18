@@ -302,6 +302,33 @@
     [title, start, end, submit].forEach(function (node) {
       form.appendChild(node);
     });
+
+    // second row: also put it in Google (when the plan and permissions allow), and the full window
+    var extra = el('div', 'cal-form-extra');
+    var toGoogle = input('checkbox', 'form-check-input');
+    toGoogle.id = 'cal-quick-google';
+    toGoogle.checked = true;
+    if (canCreateInGoogle()) {
+      var wrap = el('div', 'form-check mb-0');
+      var label = el('label', 'form-check-label small', 'Also add to my Google Calendar');
+      label.htmlFor = toGoogle.id;
+      wrap.appendChild(toGoogle);
+      wrap.appendChild(label);
+      extra.appendChild(wrap);
+    }
+    extra.appendChild(
+      button('btn btn-sm btn-link p-0', 'More options…', function () {
+        var startsAt = new Date(start.value);
+        var endsAt = new Date(end.value);
+        openCreate({
+          title: title.value.trim(),
+          startsAt: isNaN(startsAt) ? new Date() : startsAt,
+          endsAt: isNaN(endsAt) ? new Date(Date.now() + 3600000) : endsAt,
+          google: canCreateInGoogle() && toGoogle.checked,
+        });
+      }),
+    );
+    form.appendChild(extra);
     form.appendChild(error);
 
     form.addEventListener('submit', function (event) {
@@ -314,10 +341,13 @@
       }
       error.textContent = '';
       submit.disabled = true;
-      request('POST', '/events', {
+      var goesToGoogle = canCreateInGoogle() && toGoogle.checked;
+      request('POST', goesToGoogle ? '/google-calendar/events' : '/events', {
         title: title.value.trim(),
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
+        // the Google route takes the whole event
+        ...(goesToGoogle ? { allDay: false, description: null } : {}),
       })
         .then(load)
         .catch(function (problem) {
@@ -370,6 +400,32 @@
       return { reason: 'Nook can only read your Google Calendar so far.', allow: true };
     }
     return { edit: true, google: true };
+  }
+
+  /** New events can also be created in Google when the plan and the permission allow it. */
+  function canCreateInGoogle() {
+    var google = data.google || {};
+    return Boolean(google.twoWay && google.editGranted);
+  }
+
+  /** The full "new event" window, prefilled from the quick form. */
+  function openCreate(prefill) {
+    var box = getDialog();
+    box.textContent = '';
+    editEvent(
+      box,
+      {
+        title: prefill.title,
+        description: '',
+        startsAt: prefill.startsAt.toISOString(),
+        endsAt: prefill.endsAt.toISOString(),
+        allDay: false,
+        imported: false,
+        recurring: false,
+      },
+      { create: true, google: prefill.google },
+    );
+    if (!box.open) box.showModal();
   }
 
   function eventPath(ev) {
@@ -551,7 +607,8 @@
     box.appendChild(line);
   }
 
-  function editEvent(box, ev) {
+  function editEvent(box, ev, options) {
+    var create = Boolean(options && options.create);
     box.textContent = '';
     bar(box, []);
     var start = new Date(ev.startsAt);
@@ -610,7 +667,11 @@
     });
     showPair();
 
-    var heading = el('h2', 'h5 mb-2', ev.imported ? 'Edit event in Google Calendar' : 'Edit event');
+    var heading = el(
+      'h2',
+      'h5 mb-2',
+      create ? 'New event' : ev.imported ? 'Edit event in Google Calendar' : 'Edit event',
+    );
     heading.id = 'cal-dialog-title';
     form.appendChild(heading);
     form.appendChild(field('Title', title, 'cal-title-input'));
@@ -627,17 +688,35 @@
     if (ev.recurring)
       form.appendChild(el('p', 'small text-muted', '↻ Repeats. Only this occurrence changes.'));
 
+    // creating: optionally put the new event into Google Calendar as well
+    var toGoogle = input('checkbox', 'form-check-input');
+    toGoogle.id = 'cal-to-google';
+    toGoogle.checked = Boolean(options && options.google);
+    var save = el('button', 'btn btn-sm btn-primary');
+    function saveLabel() {
+      save.textContent =
+        ev.imported || (create && toGoogle.checked) ? 'Save to Google Calendar' : 'Save';
+    }
+    if (create && canCreateInGoogle()) {
+      var googleRow = el('div', 'form-check mb-3');
+      var googleLabel = el('label', 'form-check-label', 'Also add to my Google Calendar');
+      googleLabel.htmlFor = toGoogle.id;
+      googleRow.appendChild(toGoogle);
+      googleRow.appendChild(googleLabel);
+      form.appendChild(googleRow);
+      toGoogle.addEventListener('change', saveLabel);
+    } else {
+      toGoogle.checked = false;
+    }
+    saveLabel();
+
     var buttons = el('div', 'd-flex gap-2');
-    var save = el(
-      'button',
-      'btn btn-sm btn-primary',
-      ev.imported ? 'Save to Google Calendar' : 'Save',
-    );
     save.type = 'submit';
     buttons.appendChild(save);
     buttons.appendChild(
       button('btn btn-sm btn-outline-primary', 'Cancel', function () {
-        openDetails({ kind: 'event', ev: ev });
+        if (create) box.close();
+        else openDetails({ kind: 'event', ev: ev });
       }),
     );
     form.appendChild(buttons);
@@ -666,7 +745,12 @@
       }
       error.textContent = '';
       save.disabled = true;
-      request('PATCH', eventPath(ev), {
+      var path = create
+        ? toGoogle.checked
+          ? '/google-calendar/events'
+          : '/events'
+        : eventPath(ev);
+      request(create ? 'POST' : 'PATCH', path, {
         title: title.value.trim(),
         description: description.value.trim() || null,
         startsAt: startsAt.toISOString(),
