@@ -76,6 +76,17 @@ export class GoogleCalendarController {
     return this.calendar.sync(workspaceId, user.id);
   }
 
+  /** A new event that goes to Google Calendar as well as into the workspace. Pro only. */
+  @Post('workspaces/:workspaceId/google-calendar/events')
+  @RequireFeature('google-two-way-sync')
+  createEvent(
+    @CurrentUser() user: AuthUser,
+    @Param() { workspaceId }: WorkspaceParams,
+    @Body() dto: UpdateGoogleEventDto,
+  ) {
+    return this.calendar.createEvent(workspaceId, user.id, dto);
+  }
+
   /** Changes an imported event in Google Calendar itself. Pro only; see GoogleCalendarService.updateEvent. */
   @Patch('workspaces/:workspaceId/google-calendar/events/:id')
   @RequireFeature('google-two-way-sync')

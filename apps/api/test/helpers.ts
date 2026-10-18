@@ -106,6 +106,8 @@ export class FakeGoogleCalendarProvider implements GoogleCalendarProvider {
   revokedByUser = new Set<string>();
   /** Refresh tokens Nook asked Google to forget. */
   forgotten: string[] = [];
+  /** Events Nook created in Google. */
+  creations: EventChanges[] = [];
   /** Changes and deletions Nook sent to Google. */
   updates: { calendarId: string; eventId: string; changes: EventChanges }[] = [];
   deletions: { calendarId: string; eventId: string }[] = [];
@@ -169,6 +171,29 @@ export class FakeGoogleCalendarProvider implements GoogleCalendarProvider {
         (!task.completed || (task.completedAt !== undefined && task.completedAt >= completedSince)),
     );
     return { tasks, failedListIds };
+  }
+
+  async createEvent({ refreshToken, changes }: { refreshToken: string; changes: EventChanges }) {
+    if (this.revokedByUser.has(refreshToken)) throw new GoogleAccessRevokedError('revoked');
+    if (this.writeError) throw this.writeError;
+    this.creations.push(changes);
+    const created: GoogleEvent = {
+      // the real id of the main calendar, as a later sync labels it (never the "primary" alias)
+      id: `main@example.com/created-${this.creations.length}`,
+      calendarId: 'main@example.com',
+      calendarName: 'Main calendar',
+      title: changes.title,
+      description: changes.description ?? undefined,
+      startsAt: changes.startsAt,
+      endsAt: changes.endsAt,
+      allDay: changes.allDay,
+      editable: true,
+      recurring: false,
+      url: 'https://calendar.google.com/calendar/event?eid=created',
+    };
+    // Google now has it, so the next sync sees it too
+    this.calendars.set(refreshToken, [...(this.calendars.get(refreshToken) ?? []), created]);
+    return created;
   }
 
   async updateEvent({

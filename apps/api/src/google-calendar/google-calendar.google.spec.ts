@@ -588,4 +588,133 @@ describe('GoogleCalendarGoogle', () => {
       ['holidays', false],
     ]);
   });
+
+  describe('creating an event', () => {
+    const changes: EventChanges = {
+      title: 'Dentist',
+      description: 'Bring the card',
+      startsAt: new Date('2030-05-10T10:00:00Z'),
+      endsAt: new Date('2030-05-10T11:00:00Z'),
+      allDay: false,
+    };
+    const created = {
+      id: 'new1',
+      summary: 'Dentist',
+      start: { dateTime: '2030-05-10T10:00:00Z' },
+      end: { dateTime: '2030-05-10T11:00:00Z' },
+      htmlLink: 'https://calendar.google.com/e/new1',
+    };
+
+    function stubCreate(
+      options: {
+        entry?: { status: number; body?: unknown };
+        post?: { status: number; body?: unknown };
+      } = {},
+    ) {
+      const posted: { url: string; body: unknown }[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: URL | string, init?: RequestInit) => {
+          const url = String(input);
+          const json = (status: number, body: unknown) =>
+            new Response(JSON.stringify(body), { status });
+          if (url.includes('oauth2')) return json(200, { access_token: 'access' });
+          if (url.includes('calendarList/primary')) {
+            const entry = options.entry ?? {
+              status: 200,
+              body: {
+                id: 'me@x.com',
+                summary: 'me@x.com',
+                summaryOverride: 'Personal',
+                accessRole: 'owner',
+              },
+            };
+            return json(entry.status, entry.body ?? {});
+          }
+          posted.push({ url, body: JSON.parse(String(init?.body)) });
+          const post = options.post ?? { status: 200, body: created };
+          return json(post.status, post.body ?? {});
+        }),
+      );
+      return posted;
+    }
+
+    it('posts to the real id of the main calendar, not the "primary" alias, without e-mailing guests', async () => {
+      const posted = stubCreate();
+      const event = await provider.createEvent({ refreshToken: 'r', changes });
+      expect(posted).toHaveLength(1);
+      expect(posted[0].url).toBe(
+        'https://www.googleapis.com/calendar/v3/calendars/me%40x.com/events?sendUpdates=none',
+      );
+      expect(posted[0].body).toEqual({
+        summary: 'Dentist',
+        description: 'Bring the card',
+        start: { dateTime: '2030-05-10T10:00:00.000Z', date: null },
+        end: { dateTime: '2030-05-10T11:00:00.000Z', date: null },
+      });
+      // the same id and label a later sync gives it, so the sync finds it instead of adding a copy
+      expect(event).toMatchObject({
+        id: 'me@x.com/new1',
+        calendarId: 'me@x.com',
+        calendarName: 'Personal',
+        editable: true,
+        url: 'https://calendar.google.com/e/new1',
+      });
+    });
+
+    it('sends plain dates for an all-day event', async () => {
+      const posted = stubCreate({
+        post: {
+          status: 200,
+          body: { ...created, start: { date: '2030-05-10' }, end: { date: '2030-05-11' } },
+        },
+      });
+      const event = await provider.createEvent({
+        refreshToken: 'r',
+        changes: {
+          ...changes,
+          description: null,
+          allDay: true,
+          startsAt: new Date('2030-05-10T00:00:00Z'),
+          endsAt: new Date('2030-05-11T00:00:00Z'),
+        },
+      });
+      expect(posted[0].body).toMatchObject({
+        description: null,
+        start: { date: '2030-05-10', dateTime: null },
+        end: { date: '2030-05-11', dateTime: null },
+      });
+      expect(event.allDay).toBe(true);
+    });
+
+    it('turns Google’s refusals into typed errors', async () => {
+      stubCreate({ post: { status: 401 } });
+      await expect(provider.createEvent({ refreshToken: 'r', changes })).rejects.toBeInstanceOf(
+        GoogleAccessRevokedError,
+      );
+      stubCreate({ post: { status: 403 } });
+      await expect(provider.createEvent({ refreshToken: 'r', changes })).rejects.toBeInstanceOf(
+        GoogleForbiddenError,
+      );
+      stubCreate({ post: { status: 400 } });
+      await expect(provider.createEvent({ refreshToken: 'r', changes })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      stubCreate({ entry: { status: 401 } });
+      await expect(provider.createEvent({ refreshToken: 'r', changes })).rejects.toBeInstanceOf(
+        GoogleAccessRevokedError,
+      );
+      stubCreate({ entry: { status: 500 } });
+      await expect(provider.createEvent({ refreshToken: 'r', changes })).rejects.toBeInstanceOf(
+        BadGatewayException,
+      );
+    });
+
+    it('does not mistake a missing calendar for a missing event', async () => {
+      stubCreate({ post: { status: 404 } });
+      const error = await provider.createEvent({ refreshToken: 'r', changes }).catch((e) => e);
+      expect(error).toBeInstanceOf(BadGatewayException);
+      expect(error).not.toBeInstanceOf(GoogleEventGoneError);
+    });
+  });
 });

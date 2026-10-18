@@ -82,6 +82,11 @@ export interface GoogleCalendarProvider {
     tasks: GoogleTask[];
     failedListIds: string[];
   }>;
+  /**
+   * Creates an event in the person's main calendar. It comes back with that calendar's real id (not the
+   * `primary` alias) and name, exactly as a later sync would label it, so the two never duplicate it.
+   */
+  createEvent(params: { refreshToken: string; changes: EventChanges }): Promise<GoogleEvent>;
   /** Changes one event in Google and returns it as Google now has it. */
   updateEvent(params: {
     refreshToken: string;

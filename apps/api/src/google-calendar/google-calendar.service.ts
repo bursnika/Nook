@@ -20,6 +20,7 @@ import {
   GoogleForbiddenError,
   GoogleTasksUnavailableError,
   TASKS_SCOPE,
+  type EventChanges,
   type GoogleCalendarProvider,
   type GoogleEvent,
   type GoogleTask,
@@ -31,6 +32,15 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** How far around "now" events are imported. */
 const PAST_DAYS = 30;
 const FUTURE_DAYS = 180;
+
+/** What the event window sent, cleaned up for Google. */
+const toChanges = (dto: UpdateGoogleEventDto): EventChanges => ({
+  title: dto.title.trim(),
+  description: dto.description?.trim() || null,
+  startsAt: dto.startsAt,
+  endsAt: dto.endsAt,
+  allDay: dto.allDay,
+});
 
 /** `<calendar id>/<event id>` back to the event id Google knows. */
 const rawEventId = (row: CalendarEvent) =>
@@ -280,13 +290,7 @@ export class GoogleCalendarService {
         refreshToken,
         calendar: { id: row.googleCalendarId!, name: row.calendarName ?? row.googleCalendarId! },
         eventId: rawEventId(row),
-        changes: {
-          title: dto.title.trim(),
-          description: dto.description?.trim() || null,
-          startsAt: dto.startsAt,
-          endsAt: dto.endsAt,
-          allDay: dto.allDay,
-        },
+        changes: toChanges(dto),
       });
       return await this.prisma.calendarEvent.update({
         where: { id },
@@ -320,6 +324,64 @@ export class GoogleCalendarService {
     await this.prisma.calendarEvent.delete({ where: { id } });
   }
 
+  /** Creates an event in the person's Google Calendar, then keeps the same event here. */
+  async createEvent(workspaceId: string, userId: string, dto: UpdateGoogleEventDto) {
+    const refreshToken = await this.writeAccess(userId);
+    this.assertRange(dto);
+    let created;
+    try {
+      created = await this.provider.createEvent({ refreshToken, changes: toChanges(dto) });
+    } catch (error) {
+      return this.explainWriteFailure(error, userId);
+    }
+    const fields = {
+      importedById: userId,
+      googleCalendarId: created.calendarId,
+      calendarName: created.calendarName,
+      googleEditable: created.editable,
+      recurring: created.recurring,
+      googleUrl: created.url ?? null,
+      title: created.title,
+      description: created.description ?? null,
+      startsAt: created.startsAt,
+      endsAt: created.endsAt,
+      allDay: created.allDay,
+    };
+    // upsert: a sync that ran in the meantime may already have picked the new event up
+    return this.prisma.calendarEvent.upsert({
+      where: { workspaceId_googleEventId: { workspaceId, googleEventId: created.id } },
+      create: { workspaceId, googleEventId: created.id, ...fields },
+      update: fields,
+    });
+  }
+
+  /** Signed in to Google with permission to change events: the decrypted token, or why not. */
+  private async writeAccess(userId: string) {
+    const connection = await this.prisma.googleConnection.findUnique({ where: { userId } });
+    if (!connection) throw new ConflictException('Connect Google Calendar first');
+    if (!grants(connection.scope, EVENTS_WRITE_SCOPE)) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'Forbidden',
+        code: 'GOOGLE_WRITE_NOT_GRANTED',
+        message:
+          'Allow editing Google events first: connect Google Calendar again and tick the permission',
+      });
+    }
+    return decryptToken(connection.refreshTokenEnc);
+  }
+
+  private assertRange(dto: UpdateGoogleEventDto) {
+    const minimum = dto.allDay ? DAY_MS : 1;
+    if (dto.endsAt.getTime() - dto.startsAt.getTime() < minimum) {
+      throw new BadRequestException(
+        dto.allDay
+          ? 'An all-day event lasts at least one day'
+          : 'The event must end after it starts',
+      );
+    }
+  }
+
   /** The event, its owner's decrypted token, and every reason the change might not be allowed. */
   private async writable(workspaceId: string, userId: string, id: string) {
     const row = await this.prisma.calendarEvent.findFirst({
@@ -336,24 +398,15 @@ export class GoogleCalendarService {
         'Google Calendar does not let you change this event (read-only calendar, birthday or similar)',
       );
     }
-    const connection = await this.prisma.googleConnection.findUnique({ where: { userId } });
-    if (!connection) throw new ConflictException('Connect Google Calendar first');
-    if (!grants(connection.scope, EVENTS_WRITE_SCOPE)) {
-      throw new ForbiddenException({
-        statusCode: 403,
-        error: 'Forbidden',
-        code: 'GOOGLE_WRITE_NOT_GRANTED',
-        message:
-          'Allow editing Google events first: connect Google Calendar again and tick the permission',
-      });
-    }
-    return { row, refreshToken: decryptToken(connection.refreshTokenEnc) };
+    const refreshToken = await this.writeAccess(userId);
+    return { row, refreshToken };
   }
 
   private async explainWriteFailure(
     error: unknown,
     userId: string,
-    row: CalendarEvent,
+    /** The event being changed; a brand-new event has none. */
+    row?: CalendarEvent,
   ): Promise<never> {
     if (error instanceof GoogleAccessRevokedError) {
       await this.prisma.googleConnection.deleteMany({ where: { userId } });
@@ -361,10 +414,12 @@ export class GoogleCalendarService {
     }
     if (error instanceof GoogleForbiddenError) {
       throw new ForbiddenException(
-        'Google does not let you change this event. You may be only a guest of it.',
+        row
+          ? 'Google does not let you change this event. You may be only a guest of it.'
+          : 'Google does not let you add events to your calendar.',
       );
     }
-    if (error instanceof GoogleEventGoneError) {
+    if (row && error instanceof GoogleEventGoneError) {
       await this.prisma.calendarEvent.deleteMany({ where: { id: row.id } });
       throw new GoneException(
         'This event no longer exists in Google Calendar, so it was removed here too.',

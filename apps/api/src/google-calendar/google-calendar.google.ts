@@ -216,6 +216,37 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
     return { tasks, failedListIds };
   }
 
+  async createEvent({ refreshToken, changes }: { refreshToken: string; changes: EventChanges }) {
+    this.assertConfigured();
+    const accessToken = await this.accessToken(refreshToken);
+
+    // "primary" is only an alias. The real id and name are what a sync stores for this calendar.
+    const entry = await this.get(`${CALENDAR_API}/users/me/calendarList/primary`, accessToken, {});
+    if (entry.status === 401) throw new GoogleAccessRevokedError('Google answered 401');
+    if (!entry.ok) throw new BadGatewayException('Google Calendar is not available');
+    const primary = (await entry.json()) as RawCalendar;
+    const calendar = {
+      id: primary.id,
+      name: (primary.summaryOverride || primary.summary || primary.id).slice(0, 200),
+      editable: true,
+    };
+
+    const response = await fetch(this.eventsUrl(calendar.id), {
+      method: 'POST',
+      headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify(this.eventBody(changes)),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    // a 404/410 here would mean the calendar vanished, not an event: that is Google's problem, not "gone"
+    if (response.status === 404 || response.status === 410) {
+      throw new BadGatewayException('Google Calendar is not available');
+    }
+    await this.assertWritten(response);
+    const event = toEvent((await response.json()) as RawEvent, calendar);
+    if (!event) throw new BadGatewayException('Google returned an unusable event');
+    return event;
+  }
+
   async updateEvent({
     refreshToken,
     calendar,
@@ -229,21 +260,10 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
   }) {
     this.assertConfigured();
     const accessToken = await this.accessToken(refreshToken);
-    const day = (date: Date) => date.toISOString().slice(0, 10);
-    // PATCH merges objects, so the unused one of date / dateTime is cleared explicitly
-    const when = (date: Date) =>
-      changes.allDay
-        ? { date: day(date), dateTime: null }
-        : { dateTime: date.toISOString(), date: null };
     const response = await fetch(this.eventUrl(calendar.id, eventId), {
       method: 'PATCH',
       headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        summary: changes.title,
-        description: changes.description,
-        start: when(changes.startsAt),
-        end: when(changes.endsAt),
-      }),
+      body: JSON.stringify(this.eventBody(changes)),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     await this.assertWritten(response);
@@ -345,6 +365,29 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
       if (!pageToken) break;
     }
     return raws;
+  }
+
+  /**
+   * The whole event as Google wants it. For a PATCH, objects are merged, so the unused one of
+   * date / dateTime is cleared explicitly (harmless for a create).
+   */
+  private eventBody(changes: EventChanges) {
+    const day = (date: Date) => date.toISOString().slice(0, 10);
+    const when = (date: Date) =>
+      changes.allDay
+        ? { date: day(date), dateTime: null }
+        : { dateTime: date.toISOString(), date: null };
+    return {
+      summary: changes.title,
+      description: changes.description,
+      start: when(changes.startsAt),
+      end: when(changes.endsAt),
+    };
+  }
+
+  private eventsUrl(calendarId: string) {
+    // sendUpdates=none: nobody is e-mailed because of something done in Nook
+    return `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=none`;
   }
 
   private eventUrl(calendarId: string, eventId: string) {

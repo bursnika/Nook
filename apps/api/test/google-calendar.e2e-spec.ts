@@ -36,6 +36,7 @@ describe('Google Calendar', () => {
     ctx.googleCalendar.revokedByUser.clear();
     ctx.googleCalendar.forgotten = [];
     ctx.googleCalendar.updates = [];
+    ctx.googleCalendar.creations = [];
     ctx.googleCalendar.deletions = [];
     ctx.googleCalendar.writeError = null;
   });
@@ -945,6 +946,190 @@ describe('Google Calendar', () => {
         .expect(200);
       expect(home.text).toContain('connect?edit=1');
       expect(home.text).toContain('Allow editing Google events');
+    });
+  });
+
+  describe('creating events that go to Google', () => {
+    const WRITE = `openid ${CALENDAR_SCOPE} ${TASKS_SCOPE} ${EVENTS_WRITE_SCOPE}`;
+    // fixed once: asserting against a clock that keeps moving would be flaky
+    const start = at(4);
+    const end = at(4, 11);
+    const body = (extra: Record<string, unknown> = {}) => ({
+      title: 'Dentist',
+      description: 'Bring the card',
+      startsAt: start.toISOString(),
+      endsAt: end.toISOString(),
+      allDay: false,
+      ...extra,
+    });
+
+    async function ready(options: { plan?: 'PRO' | 'FREE'; scope?: string } = {}) {
+      const who = await person('a@example.com');
+      await ctx.prisma.workspace.update({
+        where: { id: who.workspaceId },
+        data: { plan: options.plan ?? 'PRO' },
+      });
+      await connect(who, { refreshToken: 'rt-create', scope: options.scope ?? WRITE });
+      const url = `/api/workspaces/${who.workspaceId}/google-calendar/events`;
+      return {
+        ...who,
+        url,
+        post: (payload: object = body(), token = who.token) =>
+          http().post(url).set('Authorization', token).send(payload),
+      };
+    }
+
+    it('creates the event in Google and keeps it here as the person’s own Google event', async () => {
+      const w = await ready();
+      const res = await w.post().expect(201);
+      expect(res.body).toMatchObject({ title: 'Dentist', description: 'Bring the card' });
+
+      expect(ctx.googleCalendar.creations).toHaveLength(1);
+      expect(ctx.googleCalendar.creations[0]).toMatchObject({
+        title: 'Dentist',
+        description: 'Bring the card',
+        allDay: false,
+      });
+      const row = await ctx.prisma.calendarEvent.findFirstOrThrow();
+      expect(row).toMatchObject({
+        workspaceId: w.workspaceId,
+        importedById: w.user.id,
+        googleCalendarId: 'main@example.com',
+        calendarName: 'Main calendar',
+        googleEditable: true,
+        googleEventId: 'main@example.com/created-1',
+      });
+      expect(row.googleUrl).toContain('created');
+      expect(row.startsAt.toISOString()).toBe(start.toISOString());
+    });
+
+    it('is not duplicated by the next sync', async () => {
+      const w = await ready();
+      await w.post().expect(201);
+      const sync = await http()
+        .post(`/api/workspaces/${w.workspaceId}/google-calendar/sync`)
+        .set('Authorization', w.token)
+        .expect(200);
+      expect(sync.body).toMatchObject({ created: 0, updated: 1, removed: 0 });
+      expect(await ctx.prisma.calendarEvent.count()).toBe(1);
+    });
+
+    it('can be edited right away through the Google routes', async () => {
+      const w = await ready();
+      const created = (await w.post().expect(201)).body;
+      await http()
+        .patch(`${w.url}/${created.id}`)
+        .set('Authorization', w.token)
+        .send(body({ title: 'Dentist (moved)' }))
+        .expect(200);
+      expect(ctx.googleCalendar.updates[0]).toMatchObject({
+        calendarId: 'main@example.com',
+        eventId: 'created-1',
+      });
+    });
+
+    it('creates all-day events and events without a description', async () => {
+      const w = await ready();
+      const day = new Date(new Date(at(5)).setUTCHours(0, 0, 0, 0));
+      const next = new Date(day.getTime() + DAY);
+      await w
+        .post(
+          body({
+            description: null,
+            allDay: true,
+            startsAt: day.toISOString(),
+            endsAt: next.toISOString(),
+          }),
+        )
+        .expect(201);
+      expect(ctx.googleCalendar.creations[0]).toMatchObject({ description: null, allDay: true });
+      expect(await ctx.prisma.calendarEvent.findFirstOrThrow()).toMatchObject({
+        allDay: true,
+        description: null,
+      });
+    });
+
+    it('validates the event before bothering Google', async () => {
+      const w = await ready();
+      await w.post(body({ endsAt: at(4, 9).toISOString() })).expect(400);
+      await w.post(body({ title: '' })).expect(400);
+      await w.post(body({ startsAt: 'tomorrow' })).expect(400);
+      await w.post({ title: 'only a title' }).expect(400);
+      await w.post(body({ extra: 'nope' })).expect(400);
+      const day = new Date(new Date(at(4)).setUTCHours(0, 0, 0, 0));
+      await w
+        .post(body({ allDay: true, startsAt: day.toISOString(), endsAt: day.toISOString() }))
+        .expect(400);
+      expect(ctx.googleCalendar.creations).toHaveLength(0);
+      expect(await ctx.prisma.calendarEvent.count()).toBe(0);
+    });
+
+    it('is a Pro feature', async () => {
+      const w = await ready({ plan: 'FREE' });
+      const res = await w.post().expect(403);
+      expect(res.body).toMatchObject({
+        code: 'FEATURE_NOT_AVAILABLE',
+        feature: 'google-two-way-sync',
+      });
+      expect(ctx.googleCalendar.creations).toHaveLength(0);
+    });
+
+    it('needs the permission to change Google events', async () => {
+      const w = await ready({ scope: `openid ${CALENDAR_SCOPE} ${TASKS_SCOPE}` });
+      expect((await w.post().expect(403)).body.code).toBe('GOOGLE_WRITE_NOT_GRANTED');
+      expect(ctx.googleCalendar.creations).toHaveLength(0);
+      expect(await ctx.prisma.calendarEvent.count()).toBe(0);
+    });
+
+    it('needs a connected Google Calendar', async () => {
+      const who = await person('a@example.com');
+      await ctx.prisma.workspace.update({ where: { id: who.workspaceId }, data: { plan: 'PRO' } });
+      await http()
+        .post(`/api/workspaces/${who.workspaceId}/google-calendar/events`)
+        .set('Authorization', who.token)
+        .send(body())
+        .expect(409);
+    });
+
+    it('stores nothing when Google refuses', async () => {
+      const w = await ready();
+      ctx.googleCalendar.writeError = new GoogleForbiddenError('read-only');
+      const res = await w.post().expect(403);
+      expect(res.body.message).toContain('add events');
+      expect(await ctx.prisma.calendarEvent.count()).toBe(0);
+    });
+
+    it('forgets the connection when Google no longer accepts it', async () => {
+      const w = await ready();
+      ctx.googleCalendar.revokedByUser.add('rt-create');
+      await w.post().expect(409);
+      expect(await ctx.prisma.googleConnection.count()).toBe(0);
+      expect(await ctx.prisma.calendarEvent.count()).toBe(0);
+    });
+
+    it('is closed to outsiders and anonymous callers', async () => {
+      const w = await ready();
+      const stranger = await person('stranger@example.com');
+      await w.post(body(), stranger.token).expect(404);
+      await http().post(w.url).send(body()).expect(401);
+      expect(ctx.googleCalendar.creations).toHaveLength(0);
+    });
+
+    it('shows the new event in the calendar as the viewer’s editable Google event', async () => {
+      const w = await ready();
+      await w.post().expect(201);
+      const window = `from=${encodeURIComponent(at(0).toISOString())}&to=${encodeURIComponent(at(10).toISOString())}`;
+      const res = await http()
+        .get(`/api/workspaces/${w.workspaceId}/calendar?${window}`)
+        .set('Authorization', w.token)
+        .expect(200);
+      expect(res.body.events[0]).toMatchObject({
+        title: 'Dentist',
+        imported: true,
+        mine: true,
+        editable: true,
+        calendarName: 'Main calendar',
+      });
     });
   });
 
