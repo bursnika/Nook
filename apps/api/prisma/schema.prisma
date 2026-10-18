@@ -201,6 +201,11 @@ model CalendarEvent {
   // Which of their calendars (primary, holidays, a shared one, ...) and what it is called.
   googleCalendarId String?
   calendarName     String?
+  // Whether the person may change it in Google (writer/owner of the calendar, not a birthday etc.).
+  googleEditable   Boolean  @default(false)
+  // One occurrence of a repeating event: edits apply to this occurrence only.
+  recurring        Boolean  @default(false)
+  googleUrl        String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   workspaceId      String
