@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
  * Timed events that start (or are still running) inside the same window are listed next to them.
  */
 export const DUE_SOON_HOURS = 24;
+const RECENT_PAGES = 8;
 const MAX_CALENDAR_DAYS = 100;
 const CALENDAR_LIMIT = 500;
 
@@ -33,35 +34,42 @@ export class OverviewService {
   async summary(workspaceId: string, now = new Date()) {
     const open = { workspaceId, status: { not: TaskStatus.DONE } };
     const soonLimit = new Date(now.getTime() + DUE_SOON_HOURS * 60 * 60 * 1000);
-    const [dueSoon, upcomingEvents, priority, openTasks, openTotal, pages] = await Promise.all([
-      this.prisma.task.findMany({
-        where: { ...open, dueDate: { lte: soonLimit } },
-        orderBy: { dueDate: 'asc' },
-        take: 10,
-        select: taskCard,
-      }),
-      // all-day entries (holidays, birthdays) are not deadlines, so they stay in the calendar only
-      this.prisma.calendarEvent.findMany({
-        where: { workspaceId, allDay: false, startsAt: { lte: soonLimit }, endsAt: { gt: now } },
-        orderBy: { startsAt: 'asc' },
-        take: 10,
-        select: { id: true, title: true, startsAt: true, endsAt: true, calendarName: true },
-      }),
-      this.prisma.task.findMany({
-        where: { ...open, priority: TaskPriority.HIGH },
-        orderBy: [...dueFirst],
-        take: 8,
-        select: taskCard,
-      }),
-      this.prisma.task.findMany({
-        where: open,
-        orderBy: [...dueFirst],
-        take: 8,
-        select: taskCard,
-      }),
-      this.prisma.task.count({ where: open }),
-      this.prisma.page.count({ where: { workspaceId } }),
-    ]);
+    const [dueSoon, upcomingEvents, priority, openTasks, openTotal, pages, recentPages] =
+      await Promise.all([
+        this.prisma.task.findMany({
+          where: { ...open, dueDate: { lte: soonLimit } },
+          orderBy: { dueDate: 'asc' },
+          take: 10,
+          select: taskCard,
+        }),
+        // all-day entries (holidays, birthdays) are not deadlines, so they stay in the calendar only
+        this.prisma.calendarEvent.findMany({
+          where: { workspaceId, allDay: false, startsAt: { lte: soonLimit }, endsAt: { gt: now } },
+          orderBy: { startsAt: 'asc' },
+          take: 10,
+          select: { id: true, title: true, startsAt: true, endsAt: true, calendarName: true },
+        }),
+        this.prisma.task.findMany({
+          where: { ...open, priority: TaskPriority.HIGH },
+          orderBy: [...dueFirst],
+          take: 8,
+          select: taskCard,
+        }),
+        this.prisma.task.findMany({
+          where: open,
+          orderBy: [...dueFirst],
+          take: 8,
+          select: taskCard,
+        }),
+        this.prisma.task.count({ where: open }),
+        this.prisma.page.count({ where: { workspaceId } }),
+        this.prisma.page.findMany({
+          where: { workspaceId },
+          orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+          take: RECENT_PAGES,
+          select: { id: true, title: true, icon: true, updatedAt: true, isPublished: true },
+        }),
+      ]);
     const mark = <T extends { dueDate: Date | null }>(tasks: T[]) =>
       tasks.map((task) => ({ ...task, isOverdue: !!task.dueDate && task.dueDate < now }));
     return {
@@ -75,6 +83,7 @@ export class OverviewService {
       openTasks: mark(openTasks),
       openTotal,
       pages,
+      recentPages,
     };
   }
 

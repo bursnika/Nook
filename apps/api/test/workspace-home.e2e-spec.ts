@@ -119,6 +119,23 @@ describe('Workspace home: overview, calendar and notes', () => {
       expect(page.text).toContain('soon medium');
     });
 
+    it('lists the most recently changed pages of this workspace only', async () => {
+      const page = (title: string, workspaceId = wsId, updatedAt?: Date) =>
+        ctx.prisma.page.create({ data: { title, workspaceId, authorId: ownerId, updatedAt } });
+      await page('old page', wsId, new Date('2030-01-01'));
+      await page('fresh page', wsId, new Date('2030-03-01'));
+      await page('foreign page', otherWsId, new Date('2030-04-01'));
+      const res = await get(`/api/workspaces/${wsId}/overview`).expect(200);
+      expect(res.body.pages).toBe(2);
+      expect(res.body.recentPages.map((p: { title: string }) => p.title)).toEqual([
+        'fresh page',
+        'old page',
+      ]);
+      const home = await get(`/admin/workspaces/${wsId}`).expect(200);
+      expect(home.text).toContain('fresh page');
+      expect(home.text).not.toContain('foreign page');
+    });
+
     it('lists open high-priority tasks, undated ones last', async () => {
       const res = await get(`/api/workspaces/${wsId}/overview`).expect(200);
       expect(res.body.priority.map((t: { title: string }) => t.title)).toEqual([

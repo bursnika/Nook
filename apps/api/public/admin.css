@@ -239,6 +239,39 @@ h4,
   border-color: var(--nook-ink);
   color: var(--nook-ink);
 }
+.home-pages {
+  display: flex;
+  flex-direction: column;
+}
+.page-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed var(--nook-lav-300);
+}
+.page-list li:last-child {
+  border-bottom: 0;
+}
+.page-list a {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.page-list a:hover .page-name,
+.page-list a:focus-visible .page-name {
+  text-decoration: underline;
+}
+.page-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .home-pane {
   max-height: 16rem;
   overflow-y: auto;

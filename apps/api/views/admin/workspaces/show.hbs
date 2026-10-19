@@ -6,7 +6,9 @@
   <a class="btn btn-outline-primary" href="/admin/workspaces/{{ws.id}}/team">Team &amp; plan</a>
 </div>
 
-<section class="card p-3 mb-3 home-top" aria-label="Tasks and notes">
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+<section class="card p-3 h-100 home-top" aria-label="Tasks and notes">
   <form class="quick-task" method="post" action="/admin/workspaces/{{ws.id}}/tasks">
     <input type="hidden" name="from" value="home">
     <input class="form-control" type="text" name="title" maxlength="200" required placeholder="New task…" aria-label="Task title">
@@ -34,7 +36,6 @@
     </li>
     <li class="nav-item ms-auto d-flex align-items-center gap-3 small">
       <a href="/admin/workspaces/{{ws.id}}/tasks">All tasks</a>
-      <a href="/admin/workspaces/{{ws.id}}/pages">Pages ({{summary.pages}})</a>
     </li>
   </ul>
   <div class="tab-content home-pane pt-3">
@@ -72,6 +73,32 @@
     </div>
   </div>
 </section>
+  </div>
+  <div class="col-lg-4 d-flex flex-column">
+    <section class="card p-3 h-100 home-pages" aria-labelledby="pages-title">
+      <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+        <h2 class="h4 mb-0" id="pages-title">Pages <small class="text-muted">({{summary.pages}})</small></h2>
+        <a class="btn btn-sm btn-primary" href="/admin/workspaces/{{ws.id}}/pages/new">+ New page</a>
+      </div>
+      {{#if summary.recentPages.length}}
+        <ul class="page-list list-unstyled mb-3">
+          {{#each summary.recentPages}}
+            <li>
+              <a href="/admin/workspaces/{{../ws.id}}/pages/{{id}}">
+                <span class="page-icon" aria-hidden="true">{{#if icon}}{{icon}}{{else}}📄{{/if}}</span>
+                <span class="page-name">{{title}}</span>
+              </a>
+              {{#if isPublished}}<span class="chip chip-done">public</span>{{/if}}
+            </li>
+          {{/each}}
+        </ul>
+      {{else}}
+        <p class="text-muted">No pages yet. Write a quick note or start a new page.</p>
+      {{/if}}
+      <a class="btn btn-sm btn-outline-primary mt-auto align-self-start" href="/admin/workspaces/{{ws.id}}/pages">All pages</a>
+    </section>
+  </div>
+</div>
 
 <section class="card p-3" id="calendar" data-workspace="{{ws.id}}" aria-labelledby="calendar-title">
   <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
