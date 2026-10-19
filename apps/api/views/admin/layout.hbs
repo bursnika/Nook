@@ -52,7 +52,7 @@
       </div>
     {{/if}}
 
-    <main class="container py-4">
+    <main class="{{#if wide}}container-fluid px-3 px-lg-4{{else}}container{{/if}} py-4">
       {{#if flash}}<div class="alert alert-success" role="status">{{flash}}</div>{{/if}}
       {{#if formError}}<div class="alert alert-danger" role="alert">{{formError}}</div>{{/if}}
       {{{body}}}

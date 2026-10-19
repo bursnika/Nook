@@ -218,6 +218,32 @@ h4,
   color: #a3262a;
 }
 
+/* workspace home: tabs on top, the calendar below it, edge to edge */
+.quick-task {
+  display: grid;
+  grid-template-columns: 1fr 11rem 9rem auto;
+  gap: 0.5rem;
+}
+.home-tabs {
+  border-bottom: 2px solid var(--nook-ink);
+}
+.home-tabs .nav-link {
+  border: 2px solid transparent;
+  border-bottom: 0;
+  border-radius: 0;
+  color: var(--nook-lav-700);
+  font-weight: 700;
+}
+.home-tabs .nav-link.active {
+  background: var(--nook-pink-100);
+  border-color: var(--nook-ink);
+  color: var(--nook-ink);
+}
+.home-pane {
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
 /* calendar */
 .gcal-bar {
   display: flex;
@@ -250,7 +276,7 @@ h4,
   flex-direction: column;
   align-items: stretch;
   gap: 2px;
-  min-height: 5.25rem;
+  min-height: 7rem;
   padding: 0.2rem;
   border: 0;
   background: #fff;
@@ -414,7 +440,8 @@ h4,
     height: 0.4rem;
     background: var(--nook-pink-700);
   }
-  .cal-form {
+  .cal-form,
+  .quick-task {
     grid-template-columns: 1fr;
   }
 }

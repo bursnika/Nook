@@ -5,6 +5,7 @@ const isoDate = (value: unknown) =>
 
 /** Small, pure helpers for the Handlebars templates. */
 export function registerViewHelpers(engine: typeof hbs) {
+  engine.registerHelper('add', (a: unknown, b: unknown) => Number(a ?? 0) + Number(b ?? 0));
   engine.registerHelper('eq', (a: unknown, b: unknown) => a === b);
   engine.registerHelper('date', isoDate);
   engine.registerHelper('iso', (value: unknown) =>

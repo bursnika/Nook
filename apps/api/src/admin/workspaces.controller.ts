@@ -298,7 +298,7 @@ export class WorkspacesAdminController {
       this.overview.summary(workspaceId),
       this.googleCalendar.status(userId, workspaceId),
     ]);
-    return { title: ws.name, section: 'overview', ws, summary, google, ...extra };
+    return { title: ws.name, section: 'overview', wide: true, ws, summary, google, ...extra };
   }
 
   private async teamView(workspaceId: string, req: Request, extra: Record<string, unknown> = {}) {

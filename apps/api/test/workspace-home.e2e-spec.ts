@@ -220,10 +220,12 @@ describe('Workspace home: overview, calendar and notes', () => {
       });
       const res = await get(`/admin/workspaces/${wsId}`).expect(200);
       for (const text of [
-        'Coming up in the next 24 hours',
-        'Priority tasks',
-        'Open tasks',
-        'Quick note',
+        'Coming up',
+        'Next 24 hours',
+        'name="from" value="home"',
+        'id="pane-priority"',
+        'id="pane-open"',
+        'id="pane-note"',
         'id="calendar"',
         `data-workspace="${wsId}"`,
         '/static/calendar.js',
@@ -243,6 +245,40 @@ describe('Workspace home: overview, calendar and notes', () => {
     it('serves the calendar script', async () => {
       const res = await http().get('/static/calendar.js').expect(200);
       expect(res.headers['content-type']).toContain('javascript');
+    });
+  });
+
+  describe('adding a task from the home page', () => {
+    const add = (body: object, token = tok.owner) =>
+      http()
+        .post(`/admin/workspaces/${wsId}/tasks`)
+        .set('Authorization', token)
+        .type('form')
+        .send(body);
+
+    it('creates the task and returns to the home page', async () => {
+      const res = await add({
+        from: 'home',
+        title: 'Call the vet',
+        priority: 'HIGH',
+        dueDate: '2030-06-02',
+      }).expect(302);
+      expect(res.headers.location).toBe(`/admin/workspaces/${wsId}?flash=task-created`);
+      const task = await ctx.prisma.task.findFirstOrThrow({ where: { workspaceId: wsId } });
+      expect(task).toMatchObject({ title: 'Call the vet', priority: 'HIGH' });
+      expect(task.dueDate?.toISOString().slice(0, 10)).toBe('2030-06-02');
+      const home = await get(`/admin/workspaces/${wsId}?flash=task-created`).expect(200);
+      expect(home.text).toContain('Task added.');
+    });
+
+    it('still goes to the task page when the form did not come from home', async () => {
+      const res = await add({ title: 'Plain form' }).expect(302);
+      expect(res.headers.location).toMatch(/\/tasks\/[0-9a-f-]+\?flash=created$/);
+    });
+
+    it('does not create a task in a workspace the user is not a member of', async () => {
+      await add({ from: 'home', title: 'intruder' }, tok.outsider).expect(404);
+      expect(await ctx.prisma.task.count()).toBe(0);
     });
   });
 

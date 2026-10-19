@@ -67,6 +67,7 @@ export function toFormMessage(error: unknown): string | null {
 
 const FLASH_MESSAGES: Record<string, string> = {
   created: 'Created successfully.',
+  'task-created': 'Task added.',
   updated: 'Changes saved.',
   deleted: 'Deleted.',
   connected: 'Google Calendar connected. Press “Sync now” to import your events.',

@@ -6,26 +6,40 @@
   <a class="btn btn-outline-primary" href="/admin/workspaces/{{ws.id}}/team">Team &amp; plan</a>
 </div>
 
-<div class="row g-3 mb-3">
-  <div class="col-lg-8">
-    <section class="card p-3 h-100" id="calendar" data-workspace="{{ws.id}}" aria-labelledby="calendar-title">
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-        <h2 class="h5 mb-0" id="calendar-title">Calendar</h2>
-        <div class="d-flex align-items-center gap-2">
-          <button class="btn btn-sm btn-outline-primary" type="button" data-cal="prev" aria-label="Previous month">‹</button>
-          <strong class="cal-month" data-cal="label" aria-live="polite"></strong>
-          <button class="btn btn-sm btn-outline-primary" type="button" data-cal="next" aria-label="Next month">›</button>
-          <button class="btn btn-sm btn-outline-primary" type="button" data-cal="today">Today</button>
-        </div>
-      </div>
-      {{> google-calendar-bar}}
-      <div class="cal-grid" data-cal="grid"><noscript>The calendar needs JavaScript.</noscript></div>
-      <div class="cal-agenda mt-3" data-cal="agenda" aria-live="polite"></div>
-    </section>
-  </div>
-  <div class="col-lg-4 d-flex flex-column gap-3">
-    <section class="card p-3" aria-labelledby="due-soon-title">
-      <h2 class="h5" id="due-soon-title">Coming up in the next {{summary.dueSoonHours}} hours</h2>
+<section class="card p-3 mb-3 home-top" aria-label="Tasks and notes">
+  <form class="quick-task" method="post" action="/admin/workspaces/{{ws.id}}/tasks">
+    <input type="hidden" name="from" value="home">
+    <input class="form-control" type="text" name="title" maxlength="200" required placeholder="New task…" aria-label="Task title">
+    <input class="form-control" type="date" name="dueDate" aria-label="Due date">
+    <select class="form-select" name="priority" aria-label="Priority">
+      <option value="LOW">Low</option>
+      <option value="MEDIUM" selected>Medium</option>
+      <option value="HIGH">High</option>
+    </select>
+    <button class="btn btn-primary" type="submit">+ Add task</button>
+  </form>
+
+  <ul class="nav nav-tabs home-tabs mt-3" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-soon" data-bs-toggle="tab" data-bs-target="#pane-soon" type="button" role="tab" aria-controls="pane-soon" aria-selected="true">Coming up <span class="badge text-bg-light">{{add summary.dueSoon.length summary.upcomingEvents.length}}</span></button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-priority" data-bs-toggle="tab" data-bs-target="#pane-priority" type="button" role="tab" aria-controls="pane-priority" aria-selected="false">Priority <span class="badge text-bg-light">{{summary.priority.length}}</span></button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-open" data-bs-toggle="tab" data-bs-target="#pane-open" type="button" role="tab" aria-controls="pane-open" aria-selected="false">Open tasks <span class="badge text-bg-light">{{summary.openTotal}}</span></button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-note" data-bs-toggle="tab" data-bs-target="#pane-note" type="button" role="tab" aria-controls="pane-note" aria-selected="false">Quick note</button>
+    </li>
+    <li class="nav-item ms-auto d-flex align-items-center gap-3 small">
+      <a href="/admin/workspaces/{{ws.id}}/tasks">All tasks</a>
+      <a href="/admin/workspaces/{{ws.id}}/pages">Pages ({{summary.pages}})</a>
+    </li>
+  </ul>
+  <div class="tab-content home-pane pt-3">
+    <div class="tab-pane fade show active" id="pane-soon" role="tabpanel" aria-labelledby="tab-soon" tabindex="0">
+      <p class="small text-muted">Next {{summary.dueSoonHours}} hours: events and task deadlines.</p>
       {{#if summary.upcomingEvents.length}}
         <ul class="task-list list-unstyled mb-0">
           {{#each summary.upcomingEvents}}
@@ -46,34 +60,32 @@
       {{else}}
         <p class="text-muted mb-0">Nothing is about to expire. Enjoy it.</p>
       {{/if}}
-    </section>
-    <section class="card p-3" aria-labelledby="priority-title">
-      <h2 class="h5" id="priority-title">Priority tasks</h2>
+    </div>
+    <div class="tab-pane fade" id="pane-priority" role="tabpanel" aria-labelledby="tab-priority" tabindex="0">
       {{> task-list tasks=summary.priority empty="No open high-priority tasks." wsId=ws.id}}
-    </section>
+    </div>
+    <div class="tab-pane fade" id="pane-open" role="tabpanel" aria-labelledby="tab-open" tabindex="0">
+      {{> task-list tasks=summary.openTasks empty="No open tasks. Add one above!" wsId=ws.id}}
+    </div>
+    <div class="tab-pane fade" id="pane-note" role="tabpanel" aria-labelledby="tab-note" tabindex="0">
+      {{> quick-note wsId=ws.id rows=3}}
+    </div>
   </div>
-</div>
+</section>
 
-<div class="row g-3">
-  <div class="col-lg-8">
-    <section class="card p-3 h-100" aria-labelledby="tasks-title">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h2 class="h5 mb-0" id="tasks-title">Open tasks <small class="text-muted">({{summary.openTotal}})</small></h2>
-        <div class="d-flex gap-2">
-          <a class="btn btn-sm btn-outline-primary" href="/admin/workspaces/{{ws.id}}/tasks">All tasks</a>
-          <a class="btn btn-sm btn-primary" href="/admin/workspaces/{{ws.id}}/tasks/new">+ New task</a>
-        </div>
-      </div>
-      {{> task-list tasks=summary.openTasks empty="No open tasks. Add one!" wsId=ws.id}}
-    </section>
+<section class="card p-3" id="calendar" data-workspace="{{ws.id}}" aria-labelledby="calendar-title">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+    <h2 class="h5 mb-0" id="calendar-title">Calendar</h2>
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-sm btn-outline-primary" type="button" data-cal="prev" aria-label="Previous month">‹</button>
+      <strong class="cal-month" data-cal="label" aria-live="polite"></strong>
+      <button class="btn btn-sm btn-outline-primary" type="button" data-cal="next" aria-label="Next month">›</button>
+      <button class="btn btn-sm btn-outline-primary" type="button" data-cal="today">Today</button>
+    </div>
   </div>
-  <div class="col-lg-4">
-    <section class="card p-3 h-100" aria-labelledby="note-title">
-      <h2 class="h5" id="note-title">Quick note</h2>
-      {{> quick-note wsId=ws.id}}
-      <a class="small mt-2" href="/admin/workspaces/{{ws.id}}/pages">All pages ({{summary.pages}})</a>
-    </section>
-  </div>
-</div>
+  {{> google-calendar-bar}}
+  <div class="cal-grid" data-cal="grid"><noscript>The calendar needs JavaScript.</noscript></div>
+  <div class="cal-agenda mt-3" data-cal="agenda" aria-live="polite"></div>
+</section>
 
 <script src="/static/calendar.js"></script>
