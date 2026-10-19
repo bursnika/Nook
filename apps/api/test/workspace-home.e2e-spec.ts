@@ -75,6 +75,50 @@ describe('Workspace home: overview, calendar and notes', () => {
       ]);
     });
 
+    it('lists timed events starting or running within 24 hours, not all-day, past or foreign ones', async () => {
+      const event = (title: string, from: number, to: number, extra = {}) => ({
+        workspaceId: wsId,
+        title,
+        startsAt: inHours(from),
+        endsAt: inHours(to),
+        ...extra,
+      });
+      await ctx.prisma.calendarEvent.createMany({
+        data: [
+          event('later today', 5, 6),
+          event('running now', -1, 1),
+          event('tomorrow evening', 30, 31),
+          event('already over', -3, -2),
+          event('holiday', 2, 20, { allDay: true }),
+          { ...event('foreign', 2, 3), workspaceId: otherWsId },
+        ],
+      });
+      const res = await get(`/api/workspaces/${wsId}/overview`).expect(200);
+      expect(
+        res.body.upcomingEvents.map((e: { title: string; isRunning: boolean }) => [
+          e.title,
+          e.isRunning,
+        ]),
+      ).toEqual([
+        ['running now', true],
+        ['later today', false],
+      ]);
+    });
+
+    it('shows those events on the home page next to the tasks', async () => {
+      await ctx.prisma.calendarEvent.create({
+        data: {
+          workspaceId: wsId,
+          title: 'dentist visit',
+          startsAt: inHours(4),
+          endsAt: inHours(5),
+        },
+      });
+      const page = await get(`/admin/workspaces/${wsId}`).expect(200);
+      expect(page.text).toContain('dentist visit');
+      expect(page.text).toContain('soon medium');
+    });
+
     it('lists open high-priority tasks, undated ones last', async () => {
       const res = await get(`/api/workspaces/${wsId}/overview`).expect(200);
       expect(res.body.priority.map((t: { title: string }) => t.title)).toEqual([
@@ -176,7 +220,7 @@ describe('Workspace home: overview, calendar and notes', () => {
       });
       const res = await get(`/admin/workspaces/${wsId}`).expect(200);
       for (const text of [
-        'Due in the next 24 hours',
+        'Coming up in the next 24 hours',
         'Priority tasks',
         'Open tasks',
         'Quick note',
