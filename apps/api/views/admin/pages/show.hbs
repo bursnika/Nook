@@ -24,15 +24,16 @@
     </div>
   </div>
   <div class="col-lg-8">
-    <h2 class="h5">Blocks ({{page.blocks.length}})</h2>
-    <div class="table-frame mb-4">
+    <h2 class="h5">Note <small class="text-muted">({{page.blocks.length}} {{#if (eq page.blocks.length 1)}}block{{else}}blocks{{/if}})</small></h2>
+    <p class="small text-muted">A note is built from blocks: every line, heading or to-do is one block. The block editor with slash commands comes later; for now lines are added below.</p>
+    <div class="table-frame mb-3">
       <table class="table align-middle">
         <thead><tr><th>Type</th><th>Content</th></tr></thead>
         <tbody>
           {{#each page.blocks}}
             <tr><td><span class="chip chip-todo">{{nice type}}</span></td><td>{{content.text}}</td></tr>
           {{else}}
-            <tr><td colspan="2" class="text-muted p-3">The page has no blocks yet.</td></tr>
+            <tr><td colspan="2" class="text-muted p-3">The note is empty. Write something below.</td></tr>
           {{/each}}
         </tbody>
       </table>
@@ -42,13 +43,31 @@
       <textarea class="form-control mb-2" id="append-text" name="text" rows="3" maxlength="20000" required placeholder="Every line becomes a block."></textarea>
       <button class="btn btn-primary" type="submit">Add</button>
     </form>
-    <h2 class="h5">Attachments ({{page.attachments.length}})</h2>
+
+    <h2 class="h5">Tasks on this page <small class="text-muted">({{tasksTotal}})</small></h2>
+    <form class="quick-task mb-2" method="post" action="/admin/workspaces/{{ws.id}}/tasks">
+      <input type="hidden" name="from" value="page">
+      <input type="hidden" name="pageId" value="{{page.id}}">
+      <input class="form-control" type="text" name="title" maxlength="200" required placeholder="New task for this page…" aria-label="Task title">
+      <input class="form-control" type="date" name="dueDate" aria-label="Due date">
+      <select class="form-select" name="priority" aria-label="Priority">
+        <option value="LOW">Low</option>
+        <option value="MEDIUM" selected>Medium</option>
+        <option value="HIGH">High</option>
+      </select>
+      <button class="btn btn-primary" type="submit">+ Add task</button>
+    </form>
+    {{> task-list tasks=tasks empty="No tasks linked to this page yet." wsId=ws.id}}
+
+    <h2 class="h5 mt-4">Files <small class="text-muted">({{page.attachments.length}})</small></h2>
+    <p class="small text-muted">Documents or images that belong to this page.</p>
     <ul>
       {{#each page.attachments}}
         <li><a href="/admin/workspaces/{{../ws.id}}/attachments/{{id}}">{{filename}}</a> <small class="text-muted">{{filesize size}}</small></li>
       {{else}}
-        <li class="text-muted">None.</li>
+        <li class="text-muted">No files.</li>
       {{/each}}
     </ul>
+    <a class="btn btn-sm btn-outline-primary" href="/admin/workspaces/{{ws.id}}/attachments/new">Upload a file</a>
   </div>
 </div>

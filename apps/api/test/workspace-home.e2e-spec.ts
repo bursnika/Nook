@@ -299,6 +299,42 @@ describe('Workspace home: overview, calendar and notes', () => {
     });
   });
 
+  describe('adding a task from a page', () => {
+    const add = (body: object, token = tok.owner) =>
+      http()
+        .post(`/admin/workspaces/${wsId}/tasks`)
+        .set('Authorization', token)
+        .type('form')
+        .send(body);
+
+    it('links the task to the page, returns there and lists it, open ones first', async () => {
+      const page = await ctx.prisma.page.create({
+        data: { title: 'Trip', workspaceId: wsId, authorId: ownerId },
+      });
+      await ctx.prisma.task.create({
+        data: { workspaceId: wsId, pageId: page.id, title: 'already done', status: 'DONE' },
+      });
+      await ctx.prisma.task.create({ data: { workspaceId: wsId, title: 'not on the page' } });
+      const res = await add({ from: 'page', pageId: page.id, title: 'Book tickets' }).expect(302);
+      expect(res.headers.location).toBe(
+        `/admin/workspaces/${wsId}/pages/${page.id}?flash=task-created`,
+      );
+      const view = await get(res.headers.location).expect(200);
+      expect(view.text).toContain('Task added.');
+      expect(view.text).toContain('Tasks on this page');
+      expect(view.text).not.toContain('not on the page');
+      expect(view.text.indexOf('Book tickets')).toBeLessThan(view.text.indexOf('already done'));
+    });
+
+    it('refuses a page from another workspace', async () => {
+      const foreign = await ctx.prisma.page.create({
+        data: { title: 'Foreign', workspaceId: otherWsId, authorId: ownerId },
+      });
+      await add({ from: 'page', pageId: foreign.id, title: 'sneaky' }).expect(400);
+      expect(await ctx.prisma.task.count({ where: { title: 'sneaky' } })).toBe(0);
+    });
+  });
+
   describe('notes', () => {
     const note = (body: object, token = tok.owner) =>
       http()

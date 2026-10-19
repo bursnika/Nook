@@ -18,6 +18,8 @@ import { uploadOptions } from '../attachments/upload.config.js';
 import { WorkspaceItemParams, WorkspaceParams } from '../common/params.js';
 import { CreatePageDto, UpdatePageDto } from '../pages/page.dto.js';
 import { PagesService } from '../pages/pages.service.js';
+import type { ListTasksQuery } from '../tasks/task.dto.js';
+import { TasksService } from '../tasks/tasks.service.js';
 import { UploadsService } from '../uploads/uploads.service.js';
 import { WorkspacesService } from '../workspaces/workspaces.service.js';
 import { AdminController } from './admin-controller.decorator.js';
@@ -34,6 +36,7 @@ export class PagesAdminController {
     private readonly workspaces: WorkspacesService,
     private readonly lookup: LookupService,
     private readonly uploads: UploadsService,
+    private readonly tasks: TasksService,
   ) {}
 
   @Get()
@@ -118,11 +121,28 @@ export class PagesAdminController {
     @Param() { workspaceId, id }: WorkspaceItemParams,
     @Query() { flash }: AdminListQuery,
   ) {
-    const [ws, page] = await Promise.all([
+    const [ws, page, linked] = await Promise.all([
       this.workspaces.get(workspaceId),
       this.pages.get(workspaceId, id),
+      this.tasks.list(workspaceId, { pageId: id, skip: 0, limit: 100 } as ListTasksQuery),
     ]);
-    return { title: page.title, section: 'pages', ws, flash: flashMessage(flash), page };
+    const now = new Date();
+    const open = linked.items.filter((task) => task.status !== 'DONE');
+    const tasks = [...open, ...linked.items.filter((task) => task.status === 'DONE')].map(
+      (task) => ({
+        ...task,
+        isOverdue: task.status !== 'DONE' && !!task.dueDate && task.dueDate < now,
+      }),
+    );
+    return {
+      title: page.title,
+      section: 'pages',
+      ws,
+      flash: flashMessage(flash),
+      page,
+      tasks,
+      tasksTotal: linked.total,
+    };
   }
 
   @Get(':id/edit')
