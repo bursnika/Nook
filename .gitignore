@@ -38,3 +38,6 @@ apps/api/src/generated/
 
 # OAuth client secrets downloaded from Google Cloud
 client_secret*.json
+
+# newman reports
+tests/postman/results/
