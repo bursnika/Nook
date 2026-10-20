@@ -51,5 +51,12 @@ export const env = {
     callbackUrl:
       process.env.GOOGLE_CALLBACK_URL ?? 'http://localhost:3000/api/auth/google/callback',
   },
+  /** Public address of the site: canonical links, Open Graph and the sitemap are built from it. */
+  publicUrl: (process.env.PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 3000}`).replace(
+    /\/+$/,
+    '',
+  ),
+  /** GA4 measurement id (G-XXXX); the analytics snippet is only rendered when it is set. */
+  gaMeasurementId: process.env.GA_MEASUREMENT_ID || undefined,
   uploadDir: resolve(process.env.UPLOAD_DIR ?? 'uploads'),
 };

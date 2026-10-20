@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{title}} · {{siteName}}</title>
+    <meta name="description" content="{{description}}" />
+    <link rel="canonical" href="{{canonical}}" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="{{siteName}}" />
+    <meta property="og:title" content="{{title}}" />
+    <meta property="og:description" content="{{description}}" />
+    <meta property="og:url" content="{{canonical}}" />
+    {{#if image}}<meta property="og:image" content="{{image}}" />{{/if}}
+    <meta name="twitter:card" content="{{#if image}}summary_large_image{{else}}summary{{/if}}" />
+    <meta name="twitter:title" content="{{title}}" />
+    <meta name="twitter:description" content="{{description}}" />
+    {{#if image}}<meta name="twitter:image" content="{{image}}" />{{/if}}
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23b8326f' d='M2 4h3v1h1v1h1V5h1V4h3v1h1v3h-1v1h-1v1h-1v1H9v1H8v1H7v-1H6v-1H5v-1H4V9H3V8H2z'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/static/public.css" />
+    <script type="application/ld+json">{{{jsonLd}}}</script>
+    {{#if gaId}}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{gaId}}"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','{{gaId}}');</script>
+    {{/if}}
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container d-flex align-items-center justify-content-between">
+        <a class="brand" href="/">♡ Nook</a>
+        <span class="small">A page published with Nook</span>
+      </div>
+    </header>
+    {{{body}}}
+    <footer class="site-footer">
+      <div class="container small">Made with Nook, a pixel-cute planner · <a href="/sitemap.xml">sitemap</a></div>
+    </footer>
+  </body>
+</html>

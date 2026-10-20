@@ -1,0 +1,40 @@
+{{#if page.coverUrl}}
+  <div class="hero" style="background-image:url('{{page.coverUrl}}')" role="img" aria-label="Cover of {{page.title}}"></div>
+{{/if}}
+<main class="container py-4">
+  <div class="row g-4">
+    <article class="col-lg-8" itemscope itemtype="https://schema.org/Article">
+      <h1 itemprop="headline">{{#if page.icon}}<span aria-hidden="true">{{page.icon}}</span> {{/if}}{{page.title}}</h1>
+      <p class="text-muted small">
+        By <span itemprop="author">{{author.name}}</span> ·
+        <time datetime="{{iso page.createdAt}}" itemprop="datePublished">{{date page.createdAt}}</time>{{#unless (eq (date page.createdAt) (date page.updatedAt))}} · updated <time datetime="{{iso page.updatedAt}}" itemprop="dateModified">{{date page.updatedAt}}</time>{{/unless}}
+      </p>
+      <div class="page-body" itemprop="articleBody">
+        {{#each nodes}}
+          {{#if (eq kind 'h1')}}<h2>{{text}}</h2>
+          {{else if (eq kind 'h2')}}<h3>{{text}}</h3>
+          {{else if (eq kind 'h3')}}<h4>{{text}}</h4>
+          {{else if (eq kind 'p')}}<p>{{text}}</p>
+          {{else if (eq kind 'quote')}}<blockquote class="blockquote">{{text}}</blockquote>
+          {{else if (eq kind 'code')}}<pre><code>{{text}}</code></pre>
+          {{else if (eq kind 'hr')}}<hr>
+          {{else if (eq kind 'ul')}}<ul>{{#each items}}<li>{{this}}</li>{{/each}}</ul>
+          {{else if (eq kind 'ol')}}<ol>{{#each items}}<li>{{this}}</li>{{/each}}</ol>
+          {{else if (eq kind 'todo')}}<ul class="todo">{{#each items}}<li><input type="checkbox" disabled{{#if checked}} checked{{/if}} aria-label="{{text}}"> <span{{#if checked}} class="done"{{/if}}>{{text}}</span></li>{{/each}}</ul>
+          {{/if}}
+        {{/each}}
+      </div>
+    </article>
+    <aside class="col-lg-4">
+      <div class="contact card p-3">
+        <h2 class="h5">About the author</h2>
+        <div class="d-flex align-items-center gap-3 mb-2">
+          {{#if author.avatarUrl}}<img class="avatar" src="{{author.avatarUrl}}" alt="" width="56" height="56" referrerpolicy="no-referrer">{{else}}<span class="avatar avatar-fallback" aria-hidden="true">♡</span>{{/if}}
+          <strong>{{author.name}}</strong>
+        </div>
+        <a class="btn btn-primary w-100" href="mailto:{{author.email}}">Write to the author</a>
+        <p class="small text-muted mt-2 mb-0">{{author.email}}</p>
+      </div>
+    </aside>
+  </div>
+</main>

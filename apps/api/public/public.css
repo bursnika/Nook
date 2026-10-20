@@ -1,0 +1,115 @@
+/* Public landing pages: Bootstrap with the Nook palette (see docs/design.md). */
+:root {
+  --nook-pink-100: #fce1ee;
+  --nook-pink-300: #f4a3c8;
+  --nook-pink-700: #b8326f;
+  --nook-lav-100: #eee6f8;
+  --nook-lav-300: #c4abe4;
+  --nook-lav-700: #654390;
+  --nook-ink: #2b1e33;
+  --bs-body-font-family: 'Nunito', system-ui, sans-serif;
+  --bs-body-color: var(--nook-ink);
+  --bs-link-color: var(--nook-pink-700);
+  --bs-link-color-rgb: 184, 50, 111;
+  --bs-border-radius: 0;
+}
+body {
+  background-color: #f7f6f9;
+  background-image:
+    linear-gradient(var(--nook-lav-100) 1px, transparent 1px),
+    linear-gradient(90deg, var(--nook-lav-100) 1px, transparent 1px);
+  background-size: 24px 24px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+main {
+  flex: 1;
+}
+h1,
+h2,
+h3,
+h4,
+.brand {
+  font-family: 'Pixelify Sans', 'Nunito', sans-serif;
+}
+.site-header {
+  background: linear-gradient(90deg, var(--nook-pink-300), var(--nook-lav-300));
+  border-bottom: 2px solid var(--nook-lav-700);
+  padding: 0.6rem 0;
+}
+.brand {
+  color: var(--nook-ink);
+  font-weight: 700;
+  font-size: 1.25rem;
+  text-decoration: none;
+}
+.hero {
+  height: 260px;
+  background-size: cover;
+  background-position: center;
+  border-bottom: 2px solid var(--nook-ink);
+}
+article,
+.contact {
+  background: #fff;
+  border: 2px solid var(--nook-ink);
+  box-shadow: 4px 4px 0 rgba(101, 67, 144, 0.3);
+}
+article {
+  padding: 1.5rem;
+}
+.page-body {
+  overflow-wrap: anywhere;
+}
+.page-body pre {
+  background: var(--nook-lav-100);
+  border: 2px solid var(--nook-ink);
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+.page-body blockquote {
+  border-left: 4px solid var(--nook-pink-300);
+  padding-left: 1rem;
+  color: #6f6979;
+}
+.todo {
+  list-style: none;
+  padding-left: 0;
+}
+.todo .done {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+.contact {
+  position: sticky;
+  top: 1rem;
+}
+.avatar {
+  width: 56px;
+  height: 56px;
+  border: 2px solid var(--nook-ink);
+  object-fit: cover;
+}
+.avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nook-pink-100);
+  color: var(--nook-pink-700);
+  font-size: 1.5rem;
+}
+.btn-primary {
+  --bs-btn-bg: var(--nook-pink-700);
+  --bs-btn-border-color: var(--nook-ink);
+  --bs-btn-hover-bg: #8f2253;
+  --bs-btn-hover-border-color: var(--nook-ink);
+  border: 2px solid var(--nook-ink);
+  font-weight: 700;
+  box-shadow: 2px 2px 0 var(--nook-ink);
+}
+.site-footer {
+  border-top: 2px solid var(--nook-lav-300);
+  background: var(--nook-lav-100);
+  padding: 0.75rem 0;
+}
