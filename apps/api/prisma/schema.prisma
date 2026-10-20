@@ -133,6 +133,7 @@ model Page {
   parent      Page?        @relation("PageTree", fields: [parentId], references: [id], onDelete: Cascade)
   children    Page[]       @relation("PageTree")
   blocks      Block[]
+  ops         PageOp[]
   tasks       Task[]
   attachments Attachment[]
 
@@ -153,6 +154,23 @@ model Block {
   page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   @@index([pageId, position])
+}
+
+// One entry per batch of block operations applied to a page. `seq` orders the log, so a client that was
+// offline (or polling) asks for everything after the last `seq` it has seen.
+model PageOp {
+  seq         Int      @id @default(autoincrement())
+  pageId      String
+  workspaceId String
+  authorId    String
+  // Who sent it: lets a browser tab tell its own echo from other people's changes.
+  clientId    String
+  ops         Json
+  createdAt   DateTime @default(now())
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, seq])
 }
 
 model Task {

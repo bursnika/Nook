@@ -1,11 +1,15 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { RealtimeBus } from '../realtime/realtime.bus.js';
 import { CreateEventDto, ListEventsQuery, UpdateEventDto } from './event.dto.js';
 
 @Injectable()
 export class EventsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly bus: RealtimeBus,
+  ) {}
 
   async list(workspaceId: string, { from, to, q, skip, limit }: ListEventsQuery) {
     const where: Prisma.CalendarEventWhereInput = {
@@ -33,7 +37,14 @@ export class EventsService {
   async create(workspaceId: string, dto: CreateEventDto) {
     this.assertRange(dto.startsAt, dto.endsAt);
     await this.assertTask(workspaceId, dto.taskId);
-    return this.prisma.calendarEvent.create({ data: { ...dto, workspaceId } });
+    const event = await this.prisma.calendarEvent.create({ data: { ...dto, workspaceId } });
+    this.bus.publishWorkspace(workspaceId, {
+      topic: 'event',
+      kind: 'created',
+      id: event.id,
+      event,
+    });
+    return event;
   }
 
   async update(workspaceId: string, id: string, dto: UpdateEventDto) {
@@ -41,12 +52,15 @@ export class EventsService {
     this.assertNotImported(current);
     this.assertRange(dto.startsAt ?? current.startsAt, dto.endsAt ?? current.endsAt);
     await this.assertTask(workspaceId, dto.taskId);
-    return this.prisma.calendarEvent.update({ where: { id }, data: dto });
+    const event = await this.prisma.calendarEvent.update({ where: { id }, data: dto });
+    this.bus.publishWorkspace(workspaceId, { topic: 'event', kind: 'updated', id, event });
+    return event;
   }
 
   async remove(workspaceId: string, id: string) {
     this.assertNotImported(await this.get(workspaceId, id));
     await this.prisma.calendarEvent.delete({ where: { id, workspaceId } });
+    this.bus.publishWorkspace(workspaceId, { topic: 'event', kind: 'deleted', id });
   }
 
   /** Imported events belong to Google: changing only the local copy would be undone by the next sync. */

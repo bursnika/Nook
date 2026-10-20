@@ -2,13 +2,17 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
 import { TaskStatus } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { RealtimeBus } from '../realtime/realtime.bus.js';
 import { CreateTaskDto, ListTasksQuery, UpdateTaskDto } from './task.dto.js';
 
 const POSITION_STEP = 1024;
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly bus: RealtimeBus,
+  ) {}
 
   async list(workspaceId: string, query: ListTasksQuery) {
     const { q, status, priority, assigneeId, pageId, dueFrom, dueTo, skip, limit } = query;
@@ -40,7 +44,7 @@ export class TasksService {
   async create(workspaceId: string, dto: CreateTaskDto) {
     await this.assertRefs(workspaceId, dto);
     const status = dto.status ?? TaskStatus.TODO;
-    return this.prisma.task.create({
+    const task = await this.prisma.task.create({
       data: {
         ...dto,
         workspaceId,
@@ -49,6 +53,8 @@ export class TasksService {
         completedAt: status === TaskStatus.DONE ? new Date() : null,
       },
     });
+    this.bus.publishWorkspace(workspaceId, { topic: 'task', kind: 'created', id: task.id, task });
+    return task;
   }
 
   async update(workspaceId: string, id: string, dto: UpdateTaskDto) {
@@ -60,17 +66,20 @@ export class TasksService {
       completedAt = dto.status === TaskStatus.DONE ? new Date() : null;
     }
 
-    return this.prisma.task.update({
+    const task = await this.prisma.task.update({
       where: { id },
       data: {
         ...dto,
         completedAt,
       },
     });
+    this.bus.publishWorkspace(workspaceId, { topic: 'task', kind: 'updated', id, task });
+    return task;
   }
 
   async remove(workspaceId: string, id: string) {
     await this.prisma.task.delete({ where: { id, workspaceId } });
+    this.bus.publishWorkspace(workspaceId, { topic: 'task', kind: 'deleted', id });
   }
 
   /** Everything a task points at must live in the same workspace, otherwise tenants could leak. */

@@ -17,6 +17,7 @@ export function configureApp(app: INestApplication) {
     exclude: [
       { path: 'admin', method: RequestMethod.ALL },
       { path: 'admin/*path', method: RequestMethod.ALL },
+      { path: 'graphql', method: RequestMethod.ALL },
       { path: 'p/:slug', method: RequestMethod.GET },
       { path: 'sitemap.xml', method: RequestMethod.GET },
       { path: 'robots.txt', method: RequestMethod.GET },
