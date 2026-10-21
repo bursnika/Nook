@@ -63,6 +63,7 @@ model User {
   importedEvents  CalendarEvent[]   @relation("EventImporter")
   importedTasks   Task[]            @relation("TaskImporter")
   googleCalendar  GoogleConnection?
+  telegram        TelegramLink?
 
   @@index([name])
   // Trigram indexes for fast substring search (created by the user_search_indexes migration).
@@ -154,6 +155,18 @@ model Block {
   page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   @@index([pageId, position])
+}
+
+// A Telegram chat that gets this person's morning plan and answers /today.
+model TelegramLink {
+  id           String   @id @default(uuid(7))
+  userId       String   @unique
+  chatId       String   @unique
+  // The day (YYYY-MM-DD, UTC) the morning plan was last sent, so it goes out once a day.
+  lastDigestOn String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // One entry per batch of block operations applied to a page. `seq` orders the log, so a client that was

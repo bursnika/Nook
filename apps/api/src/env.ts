@@ -58,5 +58,11 @@ export const env = {
   ),
   /** GA4 measurement id (G-XXXX); the analytics snippet is only rendered when it is set. */
   gaMeasurementId: process.env.GA_MEASUREMENT_ID || undefined,
+  telegram: {
+    botToken: process.env.TELEGRAM_BOT_TOKEN || undefined,
+    botUsername: process.env.TELEGRAM_BOT_USERNAME || undefined,
+    /** The morning plan goes out at this hour (UTC). */
+    digestHourUtc: Number(process.env.TELEGRAM_DIGEST_HOUR_UTC ?? 6),
+  },
   uploadDir: resolve(process.env.UPLOAD_DIR ?? 'uploads'),
 };
