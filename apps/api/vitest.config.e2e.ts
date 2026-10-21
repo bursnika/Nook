@@ -4,7 +4,9 @@ import { defineConfig } from 'vitest/config';
 import { testDatabaseUrl } from './test/test-db.js';
 
 export default defineConfig({
-  resolve: { tsconfigPaths: true },
+  // graphql ships a CJS and an ESM build; Node picks the ESM one (module-sync), so Vite must too, or the
+  // schema built in our code and the one graphql-ws uses come from two copies of the library
+  resolve: { tsconfigPaths: true, conditions: ['module-sync'] },
   test: {
     globals: true,
     root: './',
