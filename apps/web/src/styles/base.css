@@ -1,0 +1,164 @@
+/* Nook design tokens and pixel primitives (docs/design.md, docs/design/preview.html). */
+:root {
+  --pink-100: #fce1ee;
+  --pink-200: #f9c6de;
+  --pink-300: #f4a3c8;
+  --pink-500: #ec4e95;
+  --pink-700: #b8326f;
+  --lav-100: #eee6f8;
+  --lav-200: #dccbf0;
+  --lav-300: #c4abe4;
+  --lav-500: #9d7bc9;
+  --lav-700: #654390;
+  --blue-100: #e3eefb;
+  --blue-200: #c5dbf5;
+  --blue-300: #9ec2ec;
+  --blue-500: #5b8fd6;
+  --blue-700: #2f5aa6;
+  --gray-50: #f7f6f9;
+  --gray-100: #eceaf0;
+  --gray-200: #d9d6df;
+  --gray-300: #bdb8c6;
+  --gray-500: #6f6979;
+  --ink: #2b1e33;
+  --white: #ffffff;
+  --px: 2px;
+  --font-display: 'Pixelify Sans', system-ui, sans-serif;
+  --font-label: 'Tiny5', 'Pixelify Sans', monospace;
+  --font-body: 'Nunito', system-ui, sans-serif;
+  --font-code: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background-color: var(--gray-50);
+  background-image:
+    linear-gradient(var(--lav-100) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lav-100) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  margin: 0;
+}
+
+a {
+  color: var(--pink-700);
+}
+
+.boot {
+  padding: 2rem;
+  font-family: var(--font-display);
+}
+
+/* pixel border without a CSS border: four hard shadows, so corners look cut */
+.pixel-border {
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink),
+    calc(-1 * var(--px)) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink);
+}
+
+.btn {
+  --face: var(--gray-100);
+  --hi: var(--white);
+  --lo: var(--gray-300);
+  font-family: var(--font-label);
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink);
+  background: var(--face);
+  border: 0;
+  padding: 6px 14px 7px;
+  margin: var(--px);
+  cursor: pointer;
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink),
+    calc(-1 * var(--px)) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink),
+    inset calc(-1.5 * var(--px)) calc(-1.5 * var(--px)) 0 0 var(--lo),
+    inset calc(1.5 * var(--px)) calc(1.5 * var(--px)) 0 0 var(--hi);
+}
+.btn:active,
+.btn[aria-pressed='true'] {
+  transform: translate(1px, 1px);
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink),
+    calc(-1 * var(--px)) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink),
+    inset calc(1.5 * var(--px)) calc(1.5 * var(--px)) 0 0 var(--lo),
+    inset calc(-1.5 * var(--px)) calc(-1.5 * var(--px)) 0 0 var(--hi);
+}
+.btn:focus-visible {
+  outline: var(--px) dashed var(--pink-700);
+  outline-offset: 4px;
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btn--primary {
+  --face: var(--pink-700);
+  --hi: var(--pink-500);
+  --lo: #8f2253;
+  color: var(--white);
+}
+.btn--blue {
+  --face: var(--blue-200);
+  --hi: var(--blue-100);
+  --lo: var(--blue-300);
+}
+
+.input {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--white);
+  border: 0;
+  padding: 6px 8px;
+  margin: var(--px);
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink),
+    calc(-1 * var(--px)) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink);
+}
+.input:focus-visible {
+  outline: var(--px) dashed var(--pink-700);
+  outline-offset: 3px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
