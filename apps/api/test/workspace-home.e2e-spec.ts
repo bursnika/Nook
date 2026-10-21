@@ -440,3 +440,64 @@ describe('Workspace home: overview, calendar and notes', () => {
     });
   });
 });
+
+describe('Insights data', () => {
+  let ctx: TestApp;
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    app = ctx.app;
+  });
+  afterAll(() => app.close());
+  beforeEach(() => resetDb(ctx.prisma));
+
+  it('returns weekly completions, priorities and a daily activity series', async () => {
+    const ws = await ctx.prisma.workspace.create({
+      data: { name: 'I', slug: 'insights', plan: 'PRO' },
+    });
+    const other = await ctx.prisma.workspace.create({
+      data: { name: 'O', slug: 'insights-o', plan: 'PRO' },
+    });
+    const now = Date.now();
+    await ctx.prisma.task.createMany({
+      data: [
+        {
+          workspaceId: ws.id,
+          title: 'done now',
+          status: 'DONE',
+          priority: 'HIGH',
+          completedAt: new Date(now - 60_000),
+        },
+        {
+          workspaceId: ws.id,
+          title: 'done long ago',
+          status: 'DONE',
+          completedAt: new Date('2020-01-01'),
+        },
+        { workspaceId: ws.id, title: 'open', priority: 'LOW' },
+        {
+          workspaceId: other.id,
+          title: 'foreign',
+          status: 'DONE',
+          completedAt: new Date(now - 60_000),
+        },
+      ],
+    });
+    const res = await request(app.getHttpServer())
+      .get(`/api/workspaces/${ws.id}/insights`)
+      .expect(200);
+    expect(res.body.weeklyCompleted).toHaveLength(8);
+    expect(
+      res.body.weeklyCompleted.reduce(
+        (sum: number, w: { completed: number }) => sum + w.completed,
+        0,
+      ),
+    ).toBe(1);
+    expect(res.body.tasksByPriority).toEqual({ LOW: 1, MEDIUM: 1, HIGH: 1 });
+    expect(res.body.activity).toHaveLength(84);
+    // the two recent tasks were created and one completed today
+    expect(res.body.activity.at(-1).count).toBe(4);
+    expect(res.body.tasksByStatus).toEqual({ DONE: 2, TODO: 1 });
+  });
+});

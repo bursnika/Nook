@@ -445,12 +445,20 @@ describe('Tenants, roles, invitations and feature flags', () => {
         ],
       });
       const res = await as(tok.member).get(`${A()}/insights`).expect(200);
-      expect(res.body).toEqual({
+      expect(res.body).toMatchObject({
         tasksByStatus: { TODO: 2, DONE: 2 },
+        tasksByPriority: { LOW: 0, MEDIUM: 4, HIGH: 0 },
         completedLastWeek: 1,
         overdue: 1,
         pages: 1,
       });
+      // the task finished 30 days ago is still inside the 8-week chart, the other workspace's is not
+      expect(
+        res.body.weeklyCompleted.reduce(
+          (sum: number, w: { completed: number }) => sum + w.completed,
+          0,
+        ),
+      ).toBe(2);
     });
   });
 
