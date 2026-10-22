@@ -17,6 +17,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
 import { TasksModule } from './tasks/tasks.module.js';
 import { TelegramModule } from './telegram/telegram.module.js';
 import { UsersModule } from './users/users.module.js';
+import { WidgetModule } from './widget/widget.module.js';
 import { WorkspacesModule } from './workspaces/workspaces.module.js';
 
 @Module({
@@ -39,6 +40,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     PublicModule,
     RealtimeModule,
     TelegramModule,
+    WidgetModule,
   ],
   controllers: [HealthController],
 })

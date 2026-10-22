@@ -46,14 +46,16 @@ enum TaskPriority {
 }
 
 model User {
-  id        String   @id @default(uuid(7))
-  email     String   @unique
-  name      String
-  avatarUrl String?
+  id              String   @id @default(uuid(7))
+  email           String   @unique
+  name            String
+  avatarUrl       String?
   // Google account id (the OIDC `sub`); set on first sign-in with Google.
-  googleId  String?  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  googleId        String?  @unique
+  // SHA-256 of the personal token that lets a home-screen widget read today's plan (the token itself is shown once).
+  widgetTokenHash String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   memberships     Membership[]
   authoredPages   Page[]            @relation("PageAuthor")

@@ -43,11 +43,3 @@ export function formatDigest(
   }
   return lines.join('\n');
 }
-
-/** Days are compared as YYYY-MM-DD in UTC. */
-export const dayOf = (date: Date) => date.toISOString().slice(0, 10);
-
-export const dayBounds = (day: string) => ({
-  from: new Date(`${day}T00:00:00.000Z`),
-  to: new Date(`${day}T23:59:59.999Z`),
-});

@@ -7,9 +7,9 @@ import {
 } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { env } from '../env.js';
-import { TaskStatus } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { dayBounds, dayOf, formatDigest } from './digest.js';
+import { planFor, dayOf } from '../widget/today.js';
+import { formatDigest } from './digest.js';
 import {
   TELEGRAM_PROVIDER,
   type TelegramProvider,
@@ -129,30 +129,8 @@ export class TelegramService implements OnApplicationBootstrap, OnApplicationShu
 
   /** Open tasks due today (or overdue) and today's events in every workspace the person belongs to. */
   async digestFor(userId: string, day: string) {
-    const { from, to } = dayBounds(day);
-    const memberships = await this.prisma.membership.findMany({
-      where: { userId },
-      select: { workspace: { select: { id: true, name: true } } },
-    });
-    const names = new Map(memberships.map((m) => [m.workspace.id, m.workspace.name]));
-    const workspaceId = { in: [...names.keys()] };
-    const [tasks, events] = await Promise.all([
-      this.prisma.task.findMany({
-        where: { workspaceId, status: { not: TaskStatus.DONE }, dueDate: { lte: to } },
-        orderBy: [{ dueDate: 'asc' }, { id: 'asc' }],
-        take: 20,
-      }),
-      this.prisma.calendarEvent.findMany({
-        where: { workspaceId, startsAt: { lte: to }, endsAt: { gt: from } },
-        orderBy: { startsAt: 'asc' },
-        take: 20,
-      }),
-    ]);
-    return formatDigest(
-      day,
-      tasks.map((t) => ({ ...t, workspace: names.get(t.workspaceId) ?? '' })),
-      events.map((e) => ({ ...e, workspace: names.get(e.workspaceId) ?? '' })),
-    );
+    const { tasks, events } = await planFor(this.prisma, userId, day);
+    return formatDigest(day, tasks, events);
   }
 
   private async link(chatId: string, code?: string) {
