@@ -3,7 +3,10 @@ import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**'] },
+  {
+    // widgets/ run inside other apps (Scriptable, Übersicht) with their own globals
+    ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', 'widgets/**'],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   prettier,
