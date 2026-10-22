@@ -1,0 +1,195 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # every job that touches the API needs a database url and a secret; these are throwaway CI values
+  DATABASE_URL: postgresql://nook:nook@localhost:5432/nook?schema=public
+  JWT_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
+  ADMIN_EMAILS: newman@nook.local
+
+jobs:
+  check:
+    name: Lint, format, types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @nook/api db:generate
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm --filter @nook/api exec tsc --noEmit
+      - run: pnpm --filter @nook/web typecheck
+      - run: pnpm --filter @nook/mcp typecheck
+
+  api-tests:
+    name: API unit and e2e tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: nook
+          POSTGRES_PASSWORD: nook
+          POSTGRES_DB: nook
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U nook -d nook"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @nook/api db:generate
+      - run: pnpm --filter @nook/api test
+      - run: pnpm --filter @nook/api test:e2e
+
+  web-tests:
+    name: Web and MCP tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @nook/web test
+      - run: pnpm --filter @nook/web build
+      - run: pnpm --filter @nook/mcp test
+
+  newman:
+    name: Postman collection (Newman)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: nook
+          POSTGRES_PASSWORD: nook
+          POSTGRES_DB: nook
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U nook -d nook"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @nook/api db:generate
+      - run: pnpm --filter @nook/api db:deploy
+      - run: pnpm --filter @nook/api build
+      - name: Start the API
+        run: |
+          node apps/api/dist/src/main.js > api.log 2>&1 &
+          for i in $(seq 1 30); do curl -fs localhost:3000/api/health && break; sleep 1; done
+      - run: pnpm test:newman
+      - name: API log
+        if: failure()
+        run: cat api.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: newman-report
+          path: tests/postman/results/
+
+  images:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/api.Dockerfile
+          target: runtime
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Publish images and deploy
+    # Runs only after a push to main, and only once the repository variable DEPLOY_ENABLED is set to "true"
+    # (see docs/deploy.md for the secrets this needs).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    needs: [check, api-tests, web-tests, newman, images]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image names in lower case
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - name: Build and push the API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/api.Dockerfile
+          target: runtime
+          push: true
+          build-args: VITE_GA_MEASUREMENT_ID=${{ vars.GA_MEASUREMENT_ID }}
+          tags: ${{ env.IMAGE }}-api:latest,${{ env.IMAGE }}-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build and push the migration image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/api.Dockerfile
+          target: build
+          push: true
+          tags: ${{ env.IMAGE }}-migrate:latest,${{ env.IMAGE }}-migrate:${{ github.sha }}
+          cache-from: type=gha
+      - name: Copy the stack definition to the server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: infra/compose.prod.yml,infra/Caddyfile
+          target: nook
+          strip_components: 1
+      - name: Restart the stack
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd nook
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            export IMAGE_PREFIX=${{ env.IMAGE }}
+            docker compose -f compose.prod.yml pull
+            docker compose -f compose.prod.yml up -d --remove-orphans --wait
+            docker image prune -f

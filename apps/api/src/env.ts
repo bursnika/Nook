@@ -64,5 +64,7 @@ export const env = {
     /** The morning plan goes out at this hour (UTC). */
     digestHourUtc: Number(process.env.TELEGRAM_DIGEST_HOUR_UTC ?? 6),
   },
+  /** The built SPA (apps/web/dist). Served under /app when the folder exists. */
+  webDist: resolve(process.env.WEB_DIST ?? join(findAppRoot(), '..', 'web', 'dist')),
   uploadDir: resolve(process.env.UPLOAD_DIR ?? 'uploads'),
 };

@@ -16,6 +16,7 @@ export default defineConfig({
     globalSetup: ['./test/global-setup.ts'],
     env: {
       DATABASE_URL: testDatabaseUrl(),
+      WEB_DIST: join(import.meta.dirname, 'test/fixtures/web'),
       UPLOAD_DIR: join(tmpdir(), 'nook-e2e-uploads'),
       JWT_SECRET: 'test-only-secret-test-only-secret-test-only-secret',
       ADMIN_EMAILS: 'platform-admin@example.com',

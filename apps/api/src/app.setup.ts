@@ -3,7 +3,9 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import hbs from 'hbs';
+import type { Express } from 'express';
 import { createRequire } from 'node:module';
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { registerViewHelpers } from './admin/view-helpers.js';
 import { LoginRedirectFilter } from './auth/login-redirect.js';
@@ -30,6 +32,7 @@ export function configureApp(app: INestApplication) {
   app.useGlobalFilters(new PrismaExceptionFilter(), new LoginRedirectFilter());
 
   setupViews(app as NestExpressApplication);
+  setupSpa(app as NestExpressApplication);
 
   // Uploaded files are user content: never let the browser sniff or run them in our origin.
   (app as NestExpressApplication).useStaticAssets(env.uploadDir, {
@@ -81,4 +84,23 @@ function setupViews(app: NestExpressApplication) {
   for (const [name, dir] of Object.entries(vendor)) {
     app.useStaticAssets(dir, { prefix: `/static/vendor/${name}/`, index: false });
   }
+}
+
+/**
+ * The React app (apps/web) is built to static files; the API serves them under /app. Any /app/... address
+ * that is not a file gets index.html, so the app's own router can open it (a reload on /app/w/1/tasks works).
+ */
+function setupSpa(app: NestExpressApplication) {
+  const server = app.getHttpAdapter().getInstance() as Express;
+  const index = join(env.webDist, 'index.html');
+  if (!existsSync(index)) {
+    server.get('/', (_req, res) => res.redirect('/admin'));
+    return;
+  }
+  app.useStaticAssets(env.webDist, { prefix: '/app/', index: false, maxAge: '1h' });
+  server.get('/', (_req, res) => res.redirect('/app/'));
+  server.get(['/app', '/app/*path'], (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(index);
+  });
 }

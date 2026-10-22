@@ -1,0 +1,73 @@
+# Production stack on one VM: Caddy (HTTPS) in front of the API, Postgres behind it.
+# Copied to the server by the deploy job; secrets live in a .env file next to it (see docs/deploy.md).
+name: nook
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nook
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: nook
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nook -d nook']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    image: ${IMAGE_PREFIX:?}-migrate:latest
+    command: ['pnpm', '--filter', '@nook/api', 'db:deploy']
+    environment:
+      DATABASE_URL: postgresql://nook:${POSTGRES_PASSWORD}@postgres:5432/nook?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    image: ${IMAGE_PREFIX:?}-api:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://nook:${POSTGRES_PASSWORD}@postgres:5432/nook?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: https://${DOMAIN}/api/auth/google/callback
+      COOKIE_SECURE: 'true'
+      PUBLIC_URL: https://${DOMAIN}
+      GA_MEASUREMENT_ID: ${GA_MEASUREMENT_ID:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      TELEGRAM_DIGEST_HOUR_UTC: ${TELEGRAM_DIGEST_HOUR_UTC:-6}
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:
+  uploads:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,6 @@
+# HTTPS with automatic Let's Encrypt certificates. DOMAIN is set in the server's .env (for example nook.westeurope.cloudapp.azure.com).
+{$DOMAIN} {
+	encode zstd gzip
+	# the API serves the REST API, GraphQL, WebSockets (/ws, /graphql), the app (/app), the admin and public pages
+	reverse_proxy api:3000
+}

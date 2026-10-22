@@ -38,6 +38,8 @@ services:
       context: ..
       dockerfile: infra/api.Dockerfile
       target: runtime
+      args:
+        VITE_GA_MEASUREMENT_ID: ${GA_MEASUREMENT_ID:-}
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://nook:nook@postgres:5432/nook?schema=public
@@ -50,6 +52,14 @@ services:
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:3000/api/auth/google/callback}
       # Plain http on localhost; set to true once the stack is served over HTTPS
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # Public address: canonical links, Open Graph and sitemap of published pages
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
+      # Optional Google Analytics 4 (G-XXXX) for published pages and the app
+      GA_MEASUREMENT_ID: ${GA_MEASUREMENT_ID:-}
+      # Optional Telegram bot (morning plan, /today)
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      TELEGRAM_DIGEST_HOUR_UTC: ${TELEGRAM_DIGEST_HOUR_UTC:-6}
     ports:
       - '3000:3000'
     volumes:
