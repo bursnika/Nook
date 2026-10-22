@@ -18,7 +18,8 @@
     "db:seed": "prisma db seed",
     "db:seed:users": "tsx prisma/seed-users.ts",
     "db:generate": "prisma generate",
-    "postman:token": "tsx scripts/postman-seed.ts"
+    "postman:token": "tsx scripts/postman-seed.ts",
+    "bench:sync": "tsx scripts/bench-sync.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.3.2",
