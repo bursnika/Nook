@@ -61,9 +61,15 @@ export async function apiAll<T>(path: string): Promise<T[]> {
   const items: T[] = [];
   let next: string | null = `${path}${path.includes('?') ? '&' : '?'}limit=100`;
   while (next) {
-    const page: Paged<T> = await api<Paged<T>>(next.replace(/^\/api/, ''));
+    const page: Paged<T> = await api<Paged<T>>(apiPathOf(next));
     items.push(...page.items);
     next = page.nextLink;
   }
   return items;
+}
+
+/** `nextLink` is an absolute URL (`http://host/api/...`); `api()` wants the part after `/api`. */
+export function apiPathOf(link: string): string {
+  const url = new URL(link, window.location.origin);
+  return (url.pathname + url.search).replace(/^\/api/, '');
 }

@@ -1,0 +1,212 @@
+/* Kanban board */
+.tasks .page-head h2 {
+  font-size: 26px;
+  flex: 1;
+}
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 18px;
+  align-items: start;
+  overflow-x: auto;
+  padding: 4px 4px 12px;
+}
+.column {
+  background: var(--gray-100);
+  padding: 8px;
+  min-width: 0;
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink),
+    calc(-1 * var(--px)) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink);
+  margin: var(--px);
+}
+.column.is-over {
+  background: var(--lav-100);
+}
+.column__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 3px 8px;
+  font-family: var(--font-display);
+}
+.column--todo .column__head {
+  background: var(--gray-200);
+}
+.column--in_progress .column__head {
+  background: var(--blue-200);
+}
+.column--done .column__head {
+  background: var(--lav-200);
+}
+.column__head h3 {
+  flex: 1;
+  font-size: 16px;
+}
+.column__count {
+  font-family: var(--font-label);
+  font-size: 12px;
+  background: var(--white);
+  padding: 0 7px;
+}
+.column__list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  min-height: 56px;
+}
+.column__empty {
+  padding: 14px 8px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--gray-500);
+  border: 2px dashed var(--gray-300);
+}
+.column__add {
+  width: calc(100% - 2 * var(--px));
+}
+.column__form .input {
+  width: calc(100% - 2 * var(--px));
+}
+.column__form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.card {
+  background: var(--white);
+  padding: 8px 10px 8px 6px;
+  touch-action: manipulation;
+  position: relative;
+  margin: var(--px);
+  list-style: none;
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink),
+    calc(-1 * var(--px)) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink),
+    inset 4px 0 0 0 var(--gray-300);
+}
+.card--in_progress {
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink),
+    calc(-1 * var(--px)) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink),
+    inset 4px 0 0 0 var(--blue-500);
+}
+.card--done {
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink),
+    calc(-1 * var(--px)) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink),
+    inset 4px 0 0 0 var(--lav-500);
+}
+.card--done .card__title {
+  text-decoration: line-through;
+  color: var(--gray-500);
+}
+.card.is-dragging {
+  opacity: 0.35;
+}
+.card--overlay {
+  cursor: grabbing;
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--pink-700),
+    0 var(--px) 0 0 var(--pink-700),
+    calc(-1 * var(--px)) 0 0 0 var(--pink-700),
+    var(--px) 0 0 0 var(--pink-700),
+    6px 6px 0 0 rgb(101 67 144 / 0.3);
+}
+.card__top {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.card__grip {
+  flex: none;
+  width: 22px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  cursor: grab;
+  color: var(--lav-700);
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: -2px;
+  touch-action: none;
+}
+.card__grip:hover {
+  background: var(--lav-100);
+}
+.card__title {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.card__title:hover {
+  text-decoration: underline;
+}
+.card__desc {
+  margin: 2px 0 4px 26px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--gray-500);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0 26px;
+}
+.card__moves {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+.card__move {
+  border: 0;
+  background: none;
+  padding: 1px 6px;
+  font-size: 11px;
+  color: var(--lav-700);
+  cursor: pointer;
+}
+.card__move:hover {
+  background: var(--lav-200);
+}
+.modal__ask {
+  flex: 1;
+  align-self: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+@media (max-width: 860px) {
+  .board {
+    grid-template-columns: repeat(3, minmax(260px, 1fr));
+    scroll-snap-type: x proximity;
+  }
+}

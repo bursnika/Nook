@@ -11,6 +11,20 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   prettier,
   {
+    // the service worker runs in its own global scope
+    files: ['apps/web/public/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: {
+        self: 'readonly',
+        caches: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
+        Promise: 'readonly',
+      },
+    },
+  },
+  {
     // plain browser scripts served as-is from apps/api/public
     files: ['apps/api/public/**/*.js'],
     languageOptions: {

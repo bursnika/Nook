@@ -1,0 +1,242 @@
+/* Month calendar */
+.calendar {
+  container-type: inline-size;
+}
+.cal-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.cal-bar h2 {
+  font-size: 24px;
+  min-width: 11ch;
+  text-align: center;
+}
+.cal-bar__new {
+  margin-left: auto;
+}
+.notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  background: var(--blue-100);
+  font-size: 14px;
+}
+.gbar {
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: var(--lav-100);
+  font-size: 14px;
+}
+.gbar__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.gbar__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+.gbar__row .btn {
+  text-decoration: none;
+  display: inline-block;
+}
+.gbar__note {
+  margin: 6px 0 0;
+  color: var(--gray-500);
+}
+.gbar .form-error {
+  margin-top: 6px;
+}
+
+.cal-layout {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+@container (min-width: 880px) {
+  .cal-layout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+
+.cal__dows,
+.cal__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+.cal__dows {
+  margin-bottom: 3px;
+  text-align: center;
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--lav-700);
+  text-transform: uppercase;
+}
+.cal__cell {
+  min-height: 92px;
+  padding: 3px 4px 4px;
+  min-width: 0;
+  background: var(--white);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px var(--lav-200);
+}
+.cal__cell.is-other {
+  background: var(--gray-50);
+}
+.cal__cell.is-other .cal__num {
+  color: var(--gray-500);
+}
+.cal__cell.is-selected {
+  box-shadow: inset 0 0 0 2px var(--blue-700);
+  background: var(--blue-100);
+}
+.cal__num {
+  display: block;
+  margin-bottom: 2px;
+  padding: 0 5px;
+  border: 0;
+  background: none;
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.cal__cell.is-today .cal__num {
+  background: var(--pink-700);
+  color: var(--white);
+}
+.pill {
+  display: block;
+  width: 100%;
+  margin-top: 2px;
+  padding: 1px 5px;
+  border: 0;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  color: var(--ink);
+}
+.pill--event {
+  background: var(--blue-200);
+  box-shadow: inset 3px 0 0 0 var(--blue-700);
+}
+.pill--task {
+  background: var(--pink-100);
+  box-shadow: inset 3px 0 0 0 var(--pink-700);
+}
+.pill--task.is-done {
+  background: var(--lav-100);
+  box-shadow: inset 3px 0 0 0 var(--lav-500);
+  text-decoration: line-through;
+  color: var(--gray-500);
+}
+.pill--more {
+  background: none;
+  color: var(--lav-700);
+  font-family: var(--font-label);
+  font-weight: 400;
+}
+.pill:hover {
+  filter: brightness(0.96);
+}
+
+.agenda h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+.agenda__list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+}
+.agenda__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  padding: 5px 0;
+  border-bottom: 2px dotted var(--gray-200);
+}
+.agenda__when {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--gray-500);
+}
+.agenda__open {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.agenda__open:hover {
+  text-decoration: underline;
+}
+.agenda__open.is-done {
+  text-decoration: line-through;
+  color: var(--gray-500);
+}
+.agenda__form {
+  padding-top: 12px;
+  border-top: 2px dashed var(--gray-300);
+}
+.agenda__form .input {
+  width: calc(100% - 2 * var(--px));
+  margin-bottom: 8px;
+}
+.agenda__form .field-row {
+  flex-direction: column;
+  gap: 0;
+}
+.agenda__form .field-row .input {
+  margin-bottom: 8px;
+}
+.agenda__actions {
+  display: flex;
+  gap: 8px;
+}
+.event-view__title {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+.event-view__desc {
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+  .cal__cell {
+    min-height: 60px;
+    padding: 2px;
+  }
+  .pill {
+    font-size: 0;
+    height: 6px;
+    padding: 0;
+    margin-top: 3px;
+  }
+  .pill--more {
+    font-size: 10px;
+    height: auto;
+  }
+}

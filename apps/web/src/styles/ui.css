@@ -1,0 +1,380 @@
+/* Windows, dialogs, badges, form fields and status panels shared by every screen. */
+
+.window {
+  --frame: var(--lav-700);
+  --face: var(--pink-200);
+  --face-hi: var(--pink-100);
+  --face-lo: var(--pink-300);
+  --bar: linear-gradient(90deg, var(--pink-300), var(--lav-300));
+  background: var(--face);
+  padding: 4px;
+  margin: var(--px);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--frame),
+    0 var(--px) 0 0 var(--frame),
+    calc(-1 * var(--px)) 0 0 0 var(--frame),
+    var(--px) 0 0 0 var(--frame),
+    inset 2px 2px 0 0 var(--face-hi),
+    inset -2px -2px 0 0 var(--face-lo),
+    6px 6px 0 0 rgb(101 67 144 / 0.25);
+}
+.window--blue {
+  --face: var(--blue-200);
+  --face-hi: var(--blue-100);
+  --face-lo: var(--blue-300);
+  --bar: linear-gradient(90deg, var(--blue-300), var(--lav-300));
+}
+.window--lavender {
+  --face: var(--lav-200);
+  --face-hi: var(--lav-100);
+  --face-lo: var(--lav-300);
+  --bar: linear-gradient(90deg, var(--lav-300), var(--blue-300));
+}
+.window--gray {
+  --face: var(--gray-200);
+  --face-hi: var(--white);
+  --face-lo: var(--gray-300);
+  --bar: linear-gradient(90deg, var(--gray-300), var(--gray-200));
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 8px;
+  background: var(--bar);
+  color: var(--ink);
+}
+.titlebar__title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.titlebar__controls {
+  display: flex;
+  gap: 4px;
+}
+.window--gray .titlebar {
+  color: var(--gray-500);
+}
+
+.btn--icon {
+  padding: 2px 6px 3px;
+  font-size: 12px;
+  line-height: 1;
+  min-width: 24px;
+}
+.btn--small {
+  padding: 3px 9px 4px;
+  font-size: 13px;
+}
+.btn--danger {
+  --face: var(--pink-100);
+  --hi: var(--white);
+  --lo: var(--pink-300);
+  color: var(--pink-700);
+}
+
+.window__content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  background: var(--white);
+  margin-top: 2px;
+  padding: 20px 24px;
+  overflow: auto;
+  box-shadow:
+    inset 2px 2px 0 0 var(--lav-500),
+    inset -2px -2px 0 0 var(--pink-100);
+}
+.window__status {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 6px 2px;
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--lav-700);
+}
+
+/* ---------- native <dialog> as a window ---------- */
+
+.modal {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  width: min(440px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: visible;
+}
+.modal--wide {
+  width: min(560px, calc(100vw - 24px));
+}
+.modal::backdrop {
+  background: rgb(43 30 51 / 0.45);
+}
+.modal > .window {
+  max-height: calc(100dvh - 24px);
+}
+.modal__body {
+  background: var(--white);
+  margin-top: 2px;
+  padding: 16px;
+  overflow: auto;
+  font-size: 15px;
+  line-height: 1.5;
+  box-shadow:
+    inset 2px 2px 0 0 var(--lav-500),
+    inset -2px -2px 0 0 var(--pink-100);
+}
+.modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 6px 6px;
+}
+
+/* ---------- badges ---------- */
+
+.badge {
+  display: inline-block;
+  font-family: var(--font-label);
+  font-size: 11px;
+  line-height: 1.3;
+  padding: 1px 6px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow:
+    0 -1px 0 0 currentColor,
+    0 1px 0 0 currentColor,
+    -1px 0 0 0 currentColor,
+    1px 0 0 0 currentColor;
+}
+.badge--todo,
+.badge--low {
+  color: var(--gray-500);
+}
+.badge--doing,
+.badge--medium {
+  color: var(--blue-700);
+  background: var(--blue-100);
+}
+.badge--done {
+  color: var(--lav-700);
+  background: var(--lav-100);
+}
+.badge--late,
+.badge--high {
+  color: var(--pink-700);
+  background: var(--pink-100);
+}
+
+/* ---------- segmented progress ---------- */
+
+.progress {
+  height: 18px;
+  padding: 3px;
+  margin: 8px var(--px) 4px;
+  background: var(--white);
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink),
+    calc(-1 * var(--px)) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink);
+}
+.progress > div {
+  height: 100%;
+  background: repeating-linear-gradient(90deg, var(--blue-500) 0 8px, transparent 8px 11px);
+}
+
+/* ---------- forms ---------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.field__label {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--lav-700);
+  text-transform: uppercase;
+}
+.field__hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gray-500);
+}
+.field .input {
+  width: calc(100% - 2 * var(--px));
+}
+textarea.input {
+  resize: vertical;
+  min-height: 80px;
+  font-family: var(--font-body);
+}
+select.input {
+  appearance: auto;
+}
+.field-row {
+  display: flex;
+  gap: 12px;
+}
+.field-row > * {
+  flex: 1;
+  min-width: 0;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--pink-700);
+}
+.check input:focus-visible {
+  outline: var(--px) dashed var(--pink-700);
+  outline-offset: 3px;
+}
+.form-error {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  background: var(--pink-100);
+  color: var(--pink-700);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ---------- loading / error / empty ---------- */
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 16px;
+  text-align: center;
+}
+.state__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+}
+.state__text {
+  margin: 0;
+  max-width: 44ch;
+  font-size: 15px;
+  color: var(--gray-500);
+}
+.state--error .state__text {
+  color: var(--pink-700);
+  font-weight: 600;
+}
+.loader {
+  width: 160px;
+  height: 18px;
+  padding: 3px;
+  background: var(--white);
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink),
+    calc(-1 * var(--px)) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink);
+}
+.loader > div {
+  height: 100%;
+  width: 100%;
+  background: repeating-linear-gradient(90deg, var(--pink-500) 0 8px, transparent 8px 11px);
+  animation: load-steps 1.1s steps(8) infinite;
+  clip-path: inset(0 100% 0 0);
+}
+@keyframes load-steps {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.pixel-icon {
+  flex-shrink: 0;
+}
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.page-head h1 {
+  font-size: 26px;
+  flex: 1;
+  min-width: 160px;
+}
+.muted {
+  color: var(--gray-500);
+}
+.label {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--lav-700);
+  text-transform: uppercase;
+}
+.live {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--gray-500);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.live::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--gray-300);
+}
+.live--live {
+  color: var(--lav-700);
+}
+.live--live::before {
+  background: var(--pink-500);
+  animation: blink 1.4s steps(2) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: var(--px) dashed var(--pink-700);
+  outline-offset: 3px;
+}
+
+a.btn {
+  display: inline-block;
+  text-decoration: none;
+}
+a.btn--primary:visited {
+  color: var(--white);
+}

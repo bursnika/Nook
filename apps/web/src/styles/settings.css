@@ -1,0 +1,65 @@
+.settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.settings__card {
+  margin: var(--px);
+}
+.settings__card .window__content {
+  padding: 14px 16px;
+}
+.settings__card p:last-child {
+  margin-bottom: 0;
+}
+.features {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+}
+.features li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.features__reason {
+  color: var(--pink-700);
+}
+.radios {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.radios legend {
+  margin-bottom: 6px;
+  padding: 0;
+}
+.radio {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 15px;
+}
+.radio input {
+  margin-top: 4px;
+  accent-color: var(--pink-700);
+}
+.radio input:focus-visible {
+  outline: var(--px) dashed var(--pink-700);
+  outline-offset: 3px;
+}
+.settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.settings__actions .btn {
+  text-decoration: none;
+  display: inline-block;
+}

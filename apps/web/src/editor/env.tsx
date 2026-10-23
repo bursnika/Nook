@@ -31,6 +31,8 @@ export const defaultEnv: EditorEnv = {
         window.dispatchEvent(
           new CustomEvent(PAGE_RENAMED, { detail: { workspaceId, pageId, title } }),
         );
+        // the shell's sidebar listens for this one
+        window.dispatchEvent(new Event('nook:pages-changed'));
       },
     });
   },
