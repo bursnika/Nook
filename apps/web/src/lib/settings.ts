@@ -33,4 +33,6 @@ export function setTransport(kind: TransportKind) {
   } catch {
     // ignored: the choice then lasts until the page is reloaded
   }
+  // an open editor switches transport right away
+  window.dispatchEvent(new Event('nook:transport'));
 }
