@@ -1,10 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
 import { extname } from 'node:path';
 import { UnsupportedMediaTypeException } from '@nestjs/common';
 import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface.js';
-import { diskStorage } from 'multer';
-import { env } from '../env.js';
+import { FileStorageEngine } from '../uploads/storage-engine.js';
+import type { FileStorage } from '../uploads/file-storage.js';
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -19,21 +18,34 @@ export const ALLOWED_MIME_TYPES: Record<string, string> = {
   'text/markdown': '.md',
 };
 
+/** Size and type rules. Where the bytes go is the `FileStorage`'s business (see `storageOptions`). */
 export const uploadOptions: MulterOptions = {
   limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
-  storage: diskStorage({
-    destination: (_req, _file, cb) => {
-      mkdirSync(env.uploadDir, { recursive: true });
-      cb(null, env.uploadDir);
-    },
-    // The stored name is random and its extension comes from the checked MIME type, never from the client.
-    filename: (_req, file, cb) => cb(null, `${randomUUID()}${ALLOWED_MIME_TYPES[file.mimetype]}`),
-  }),
   fileFilter: (_req, file, cb) => {
     if (ALLOWED_MIME_TYPES[file.mimetype]) return cb(null, true);
     cb(new UnsupportedMediaTypeException(`File type ${file.mimetype} is not allowed`), false);
   },
 };
+
+/** multer's module-wide options: every upload interceptor writes through the configured storage. */
+export const storageOptions = (storage: FileStorage): MulterOptions => ({
+  // The stored name is random and its extension comes from the checked MIME type, never from the client.
+  storage: new FileStorageEngine(
+    storage,
+    (file) => `${randomUUID()}${ALLOWED_MIME_TYPES[file.mimetype]}`,
+  ),
+});
+
+const EXTENSION_TYPES = new Map(
+  Object.entries(ALLOWED_MIME_TYPES).map(([mime, extension]) => [extension, mime]),
+);
+
+/** The content type to serve a stored file with, from its extension (which only we choose). */
+export function mimeTypeOfStoredName(name: string): string {
+  const mime = EXTENSION_TYPES.get(extname(name).toLowerCase());
+  if (!mime) return 'application/octet-stream';
+  return mime.startsWith('text/') ? `${mime}; charset=utf-8` : mime;
+}
 
 /** multer decodes the client file name as latin1, which garbles Cyrillic names. */
 export function originalName(file: Express.Multer.File): string {

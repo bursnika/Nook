@@ -1,20 +1,16 @@
-import { Injectable } from '@nestjs/common';
-import { unlink } from 'node:fs/promises';
-import { basename, join } from 'node:path';
-import { env } from '../env.js';
-
-const UPLOAD_PREFIX = '/uploads/';
+import { Inject, Injectable } from '@nestjs/common';
+import { FILE_STORAGE, type FileStorage } from './file-storage.js';
 
 @Injectable()
 export class UploadsService {
+  constructor(@Inject(FILE_STORAGE) private readonly storage: FileStorage) {}
+
   /** Removes a stored file by its public url (`/uploads/<name>`) or bare stored name. Ignores missing files. */
   async remove(urlOrName: string | null | undefined) {
-    if (!urlOrName) return;
-    if (urlOrName.includes('/') && !urlOrName.startsWith(UPLOAD_PREFIX)) return; // external link, not ours
-    await unlink(join(env.uploadDir, basename(urlOrName))).catch(() => undefined);
+    if (urlOrName) await this.storage.delete(urlOrName);
   }
 
   urlFor(storedName: string) {
-    return `${UPLOAD_PREFIX}${storedName}`;
+    return this.storage.urlFor(storedName);
   }
 }
