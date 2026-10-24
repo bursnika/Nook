@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type DragEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PixelIcon } from '../components/PixelIcon';
 import { Dialog, EmptyState, Field, LoadingState } from '../components/ui';
@@ -6,6 +6,7 @@ import type { PageSummary } from '../lib/types';
 import { useWorkspace } from '../lib/workspace';
 import '../styles/pages.css';
 import { LOCALE } from '../lib/locale';
+import { exportMarkdownFile, importMarkdownFile } from '../lib/markdownFile';
 
 /** `/pages`: every page of the workspace, searchable, with create and delete. */
 export default function PagesIndex() {
@@ -15,6 +16,8 @@ export default function PagesIndex() {
   const [deleting, setDeleting] = useState<PageSummary>();
   const [problem, setProblem] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -35,6 +38,38 @@ export default function PagesIndex() {
     }
   };
 
+  const importFiles = async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    setProblem(undefined);
+    setBusy(true);
+    try {
+      let last;
+      for (const file of list) last = await importMarkdownFile(workspace.id, file);
+      // one file opens straight away, several stay in the list
+      if (last && list.length === 1) navigate(`/w/${workspace.id}/pages/${last.id}`);
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : 'Could not import the file');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onDrop = (event: DragEvent) => {
+    event.preventDefault();
+    setDragging(false);
+    void importFiles(event.dataTransfer.files);
+  };
+
+  const exportPage = async (page: PageSummary) => {
+    setProblem(undefined);
+    try {
+      await exportMarkdownFile(workspace.id, page);
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : 'Could not export the page');
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleting) return;
     try {
@@ -49,18 +84,57 @@ export default function PagesIndex() {
   if (pagesLoading && pages.length === 0) return <LoadingState label="Loading pages" />;
 
   return (
-    <div className="pages">
+    <div
+      className={`pages${dragging ? ' pages--dragging' : ''}`}
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes('Files')) {
+          event.preventDefault();
+          setDragging(true);
+        }
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+      }}
+      onDrop={onDrop}
+    >
       <div className="page-head">
         <h2>Pages</h2>
-        <button
-          type="button"
-          className="btn btn--primary"
-          disabled={busy}
-          onClick={() => void create()}
-        >
-          New page
-        </button>
+        <div className="pages__actions">
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".md,.markdown,.txt,text/markdown,text/plain"
+            multiple
+            hidden
+            aria-label="Markdown files to import"
+            onChange={(event) => {
+              void importFiles(event.target.files ?? []);
+              event.target.value = '';
+            }}
+          />
+          <button
+            type="button"
+            className="btn"
+            disabled={busy}
+            onClick={() => fileInput.current?.click()}
+          >
+            Import .md
+          </button>
+          <button
+            type="button"
+            className="btn btn--primary"
+            disabled={busy}
+            onClick={() => void create()}
+          >
+            New page
+          </button>
+        </div>
       </div>
+      <p className="muted pages__drop-hint">
+        {dragging
+          ? 'Drop Markdown files here to import them'
+          : 'Tip: drag .md files onto this screen to import them.'}
+      </p>
       {problem && (
         <p className="form-error" role="alert">
           {problem}
@@ -104,6 +178,14 @@ export default function PagesIndex() {
                       {page._count?.children ? ` · ${page._count.children} subpages` : ''}
                     </span>
                   </Link>
+                  <button
+                    type="button"
+                    className="btn btn--small"
+                    aria-label={`Export ${page.title || 'Untitled'} as Markdown`}
+                    onClick={() => void exportPage(page)}
+                  >
+                    Export .md
+                  </button>
                   <button
                     type="button"
                     className="btn btn--small btn--danger"

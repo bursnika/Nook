@@ -65,3 +65,18 @@
     display: none;
   }
 }
+
+.pages__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pages__drop-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+}
+.pages--dragging {
+  outline: 2px dashed var(--pink-700);
+  outline-offset: 6px;
+  background: var(--pink-100);
+}
