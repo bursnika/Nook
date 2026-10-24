@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
+import { CacheService } from '../cache/cache.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RealtimeBus } from '../realtime/realtime.bus.js';
 import { CreateEventDto, ListEventsQuery, UpdateEventDto } from './event.dto.js';
@@ -9,6 +10,7 @@ export class EventsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bus: RealtimeBus,
+    private readonly cache: CacheService,
   ) {}
 
   async list(workspaceId: string, { from, to, q, skip, limit }: ListEventsQuery) {
@@ -38,6 +40,7 @@ export class EventsService {
     this.assertRange(dto.startsAt, dto.endsAt);
     await this.assertTask(workspaceId, dto.taskId);
     const event = await this.prisma.calendarEvent.create({ data: { ...dto, workspaceId } });
+    await this.cache.invalidateWorkspace(workspaceId);
     this.bus.publishWorkspace(workspaceId, {
       topic: 'event',
       kind: 'created',
@@ -53,6 +56,7 @@ export class EventsService {
     this.assertRange(dto.startsAt ?? current.startsAt, dto.endsAt ?? current.endsAt);
     await this.assertTask(workspaceId, dto.taskId);
     const event = await this.prisma.calendarEvent.update({ where: { id }, data: dto });
+    await this.cache.invalidateWorkspace(workspaceId);
     this.bus.publishWorkspace(workspaceId, { topic: 'event', kind: 'updated', id, event });
     return event;
   }
@@ -60,6 +64,7 @@ export class EventsService {
   async remove(workspaceId: string, id: string) {
     this.assertNotImported(await this.get(workspaceId, id));
     await this.prisma.calendarEvent.delete({ where: { id, workspaceId } });
+    await this.cache.invalidateWorkspace(workspaceId);
     this.bus.publishWorkspace(workspaceId, { topic: 'event', kind: 'deleted', id });
   }
 

@@ -13,6 +13,8 @@ export default defineConfig({
       // the Google provider refuses to work without credentials; its HTTP calls are stubbed in the specs
       GOOGLE_CLIENT_ID: 'unit-client-id',
       GOOGLE_CLIENT_SECRET: 'unit-client-secret',
+      REDIS_URL: '',
+      AZURE_STORAGE_CONNECTION_STRING: '',
     },
   },
 });

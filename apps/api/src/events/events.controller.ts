@@ -9,9 +9,11 @@ import {
   Post,
   Query,
   Req,
+  Res,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
+import { CACHE_TTL_SECONDS, CacheService, setCacheHeader } from '../cache/cache.service.js';
 import { ApiPaginatedResponse, toPage } from '../common/pagination.js';
 import { WorkspaceItemParams, WorkspaceParams } from '../common/params.js';
 import { CreateEventDto, ListEventsQuery, UpdateEventDto } from './event.dto.js';
@@ -20,7 +22,10 @@ import { EventsService } from './events.service.js';
 @ApiTags('events')
 @Controller('workspaces/:workspaceId/events')
 export class EventsController {
-  constructor(private readonly events: EventsService) {}
+  constructor(
+    private readonly events: EventsService,
+    private readonly cache: CacheService,
+  ) {}
 
   @Get()
   @ApiPaginatedResponse()
@@ -28,9 +33,16 @@ export class EventsController {
     @Param() { workspaceId }: WorkspaceParams,
     @Query() query: ListEventsQuery,
     @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    const { items, total } = await this.events.list(workspaceId, query);
-    return toPage(req, items, total, query);
+    // only { items, total } is cached: nextLink is built per request from its own host
+    const { value, hit } = await this.cache.remember(
+      this.cache.listKey(workspaceId, 'events', query),
+      CACHE_TTL_SECONDS.events,
+      () => this.events.list(workspaceId, query),
+    );
+    setCacheHeader(res, hit);
+    return toPage(req, value.items, value.total, query);
   }
 
   @Get(':id')

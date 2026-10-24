@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BlockType } from '../generated/prisma/enums.js';
+import { CacheService } from '../cache/cache.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 const POSITION_STEP = 1024;
@@ -9,12 +10,15 @@ const MAX_BLOCKS = 200;
 /** A note is a page whose body is one paragraph block per line of text. */
 @Injectable()
 export class NotesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   async create(workspaceId: string, authorId: string, input: { title?: string; text: string }) {
     const lines = toLines(input.text);
     const title = input.title?.trim() || firstLineAsTitle(lines);
-    return this.prisma.page.create({
+    const page = await this.prisma.page.create({
       data: {
         workspaceId,
         authorId,
@@ -29,6 +33,8 @@ export class NotesService {
       },
       select: { id: true },
     });
+    await this.cache.invalidateWorkspace(workspaceId);
+    return page;
   }
 
   /** Adds the lines after the page's last block. */
@@ -50,6 +56,7 @@ export class NotesService {
         position: start + (index + 1) * POSITION_STEP,
       })),
     });
+    await this.cache.invalidateWorkspace(workspaceId);
   }
 }
 

@@ -22,6 +22,9 @@ export default defineConfig({
       ADMIN_EMAILS: 'platform-admin@example.com',
       GOOGLE_CLIENT_ID: 'test-client-id',
       GOOGLE_CLIENT_SECRET: 'test-client-secret',
+      // the specs always run on the in-memory cache and local-disk storage, whatever the developer's .env says
+      REDIS_URL: '',
+      AZURE_STORAGE_CONNECTION_STRING: '',
     },
   },
 });

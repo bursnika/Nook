@@ -9,8 +9,16 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { registerViewHelpers } from './admin/view-helpers.js';
 import { LoginRedirectFilter } from './auth/login-redirect.js';
+import { IMPORT_BODY_LIMIT, limitJsonBodies } from './common/body-limit.js';
 import { PrismaExceptionFilter } from './common/prisma-exception.filter.js';
 import { env } from './env.js';
+import {
+  FILE_STORAGE,
+  UPLOAD_PREFIX,
+  UPLOAD_RESPONSE_HEADERS,
+  type FileStorage,
+} from './uploads/file-storage.js';
+import { serveUploadsFromStorage } from './uploads/serve-uploads.js';
 
 /** Shared by main.ts and the e2e tests so both run the app exactly the same way. */
 export function configureApp(app: INestApplication) {
@@ -28,19 +36,33 @@ export function configureApp(app: INestApplication) {
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );
+  app.use(limitJsonBodies);
+  (app as NestExpressApplication).useBodyParser('json', { limit: IMPORT_BODY_LIMIT });
   app.use(cookieParser());
   app.useGlobalFilters(new PrismaExceptionFilter(), new LoginRedirectFilter());
 
   setupViews(app as NestExpressApplication);
   setupSpa(app as NestExpressApplication);
 
-  // Uploaded files are user content: never let the browser sniff or run them in our origin.
-  (app as NestExpressApplication).useStaticAssets(env.uploadDir, {
-    prefix: '/uploads/',
+  setupUploads(app as NestExpressApplication);
+}
+
+/**
+ * Uploaded files are user content: never let the browser sniff or run them in our origin. Local files
+ * are plain static assets; blob storage has no folder, so the API streams them (same headers).
+ */
+function setupUploads(app: NestExpressApplication) {
+  const storage = app.get<FileStorage>(FILE_STORAGE);
+  if (!storage.staticRoot) {
+    serveUploadsFromStorage(app.getHttpAdapter().getInstance() as Express, storage);
+    return;
+  }
+  app.useStaticAssets(storage.staticRoot, {
+    prefix: UPLOAD_PREFIX,
     index: false,
     setHeaders: (res) => {
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'; img-src 'self'");
+      for (const [name, value] of Object.entries(UPLOAD_RESPONSE_HEADERS))
+        res.setHeader(name, value);
     },
   });
 }

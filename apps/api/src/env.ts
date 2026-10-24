@@ -67,4 +67,11 @@ export const env = {
   /** The built SPA (apps/web/dist). Served under /app when the folder exists. */
   webDist: resolve(process.env.WEB_DIST ?? join(findAppRoot(), '..', 'web', 'dist')),
   uploadDir: resolve(process.env.UPLOAD_DIR ?? 'uploads'),
+  /** List caching in Redis; without it the cache lives in the process memory. */
+  redisUrl: process.env.REDIS_URL || undefined,
+  /** Uploaded files go to this Azure Blob container when the connection string is set, otherwise to uploadDir. */
+  azureStorage: {
+    connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING || undefined,
+    container: process.env.AZURE_STORAGE_CONTAINER || 'nook-uploads',
+  },
 };

@@ -6,7 +6,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModuleBuilder } from '@nestjs/testing';
 import type { Request } from 'express';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
@@ -251,7 +251,13 @@ export interface TestApp {
   googleCalendar: FakeGoogleCalendarProvider;
 }
 
-export async function createTestApp(options: { auth?: 'bypass' | 'real' } = {}): Promise<TestApp> {
+export async function createTestApp(
+  options: {
+    auth?: 'bypass' | 'real';
+    /** Swap providers (storage, cache driver, ...) before the module is compiled. */
+    customize?: (builder: TestingModuleBuilder) => TestingModuleBuilder;
+  } = {},
+): Promise<TestApp> {
   const oauth = new FakeOAuthProvider();
   const googleCalendar = new FakeGoogleCalendarProvider();
   let builder = Test.createTestingModule({ imports: [AppModule] })
@@ -261,6 +267,7 @@ export async function createTestApp(options: { auth?: 'bypass' | 'real' } = {}):
     .useValue(googleCalendar);
   if (options.auth !== 'real')
     builder = builder.overrideProvider(AuthGuard).useClass(PlatformAdminGuard);
+  if (options.customize) builder = options.customize(builder);
   const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication();
   configureApp(app);

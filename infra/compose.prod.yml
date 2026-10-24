@@ -34,6 +34,28 @@ services:
       timeout: 3s
       retries: 10
 
+  # Cache for GET lists (see docs/b9-caching.md). Nothing here must survive a restart.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      [
+        'redis-server',
+        '--save',
+        '',
+        '--appendonly',
+        'no',
+        '--maxmemory',
+        '64mb',
+        '--maxmemory-policy',
+        'allkeys-lru',
+      ]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   migrate:
     image: ${IMAGE_PREFIX:?}-migrate:latest
     command: ['pnpm', '--filter', '@nook/api', 'db:deploy']
@@ -60,11 +82,16 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       TELEGRAM_DIGEST_HOUR_UTC: ${TELEGRAM_DIGEST_HOUR_UTC:-6}
+      REDIS_URL: redis://redis:6379
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}
+      AZURE_STORAGE_CONTAINER: ${AZURE_STORAGE_CONTAINER:-nook-uploads}
     volumes:
       - uploads:/data/uploads
     depends_on:
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
 volumes:
   postgres-data:

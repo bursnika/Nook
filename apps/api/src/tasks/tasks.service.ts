@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
 import { TaskStatus } from '../generated/prisma/enums.js';
+import { CacheService } from '../cache/cache.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RealtimeBus } from '../realtime/realtime.bus.js';
 import { CreateTaskDto, ListTasksQuery, UpdateTaskDto } from './task.dto.js';
@@ -12,6 +13,7 @@ export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bus: RealtimeBus,
+    private readonly cache: CacheService,
   ) {}
 
   async list(workspaceId: string, query: ListTasksQuery) {
@@ -53,6 +55,7 @@ export class TasksService {
         completedAt: status === TaskStatus.DONE ? new Date() : null,
       },
     });
+    await this.cache.invalidateWorkspace(workspaceId);
     this.bus.publishWorkspace(workspaceId, { topic: 'task', kind: 'created', id: task.id, task });
     return task;
   }
@@ -73,12 +76,14 @@ export class TasksService {
         completedAt,
       },
     });
+    await this.cache.invalidateWorkspace(workspaceId);
     this.bus.publishWorkspace(workspaceId, { topic: 'task', kind: 'updated', id, task });
     return task;
   }
 
   async remove(workspaceId: string, id: string) {
     await this.prisma.task.delete({ where: { id, workspaceId } });
+    await this.cache.invalidateWorkspace(workspaceId);
     this.bus.publishWorkspace(workspaceId, { topic: 'task', kind: 'deleted', id });
   }
 

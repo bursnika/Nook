@@ -19,6 +19,31 @@ services:
       timeout: 3s
       retries: 10
 
+  # Cache for GET lists (see docs/b9-caching.md). Nothing here must survive a restart.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      [
+        'redis-server',
+        '--save',
+        '',
+        '--appendonly',
+        'no',
+        '--maxmemory',
+        '64mb',
+        '--maxmemory-policy',
+        'allkeys-lru',
+      ]
+    # host port 6380 for running the API outside Docker (REDIS_URL=redis://localhost:6380)
+    ports:
+      - '6380:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   # One-shot: applies pending migrations, then exits. The API starts after it succeeds.
   migrate:
     build:
@@ -60,6 +85,11 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       TELEGRAM_DIGEST_HOUR_UTC: ${TELEGRAM_DIGEST_HOUR_UTC:-6}
+      # List cache; the API keeps working (without cache) when Redis is down
+      REDIS_URL: redis://redis:6379
+      # Optional: uploaded files in Azure Blob Storage instead of the uploads volume (docs/c19-blob-storage.md)
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}
+      AZURE_STORAGE_CONTAINER: ${AZURE_STORAGE_CONTAINER:-nook-uploads}
     ports:
       - '3000:3000'
     volumes:
@@ -67,6 +97,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
 volumes:
   postgres-data:

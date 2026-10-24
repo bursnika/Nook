@@ -7,6 +7,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { CacheService } from '../cache/cache.service.js';
 import { FeaturesService } from '../features/features.service.js';
 import type { CalendarEvent } from '../generated/prisma/client.js';
 import { TaskStatus } from '../generated/prisma/enums.js';
@@ -62,6 +63,7 @@ export class GoogleCalendarService {
     private readonly prisma: PrismaService,
     private readonly features: FeaturesService,
     @Inject(GOOGLE_CALENDAR_PROVIDER) readonly provider: GoogleCalendarProvider,
+    private readonly cache: CacheService,
   ) {}
 
   /** `workspaceId` adds whether that workspace's plan allows changing Google events from Nook. */
@@ -189,6 +191,8 @@ export class GoogleCalendarService {
       },
     });
 
+    await this.cache.invalidateWorkspace(workspaceId);
+
     const created = events.filter((event) => !existing.has(event.id)).length;
     return { created, updated: events.length - created, removed: removed.count };
   }
@@ -267,6 +271,7 @@ export class GoogleCalendarService {
         NOT: failedListIds.map((id) => ({ googleTaskId: { startsWith: `${id}/` } })),
       },
     });
+    await this.cache.invalidateWorkspace(workspaceId);
     const created = tasks.filter((task) => !existing.has(task.id)).length;
     return { status: 'synced', created, updated: tasks.length - created, removed: removed.count };
   }
@@ -292,7 +297,7 @@ export class GoogleCalendarService {
         eventId: rawEventId(row),
         changes: toChanges(dto),
       });
-      return await this.prisma.calendarEvent.update({
+      const event = await this.prisma.calendarEvent.update({
         where: { id },
         data: {
           title: updated.title,
@@ -305,6 +310,8 @@ export class GoogleCalendarService {
           googleUrl: updated.url ?? row.googleUrl,
         },
       });
+      await this.cache.invalidateWorkspace(workspaceId);
+      return event;
     } catch (error) {
       return this.explainWriteFailure(error, userId, row);
     }
@@ -322,6 +329,7 @@ export class GoogleCalendarService {
       return this.explainWriteFailure(error, userId, row);
     }
     await this.prisma.calendarEvent.delete({ where: { id } });
+    await this.cache.invalidateWorkspace(workspaceId);
   }
 
   /** Creates an event in the person's Google Calendar, then keeps the same event here. */
@@ -348,11 +356,13 @@ export class GoogleCalendarService {
       allDay: created.allDay,
     };
     // upsert: a sync that ran in the meantime may already have picked the new event up
-    return this.prisma.calendarEvent.upsert({
+    const event = await this.prisma.calendarEvent.upsert({
       where: { workspaceId_googleEventId: { workspaceId, googleEventId: created.id } },
       create: { workspaceId, googleEventId: created.id, ...fields },
       update: fields,
     });
+    await this.cache.invalidateWorkspace(workspaceId);
+    return event;
   }
 
   /** Signed in to Google with permission to change events: the decrypted token, or why not. */
@@ -421,6 +431,7 @@ export class GoogleCalendarService {
     }
     if (row && error instanceof GoogleEventGoneError) {
       await this.prisma.calendarEvent.deleteMany({ where: { id: row.id } });
+      await this.cache.invalidateWorkspace(row.workspaceId);
       throw new GoneException(
         'This event no longer exists in Google Calendar, so it was removed here too.',
       );
@@ -432,11 +443,30 @@ export class GoogleCalendarService {
   async disconnect(userId: string) {
     const connection = await this.prisma.googleConnection.findUnique({ where: { userId } });
     if (!connection) return;
+    const touched = await this.importedWorkspaces(userId);
     await this.prisma.$transaction([
       this.prisma.calendarEvent.deleteMany({ where: { importedById: userId } }),
       this.prisma.task.deleteMany({ where: { importedById: userId } }),
       this.prisma.googleConnection.delete({ where: { userId } }),
     ]);
+    await Promise.all(touched.map((id) => this.cache.invalidateWorkspace(id)));
     await this.provider.revoke(decryptToken(connection.refreshTokenEnc));
+  }
+
+  /** The workspaces whose cached lists contain something this person imported. */
+  private async importedWorkspaces(userId: string) {
+    const [events, tasks] = await Promise.all([
+      this.prisma.calendarEvent.findMany({
+        where: { importedById: userId },
+        distinct: ['workspaceId'],
+        select: { workspaceId: true },
+      }),
+      this.prisma.task.findMany({
+        where: { importedById: userId },
+        distinct: ['workspaceId'],
+        select: { workspaceId: true },
+      }),
+    ]);
+    return [...new Set([...events, ...tasks].map((row) => row.workspaceId))];
   }
 }

@@ -1,11 +1,15 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
+import { CacheService } from '../cache/cache.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreatePageDto, ListPagesQuery, UpdatePageDto } from './page.dto.js';
 
 @Injectable()
 export class PagesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   async list(workspaceId: string, { q, parentId, skip, limit }: ListPagesQuery) {
     const where: Prisma.PageWhereInput = {
@@ -43,7 +47,9 @@ export class PagesService {
   async create(workspaceId: string, dto: CreatePageDto, authorId: string) {
     if (dto.parentId) await this.assertPageInWorkspace(workspaceId, dto.parentId);
     this.assertPublishable(dto.isPublished, dto.slug);
-    return this.prisma.page.create({ data: { ...dto, workspaceId, authorId } });
+    const page = await this.prisma.page.create({ data: { ...dto, workspaceId, authorId } });
+    await this.cache.invalidateWorkspace(workspaceId);
+    return page;
   }
 
   async update(workspaceId: string, id: string, dto: UpdatePageDto) {
@@ -53,12 +59,15 @@ export class PagesService {
       await this.assertNoCycle(id, dto.parentId);
     }
     this.assertPublishable(dto.isPublished ?? current.isPublished, dto.slug ?? current.slug);
-    return this.prisma.page.update({ where: { id }, data: dto });
+    const page = await this.prisma.page.update({ where: { id }, data: dto });
+    await this.cache.invalidateWorkspace(workspaceId);
+    return page;
   }
 
   async remove(workspaceId: string, id: string) {
     await this.prisma.page.findFirstOrThrow({ where: { id, workspaceId }, select: { id: true } });
     await this.prisma.page.delete({ where: { id } });
+    await this.cache.invalidateWorkspace(workspaceId);
   }
 
   private async assertPageInWorkspace(workspaceId: string, pageId: string) {

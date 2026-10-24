@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
+import { CacheService } from '../cache/cache.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { ApplyOpsDto, BlockOpDto, OpsMessage } from './ops.dto.js';
 import { RealtimeBus } from './realtime.bus.js';
@@ -15,6 +16,7 @@ export class SyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bus: RealtimeBus,
+    private readonly cache: CacheService,
   ) {}
 
   /** The page as it is now plus the log position it corresponds to: a client replays only newer ops. */
@@ -54,6 +56,7 @@ export class SyncService {
         },
       });
     });
+    await this.cache.invalidateWorkspace(workspaceId); // block counts and updatedAt feed the cached lists
     const message: OpsMessage = {
       type: 'ops',
       seq: entry.seq,

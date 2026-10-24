@@ -22,6 +22,7 @@
     "bench:sync": "tsx scripts/bench-sync.ts"
   },
   "dependencies": {
+    "@azure/storage-blob": "^12.34.0",
     "@nestjs/common": "^12.3.2",
     "@nestjs/core": "^12.3.2",
     "@nestjs/platform-express": "^12.3.2",
@@ -36,6 +37,7 @@
     "graphql": "^17.0.2",
     "graphql-ws": "^6.4.1",
     "hbs": "^4.4.0",
+    "ioredis": "^6.0.0",
     "jose": "^6.2.14",
     "jquery": "3.7.1",
     "multer": "2.5.0",

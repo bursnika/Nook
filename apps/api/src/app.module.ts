@@ -3,6 +3,7 @@ import { AdminModule } from './admin/admin.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { AttachmentsModule } from './attachments/attachments.module.js';
 import { BlocksModule } from './blocks/blocks.module.js';
+import { CacheModule } from './cache/cache.module.js';
 import { EventsModule } from './events/events.module.js';
 import { FeaturesModule } from './features/features.module.js';
 import { GoogleCalendarModule } from './google-calendar/google-calendar.module.js';
@@ -23,6 +24,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
 @Module({
   imports: [
     PrismaModule,
+    CacheModule,
     AuthModule,
     UsersModule,
     WorkspacesModule,
