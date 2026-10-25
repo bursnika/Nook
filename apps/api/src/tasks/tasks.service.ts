@@ -69,11 +69,16 @@ export class TasksService {
       completedAt = dto.status === TaskStatus.DONE ? new Date() : null;
     }
 
+    // a rescheduled task is announced again
+    const rescheduled =
+      dto.dueDate !== undefined && dto.dueDate?.getTime() !== current.dueDate?.getTime();
+
     const task = await this.prisma.task.update({
       where: { id },
       data: {
         ...dto,
         completedAt,
+        ...(rescheduled ? { reminderSentAt: null } : {}),
       },
     });
     await this.cache.invalidateWorkspace(workspaceId);

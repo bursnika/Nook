@@ -22,6 +22,7 @@ import { WorkspaceItemParams, WorkspaceParams } from '../common/params.js';
 import { env } from '../env.js';
 import { UpdateGoogleEventDto } from './google-event.dto.js';
 import { GoogleCalendarService } from './google-calendar.service.js';
+import { GoogleSyncJobs } from './google-sync.jobs.js';
 
 class ConnectQuery {
   @IsOptional()
@@ -37,7 +38,10 @@ class ConnectQuery {
 @ApiTags('google-calendar')
 @Controller()
 export class GoogleCalendarController {
-  constructor(private readonly calendar: GoogleCalendarService) {}
+  constructor(
+    private readonly calendar: GoogleCalendarService,
+    private readonly jobs: GoogleSyncJobs,
+  ) {}
 
   /**
    * Starts the extra consent for calendar access. It reuses the sign-in redirect URI, so Google only
@@ -74,6 +78,14 @@ export class GoogleCalendarController {
   @HttpCode(200)
   sync(@CurrentUser() user: AuthUser, @Param() { workspaceId }: WorkspaceParams) {
     return this.calendar.sync(workspaceId, user.id);
+  }
+
+  /** Same sync, run in the background by the queue; answers at once. */
+  @Post('workspaces/:workspaceId/google-calendar/sync-async')
+  @HttpCode(202)
+  async syncAsync(@CurrentUser() user: AuthUser, @Param() { workspaceId }: WorkspaceParams) {
+    await this.jobs.enqueue(workspaceId, user.id);
+    return { queued: true };
   }
 
   /** A new event that goes to Google Calendar as well as into the workspace. Pro only. */

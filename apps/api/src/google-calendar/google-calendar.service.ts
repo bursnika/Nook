@@ -220,9 +220,9 @@ export class GoogleCalendarService {
       (
         await this.prisma.task.findMany({
           where: { workspaceId, googleTaskId: { in: ids } },
-          select: { googleTaskId: true, status: true },
+          select: { googleTaskId: true, status: true, dueDate: true },
         })
-      ).map((row) => [row.googleTaskId, row.status]),
+      ).map((row) => [row.googleTaskId, row]),
     );
 
     await this.prisma.$transaction(
@@ -233,7 +233,8 @@ export class GoogleCalendarService {
           dueDate: task.due ?? null,
           importedById: userId,
         };
-        const localStatus = existing.get(task.id);
+        const local = existing.get(task.id);
+        const localStatus = local?.status;
         if (localStatus === undefined) {
           return this.prisma.task.create({
             data: {
@@ -257,6 +258,8 @@ export class GoogleCalendarService {
             ...shared,
             status,
             completedAt: task.completed ? (task.completedAt ?? new Date()) : null,
+            // moved in Google: remind again
+            ...(local?.dueDate?.getTime() !== task.due?.getTime() ? { reminderSentAt: null } : {}),
           },
         });
       }),

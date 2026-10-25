@@ -4,6 +4,7 @@ import { GoogleCalendarController } from './google-calendar.controller.js';
 import { GoogleCalendarGoogle } from './google-calendar.google.js';
 import { GOOGLE_CALENDAR_PROVIDER } from './google-calendar.provider.js';
 import { GoogleCalendarService } from './google-calendar.service.js';
+import { GoogleSyncJobs } from './google-sync.jobs.js';
 
 @Module({
   imports: [FeaturesModule],
@@ -12,6 +13,7 @@ import { GoogleCalendarService } from './google-calendar.service.js';
     GoogleCalendarGoogle,
     { provide: GOOGLE_CALENDAR_PROVIDER, useExisting: GoogleCalendarGoogle },
     GoogleCalendarService,
+    GoogleSyncJobs,
   ],
   exports: [GoogleCalendarService],
 })

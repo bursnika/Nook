@@ -11,6 +11,6 @@ import { TelegramService } from './telegram.service.js';
     TelegramHttp,
     { provide: TELEGRAM_PROVIDER, useExisting: TelegramHttp },
   ],
-  exports: [TelegramService],
+  exports: [TelegramService, TELEGRAM_PROVIDER],
 })
 export class TelegramModule {}

@@ -189,23 +189,25 @@ model PageOp {
 }
 
 model Task {
-  id           String       @id @default(uuid(7))
-  title        String
-  description  String?
-  status       TaskStatus   @default(TODO)
-  priority     TaskPriority @default(MEDIUM)
-  dueDate      DateTime?
+  id             String       @id @default(uuid(7))
+  title          String
+  description    String?
+  status         TaskStatus   @default(TODO)
+  priority       TaskPriority @default(MEDIUM)
+  dueDate        DateTime?
   // Order inside a Kanban column.
-  position     Float        @default(0)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  completedAt  DateTime?
-  workspaceId  String
-  pageId       String?
-  assigneeId   String?
+  position       Float        @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  completedAt    DateTime?
+  // When the "due soon" reminder went out; cleared when dueDate changes so a rescheduled task is reminded again.
+  reminderSentAt DateTime?
+  workspaceId    String
+  pageId         String?
+  assigneeId     String?
   // Set when the task was imported from Google Tasks (`<list id>/<task id>`) by this person.
-  googleTaskId String?
-  importedById String?
+  googleTaskId   String?
+  importedById   String?
 
   workspace  Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   page       Page?           @relation(fields: [pageId], references: [id], onDelete: SetNull)
@@ -218,6 +220,8 @@ model Task {
   @@index([workspaceId, status, position])
   @@index([workspaceId, dueDate])
   @@index([assigneeId])
+  // The reminder scheduler looks for open, not yet reminded tasks by due date.
+  @@index([dueDate, reminderSentAt])
 }
 
 model CalendarEvent {
