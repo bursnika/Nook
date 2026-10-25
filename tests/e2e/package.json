@@ -1,0 +1,5 @@
+{
+  "name": "@nook/e2e-tests",
+  "private": true,
+  "type": "module"
+}

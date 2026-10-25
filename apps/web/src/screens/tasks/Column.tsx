@@ -66,15 +66,21 @@ function AddCard({
   const input = useRef<HTMLInputElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
 
+  // the "+ Add card" button is not on screen while the form is open, so focus goes back to it after closing
+  const restoreFocus = useRef(false);
   useEffect(() => {
     if (open) input.current?.focus();
+    else if (restoreFocus.current) {
+      restoreFocus.current = false;
+      opener.current?.focus();
+    }
   }, [open]);
 
   const close = () => {
+    restoreFocus.current = true;
     setOpen(false);
     setTitle('');
     setProblem(undefined);
-    opener.current?.focus();
   };
 
   const submit = async (event: FormEvent) => {

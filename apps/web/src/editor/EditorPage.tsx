@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getTransport } from '../lib/settings';
 import type { RemotePresence, SyncClient } from '../sync/syncClient';
+import { NotFound } from '../components/Gate';
 import { createActions, type CaretTarget } from './actions';
 import { BlockRow, type FocusRequest } from './BlockRow';
 import { useEditorEnv } from './env';
@@ -127,6 +128,8 @@ function EditorSession({ workspaceId, pageId }: { workspaceId: string; pageId: s
   }, [state.recent]);
 
   const titleRef = useRef<HTMLInputElement>(null);
+
+  if (state.missing) return <NotFound what="page" home={`/w/${workspaceId}/pages`} />;
 
   return (
     <MotionConfig reducedMotion="user">

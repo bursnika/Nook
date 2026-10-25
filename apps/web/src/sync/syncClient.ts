@@ -55,6 +55,8 @@ export interface SyncState {
   presence: RemotePresence[];
   recent: Record<string, RecentChange>;
   notice: string | null;
+  /** The server says there is no such page for this person (deleted, or never theirs): nothing will load. */
+  missing: boolean;
 }
 
 export interface SyncClientOptions {
@@ -130,6 +132,7 @@ export class SyncClient {
   private recent: Record<string, RecentChange> = {};
   private nonce = 0;
   private notice: string | null = null;
+  private missing = false;
 
   private cursor: { blockId: string | null; caret: number | null } = { blockId: null, caret: null };
   private lastSentCursor = '';
@@ -434,8 +437,15 @@ export class SyncClient {
       this.snapshotFailures = 0;
       this.reconcile(snapshot);
       this.connectTransport();
-    } catch {
+    } catch (error) {
       if (this.stopped) return;
+      // a page that does not exist will not appear by asking again: say so instead of loading forever
+      if (isMissing(error)) {
+        this.missing = true;
+        this.transportStatus = 'offline';
+        this.emit();
+        return;
+      }
       this.snapshotFailures += 1;
       this.transportStatus = 'offline';
       this.emit();
@@ -660,8 +670,15 @@ export class SyncClient {
         previous && samePresence(previous.presence, presence) ? previous.presence : presence,
       recent: this.recent,
       notice: this.notice,
+      missing: this.missing,
     };
   }
+}
+
+/** An API error that says the page is not there (bad id, not found, not allowed), whatever the transport. */
+function isMissing(error: unknown): boolean {
+  const status = (error as { status?: unknown } | null)?.status;
+  return status === 400 || status === 403 || status === 404;
 }
 
 function samePresence(a: RemotePresence[], b: RemotePresence[]): boolean {

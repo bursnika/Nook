@@ -72,6 +72,32 @@ describe('SyncClient', () => {
     ctx.client.stop();
   });
 
+  it('reports a page the server does not know instead of retrying forever', async () => {
+    const loadSnapshot = vi.fn(async () => {
+      throw Object.assign(new Error('Not found'), { status: 404 });
+    });
+    const ctx = setup({ loadSnapshot });
+    ctx.client.start();
+    await tick();
+    expect(ctx.client.getState().missing).toBe(true);
+    await tick(60_000);
+    expect(loadSnapshot).toHaveBeenCalledTimes(1);
+    ctx.client.stop();
+  });
+
+  it('keeps retrying when the snapshot fails for another reason', async () => {
+    const loadSnapshot = vi.fn(async () => {
+      throw new Error('offline');
+    });
+    const ctx = setup({ loadSnapshot });
+    ctx.client.start();
+    await tick();
+    expect(ctx.client.getState().missing).toBe(false);
+    await tick(60_000);
+    expect(loadSnapshot.mock.calls.length).toBeGreaterThan(1);
+    ctx.client.stop();
+  });
+
   it('applies local edits optimistically and batches typing into one update', async () => {
     const ctx = setup();
     await online(ctx);

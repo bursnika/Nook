@@ -1,0 +1,17 @@
+{
+  "temp-dir": ".nyc_output",
+  "report-dir": "tests/e2e/coverage",
+  "include": ["apps/web/src/**"],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/test-setup.ts",
+    "apps/web/src/lib/testing.ts",
+    "apps/web/src/sync/fakeTransport.ts",
+    "**/node_modules/**",
+    "tests/**"
+  ],
+  "extension": [".ts", ".tsx"],
+  "all": false,
+  "skip-full": false
+}

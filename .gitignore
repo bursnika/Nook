@@ -41,3 +41,10 @@ client_secret*.json
 
 # newman reports
 tests/postman/results/
+
+# Playwright e2e (QA2): report, traces, signed-in states, coverage and the instrumented web build
+tests/e2e/report/
+tests/e2e/test-results/
+tests/e2e/.auth/
+tests/e2e/coverage/
+apps/web/dist-e2e/

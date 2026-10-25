@@ -9,3 +9,5 @@ apps/api/uploads
 docs
 infra
 *.md
+**/dist-e2e
+.nyc_output

@@ -1,5 +1,9 @@
 pnpm-lock.yaml
 dist
+dist-e2e
 coverage
+.nyc_output
+tests/e2e/report
+tests/e2e/test-results
 # Handlebars templates are whitespace-sensitive; the glimmer formatter would change the rendered output
 *.hbs

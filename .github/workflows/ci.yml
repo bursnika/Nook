@@ -114,6 +114,47 @@ jobs:
           name: newman-report
           path: tests/postman/results/
 
+  e2e:
+    name: Playwright end-to-end tests and coverage
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: nook
+          POSTGRES_PASSWORD: nook
+          POSTGRES_DB: nook
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U nook -d nook"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @nook/api db:generate
+      - run: npx playwright install --with-deps chromium
+      # builds the API and the coverage-instrumented web app; the tests start the API on port 3300 themselves
+      # and use their own database (nook_e2e) on the Postgres service above
+      - run: pnpm e2e:build
+      - run: pnpm e2e:coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-report
+          path: |
+            tests/e2e/report/
+            tests/e2e/test-results/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-coverage
+          path: tests/e2e/coverage/
+
   images:
     name: Docker images build
     runs-on: ubuntu-latest
@@ -134,7 +175,7 @@ jobs:
     # Runs only after a push to main, and only once the repository variable DEPLOY_ENABLED is set to "true"
     # (see docs/deploy.md for the secrets this needs).
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
-    needs: [check, api-tests, web-tests, newman, images]
+    needs: [check, api-tests, web-tests, newman, e2e, images]
     runs-on: ubuntu-latest
     permissions:
       contents: read
