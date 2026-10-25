@@ -6,6 +6,8 @@ export const JSON_BODY_LIMIT_BYTES = 100 * 1024;
 export const IMPORT_BODY_LIMIT = '2mb';
 
 const IMPORT_ROUTE = /^\/api\/workspaces\/[^/]+\/pages\/import\/?$/;
+/** The assistant gets the whole conversation (up to 40 messages of 8000 characters) with each request. */
+const ASSISTANT_ROUTE = /^\/api\/workspaces\/[^/]+\/assistant\/chat\/?$/;
 
 /**
  * The JSON parser accepts IMPORT_BODY_LIMIT everywhere (it is one parser for the whole app), so this runs
@@ -13,8 +15,9 @@ const IMPORT_ROUTE = /^\/api\/workspaces\/[^/]+\/pages\/import\/?$/;
  */
 export function limitJsonBodies(req: Request, res: Response, next: NextFunction) {
   const size = Number(req.headers['content-length']);
-  const isImport = req.method === 'POST' && IMPORT_ROUTE.test(req.path);
-  if (size > JSON_BODY_LIMIT_BYTES && !isImport && req.is('application/json')) {
+  const isLarge =
+    req.method === 'POST' && (IMPORT_ROUTE.test(req.path) || ASSISTANT_ROUTE.test(req.path));
+  if (size > JSON_BODY_LIMIT_BYTES && !isLarge && req.is('application/json')) {
     res.status(413).json({ statusCode: 413, message: 'Payload Too Large' });
     return;
   }

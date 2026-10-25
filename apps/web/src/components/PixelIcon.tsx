@@ -73,6 +73,15 @@ const ICONS = {
     '....O....',
     '....O....',
   ],
+  chat: [
+    '.OOOOOOOOO.',
+    'OLLLLLLLLLO',
+    'OLWLLWLLWLO',
+    'OLLLLLLLLLO',
+    '.OOOLOOOOO.',
+    '...OLO.....',
+    '....O......',
+  ],
   trash: [
     '..OOOOOO..',
     'OOOOOOOOOO',

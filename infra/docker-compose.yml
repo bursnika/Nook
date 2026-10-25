@@ -44,6 +44,29 @@ services:
       timeout: 3s
       retries: 10
 
+  # Message broker for reminders and Google sync jobs (see docs/b8-queues.md). The management UI is not
+  # part of this image; inspect with `docker compose exec rabbitmq rabbitmqctl list_queues` or GET /api/queue-status.
+  rabbitmq:
+    image: rabbitmq:4-alpine
+    restart: unless-stopped
+    # RabbitMQ keeps its data under the node name, which comes from the hostname: pin it, or a recreated
+    # container would start with empty queues
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: nook
+      RABBITMQ_DEFAULT_PASS: nook
+    # host port 5673 for running the API outside Docker (AMQP_URL=amqp://nook:nook@localhost:5673)
+    ports:
+      - '5673:5672'
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
   # One-shot: applies pending migrations, then exits. The API starts after it succeeds.
   migrate:
     build:
@@ -87,9 +110,16 @@ services:
       TELEGRAM_DIGEST_HOUR_UTC: ${TELEGRAM_DIGEST_HOUR_UTC:-6}
       # List cache; the API keeps working (without cache) when Redis is down
       REDIS_URL: redis://redis:6379
+      # Queues for reminders and Google sync jobs; the API starts even if the broker is away and keeps trying
+      AMQP_URL: amqp://nook:nook@rabbitmq:5672
+      REMINDER_LEAD_MINUTES: ${REMINDER_LEAD_MINUTES:-30}
+      GOOGLE_SYNC_EVERY_MINUTES: ${GOOGLE_SYNC_EVERY_MINUTES:-30}
       # Optional: uploaded files in Azure Blob Storage instead of the uploads volume (docs/c19-blob-storage.md)
       AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}
       AZURE_STORAGE_CONTAINER: ${AZURE_STORAGE_CONTAINER:-nook-uploads}
+      # Optional: AI planning assistant (Pro); without a key it answers 503 (docs/c21-assistant.md)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5-5}
     ports:
       - '3000:3000'
     volumes:
@@ -99,7 +129,10 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
 volumes:
   postgres-data:
+  rabbitmq-data:
   uploads:

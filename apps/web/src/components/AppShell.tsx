@@ -27,6 +27,8 @@ function sectionOf(
       return { title: 'Calendar', icon: 'calendar' };
     case 'insights':
       return { title: 'Insights', icon: 'sparkle' };
+    case 'assistant':
+      return { title: 'Assistant', icon: 'chat' };
     case 'settings':
       return { title: 'Settings', icon: 'gear' };
     case 'pages':

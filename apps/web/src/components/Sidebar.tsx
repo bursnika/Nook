@@ -9,6 +9,7 @@ export const NAV: { to: string; label: string; icon: IconName; end?: boolean }[]
   { to: 'tasks', label: 'Tasks', icon: 'tasks' },
   { to: 'calendar', label: 'Calendar', icon: 'calendar' },
   { to: 'insights', label: 'Insights', icon: 'sparkle' },
+  { to: 'assistant', label: 'Assistant', icon: 'chat' },
   { to: 'settings', label: 'Settings', icon: 'gear' },
 ];
 

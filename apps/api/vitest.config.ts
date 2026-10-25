@@ -15,6 +15,8 @@ export default defineConfig({
       GOOGLE_CLIENT_SECRET: 'unit-client-secret',
       REDIS_URL: '',
       AZURE_STORAGE_CONNECTION_STRING: '',
+      // always the in-memory queue, whatever the developer's .env says
+      AMQP_URL: '',
     },
   },
 });

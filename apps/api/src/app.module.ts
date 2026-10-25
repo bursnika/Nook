@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AdminModule } from './admin/admin.module.js';
+import { AssistantModule } from './assistant/assistant.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { AttachmentsModule } from './attachments/attachments.module.js';
 import { BlocksModule } from './blocks/blocks.module.js';
@@ -13,8 +14,10 @@ import { MembersModule } from './members/members.module.js';
 import { OverviewModule } from './overview/overview.module.js';
 import { PagesModule } from './pages/pages.module.js';
 import { PublicModule } from './public/public.module.js';
+import { QueueModule } from './queue/queue.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { RemindersModule } from './reminders/reminders.module.js';
 import { TasksModule } from './tasks/tasks.module.js';
 import { TelegramModule } from './telegram/telegram.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -25,6 +28,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
   imports: [
     PrismaModule,
     CacheModule,
+    QueueModule,
     AuthModule,
     UsersModule,
     WorkspacesModule,
@@ -38,10 +42,12 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     FeaturesModule,
     OverviewModule,
     GoogleCalendarModule,
+    AssistantModule,
     AdminModule,
     PublicModule,
     RealtimeModule,
     TelegramModule,
+    RemindersModule,
     WidgetModule,
   ],
   controllers: [HealthController],

@@ -56,6 +56,24 @@ services:
       timeout: 3s
       retries: 10
 
+  # Message broker for reminders and Google sync jobs (docs/b8-queues.md). Reachable only inside the compose
+  # network: no published ports, no management UI. Queues live in the volume.
+  rabbitmq:
+    image: rabbitmq:4-alpine
+    restart: unless-stopped
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: nook
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-${POSTGRES_PASSWORD}}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
   migrate:
     image: ${IMAGE_PREFIX:?}-migrate:latest
     command: ['pnpm', '--filter', '@nook/api', 'db:deploy']
@@ -83,8 +101,14 @@ services:
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       TELEGRAM_DIGEST_HOUR_UTC: ${TELEGRAM_DIGEST_HOUR_UTC:-6}
       REDIS_URL: redis://redis:6379
+      AMQP_URL: amqp://nook:${RABBITMQ_PASSWORD:-${POSTGRES_PASSWORD}}@rabbitmq:5672
+      REMINDER_LEAD_MINUTES: ${REMINDER_LEAD_MINUTES:-30}
+      GOOGLE_SYNC_EVERY_MINUTES: ${GOOGLE_SYNC_EVERY_MINUTES:-30}
       AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}
       AZURE_STORAGE_CONTAINER: ${AZURE_STORAGE_CONTAINER:-nook-uploads}
+      # Optional: AI planning assistant (Pro); without a key it answers 503 (docs/c21-assistant.md)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5-5}
     volumes:
       - uploads:/data/uploads
     depends_on:
@@ -92,9 +116,12 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
 volumes:
   postgres-data:
+  rabbitmq-data:
   uploads:
   caddy-data:
   caddy-config:

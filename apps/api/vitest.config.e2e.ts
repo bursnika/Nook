@@ -25,6 +25,8 @@ export default defineConfig({
       // the specs always run on the in-memory cache and local-disk storage, whatever the developer's .env says
       REDIS_URL: '',
       AZURE_STORAGE_CONNECTION_STRING: '',
+      // always the in-memory queue, whatever the developer's .env says
+      AMQP_URL: '',
     },
   },
 });
