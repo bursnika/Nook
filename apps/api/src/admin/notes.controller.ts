@@ -45,7 +45,7 @@ export class NotesAdminController {
     return res.redirect(`/admin/workspaces/${workspaceId}/pages/${page.id}?flash=created`);
   }
 
-  @Post('pages/:id/blocks')
+  @Post('pages/:id/note')
   async append(
     @Param() { workspaceId, id }: WorkspaceItemParams,
     @Body() body: Record<string, unknown>,

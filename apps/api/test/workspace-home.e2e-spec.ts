@@ -387,7 +387,7 @@ describe('Workspace home: overview, calendar and notes', () => {
       await note({ text: 'one\ntwo' }).expect(302);
       const page = await ctx.prisma.page.findFirstOrThrow();
       const res = await http()
-        .post(`/admin/workspaces/${wsId}/pages/${page.id}/blocks`)
+        .post(`/admin/workspaces/${wsId}/pages/${page.id}/note`)
         .set('Authorization', tok.owner)
         .type('form')
         .send({ text: 'three\nfour' })
@@ -410,13 +410,13 @@ describe('Workspace home: overview, calendar and notes', () => {
       await note({ text: 'one' }).expect(302);
       const page = await ctx.prisma.page.findFirstOrThrow();
       await http()
-        .post(`/admin/workspaces/${wsId}/pages/${page.id}/blocks`)
+        .post(`/admin/workspaces/${wsId}/pages/${page.id}/note`)
         .set('Authorization', tok.outsider)
         .type('form')
         .send({ text: 'planted' })
         .expect(404);
       await http()
-        .post(`/admin/workspaces/${otherWsId}/pages/${page.id}/blocks`)
+        .post(`/admin/workspaces/${otherWsId}/pages/${page.id}/note`)
         .set('Authorization', tok.outsider)
         .type('form')
         .send({ text: 'planted' })

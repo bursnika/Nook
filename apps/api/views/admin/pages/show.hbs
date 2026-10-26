@@ -24,23 +24,21 @@
     </div>
   </div>
   <div class="col-lg-8">
-    <h2 class="h5">Note <small class="text-muted">({{page.blocks.length}} {{#if (eq page.blocks.length 1)}}block{{else}}blocks{{/if}})</small></h2>
-    <p class="small text-muted">A note is built from blocks: every line, heading or to-do is one block. The block editor with slash commands comes later; for now lines are added below.</p>
-    <div class="table-frame mb-3">
-      <table class="table align-middle">
-        <thead><tr><th>Type</th><th>Content</th></tr></thead>
-        <tbody>
-          {{#each page.blocks}}
-            <tr><td><span class="chip chip-todo">{{nice type}}</span></td><td>{{content.text}}</td></tr>
-          {{else}}
-            <tr><td colspan="2" class="text-muted p-3">The note is empty. Write something below.</td></tr>
-          {{/each}}
-        </tbody>
-      </table>
+    <h2 class="h5">Note</h2>
+    <div class="card p-3 mb-3 note-body">
+      {{#each page.blocks}}
+        {{#if (eq type "TODO")}}
+          <p class="mb-1"><input class="form-check-input me-2" type="checkbox" disabled{{#if content.checked}} checked{{/if}} aria-label="Done"> {{content.text}}</p>
+        {{else}}
+          <p class="mb-1">{{content.text}}</p>
+        {{/if}}
+      {{else}}
+        <p class="text-muted mb-0">The note is empty. Write something below.</p>
+      {{/each}}
     </div>
-    <form class="mb-4" method="post" action="/admin/workspaces/{{ws.id}}/pages/{{page.id}}/blocks">
+    <form class="mb-4" method="post" action="/admin/workspaces/{{ws.id}}/pages/{{page.id}}/note">
       <label class="form-label fw-bold" for="append-text">Add to this note</label>
-      <textarea class="form-control mb-2" id="append-text" name="text" rows="3" maxlength="20000" required placeholder="Every line becomes a block."></textarea>
+      <textarea class="form-control mb-2" id="append-text" name="text" rows="3" maxlength="20000" required placeholder="Write a line or several, one per row."></textarea>
       <button class="btn btn-primary" type="submit">Add</button>
     </form>
 

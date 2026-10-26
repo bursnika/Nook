@@ -9,12 +9,11 @@
 {{> search-form q=q placeholder="Search by title…"}}
 <div class="table-frame">
   <table class="table table-hover align-middle">
-    <thead><tr><th>Title</th><th>Blocks</th><th>Subpages</th><th>Published</th><th>Updated</th><th></th></tr></thead>
+    <thead><tr><th>Title</th><th>Subpages</th><th>Published</th><th>Updated</th><th></th></tr></thead>
     <tbody>
       {{#each pages}}
         <tr>
           <td><a href="/admin/workspaces/{{../ws.id}}/pages/{{id}}">{{#if icon}}{{icon}} {{/if}}{{title}}</a></td>
-          <td>{{_count.blocks}}</td>
           <td>{{_count.children}}</td>
           <td>{{#if isPublished}}<span class="chip chip-done">/p/{{slug}}</span>{{else}}<span class="text-muted">private</span>{{/if}}</td>
           <td>{{date updatedAt}}</td>
@@ -26,7 +25,7 @@
           </td>
         </tr>
       {{else}}
-        <tr><td colspan="6" class="text-muted p-4">No pages found.</td></tr>
+        <tr><td colspan="5" class="text-muted p-4">No pages found.</td></tr>
       {{/each}}
     </tbody>
   </table>
