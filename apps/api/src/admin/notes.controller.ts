@@ -4,6 +4,7 @@ import type { Response } from 'express';
 import type { AuthUser } from '../auth/auth.types.js';
 import { CurrentUser } from '../auth/decorators.js';
 import { WorkspaceItemParams, WorkspaceParams } from '../common/params.js';
+import { IsUUID } from 'class-validator';
 import { NotesService } from '../pages/notes.service.js';
 import { AdminController } from './admin-controller.decorator.js';
 import { parseForm } from './forms.js';
@@ -18,6 +19,11 @@ class NoteForm {
   @MinLength(1)
   @MaxLength(20000)
   text!: string;
+}
+
+class ChecklistItemParams extends WorkspaceItemParams {
+  @IsUUID()
+  blockId!: string;
 }
 
 class AppendForm {
@@ -54,7 +60,37 @@ export class NotesAdminController {
     const { value, ok } = await parseForm(AppendForm, body);
     if (!ok) return this.rejected(res);
     await this.notes.append(workspaceId, id, value.text);
-    return res.redirect(`/admin/workspaces/${workspaceId}/pages/${id}?flash=updated`);
+    return res.redirect(`/admin/workspaces/${workspaceId}/pages/${id}?tab=note&flash=updated`);
+  }
+
+  @Post('pages/:id/checklist')
+  async addItems(
+    @Param() { workspaceId, id }: WorkspaceItemParams,
+    @Body() body: Record<string, unknown>,
+    @Res() res: Response,
+  ) {
+    const { value, ok } = await parseForm(AppendForm, body);
+    if (!ok) return this.rejected(res);
+    await this.notes.addItems(workspaceId, id, value.text);
+    return res.redirect(`/admin/workspaces/${workspaceId}/pages/${id}?tab=checklist&flash=updated`);
+  }
+
+  @Post('pages/:id/checklist/:blockId/toggle')
+  async toggleItem(
+    @Param() { workspaceId, id, blockId }: ChecklistItemParams,
+    @Res() res: Response,
+  ) {
+    await this.notes.toggleItem(workspaceId, id, blockId);
+    return res.redirect(`/admin/workspaces/${workspaceId}/pages/${id}?tab=checklist`);
+  }
+
+  @Post('pages/:id/checklist/:blockId/delete')
+  async removeItem(
+    @Param() { workspaceId, id, blockId }: ChecklistItemParams,
+    @Res() res: Response,
+  ) {
+    await this.notes.removeItem(workspaceId, id, blockId);
+    return res.redirect(`/admin/workspaces/${workspaceId}/pages/${id}?tab=checklist&flash=deleted`);
   }
 
   private rejected(res: Response) {

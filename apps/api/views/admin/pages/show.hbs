@@ -24,48 +24,88 @@
     </div>
   </div>
   <div class="col-lg-8">
-    <h2 class="h5">Note</h2>
-    <div class="card p-3 mb-3 note-body">
-      {{#each page.blocks}}
-        {{#if (eq type "TODO")}}
-          <p class="mb-1"><input class="form-check-input me-2" type="checkbox" disabled{{#if content.checked}} checked{{/if}} aria-label="Done"> {{content.text}}</p>
-        {{else}}
-          <p class="mb-1">{{content.text}}</p>
-        {{/if}}
-      {{else}}
-        <p class="text-muted mb-0">The note is empty. Write something below.</p>
-      {{/each}}
-    </div>
-    <form class="mb-4" method="post" action="/admin/workspaces/{{ws.id}}/pages/{{page.id}}/note">
-      <label class="form-label fw-bold" for="append-text">Add to this note</label>
-      <textarea class="form-control mb-2" id="append-text" name="text" rows="3" maxlength="20000" required placeholder="Write a line or several, one per row."></textarea>
-      <button class="btn btn-primary" type="submit">Add</button>
-    </form>
-
-    <h2 class="h5">Tasks on this page <small class="text-muted">({{tasksTotal}})</small></h2>
-    <form class="quick-task mb-2" method="post" action="/admin/workspaces/{{ws.id}}/tasks">
-      <input type="hidden" name="from" value="page">
-      <input type="hidden" name="pageId" value="{{page.id}}">
-      <input class="form-control" type="text" name="title" maxlength="200" required placeholder="New task for this page…" aria-label="Task title">
-      <input class="form-control" type="date" name="dueDate" aria-label="Due date">
-      <select class="form-select" name="priority" aria-label="Priority">
-        <option value="LOW">Low</option>
-        <option value="MEDIUM" selected>Medium</option>
-        <option value="HIGH">High</option>
-      </select>
-      <button class="btn btn-primary" type="submit">+ Add task</button>
-    </form>
-    {{> task-list tasks=tasks empty="No tasks linked to this page yet." wsId=ws.id}}
-
-    <h2 class="h5 mt-4">Files <small class="text-muted">({{page.attachments.length}})</small></h2>
-    <p class="small text-muted">Documents or images that belong to this page.</p>
-    <ul>
-      {{#each page.attachments}}
-        <li><a href="/admin/workspaces/{{../ws.id}}/attachments/{{id}}">{{filename}}</a> <small class="text-muted">{{filesize size}}</small></li>
-      {{else}}
-        <li class="text-muted">No files.</li>
-      {{/each}}
+    <ul class="nav nav-tabs home-tabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link{{#if (eq tab "note")}} active{{/if}}" id="tab-note" data-bs-toggle="tab" data-bs-target="#pane-note" type="button" role="tab" aria-controls="pane-note" aria-selected="{{#if (eq tab "note")}}true{{else}}false{{/if}}">Note</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link{{#if (eq tab "checklist")}} active{{/if}}" id="tab-checklist" data-bs-toggle="tab" data-bs-target="#pane-checklist" type="button" role="tab" aria-controls="pane-checklist" aria-selected="{{#if (eq tab "checklist")}}true{{else}}false{{/if}}">Checklist <span class="badge text-bg-light">{{checklistDone}}/{{checklist.length}}</span></button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link{{#if (eq tab "tasks")}} active{{/if}}" id="tab-tasks" data-bs-toggle="tab" data-bs-target="#pane-tasks" type="button" role="tab" aria-controls="pane-tasks" aria-selected="{{#if (eq tab "tasks")}}true{{else}}false{{/if}}">Tasks <span class="badge text-bg-light">{{tasksTotal}}</span></button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link{{#if (eq tab "files")}} active{{/if}}" id="tab-files" data-bs-toggle="tab" data-bs-target="#pane-files" type="button" role="tab" aria-controls="pane-files" aria-selected="{{#if (eq tab "files")}}true{{else}}false{{/if}}">Files <span class="badge text-bg-light">{{page.attachments.length}}</span></button>
+      </li>
     </ul>
-    <a class="btn btn-sm btn-outline-primary" href="/admin/workspaces/{{ws.id}}/attachments/new">Upload a file</a>
+
+    <div class="tab-content pt-3">
+      <div class="tab-pane fade{{#if (eq tab "note")}} show active{{/if}}" id="pane-note" role="tabpanel" aria-labelledby="tab-note" tabindex="0">
+        <div class="card p-3 mb-3 note-body">
+          {{#each noteBlocks}}
+            <p class="mb-1">{{content.text}}</p>
+          {{else}}
+            <p class="text-muted mb-0">The note is empty. Write something below.</p>
+          {{/each}}
+        </div>
+        <form method="post" action="/admin/workspaces/{{ws.id}}/pages/{{page.id}}/note">
+          <label class="form-label fw-bold" for="append-text">Add to this note</label>
+          <textarea class="form-control mb-2" id="append-text" name="text" rows="3" maxlength="20000" required placeholder="Write a line or several, one per row."></textarea>
+          <button class="btn btn-primary" type="submit">Add</button>
+        </form>
+      </div>
+
+      <div class="tab-pane fade{{#if (eq tab "checklist")}} show active{{/if}}" id="pane-checklist" role="tabpanel" aria-labelledby="tab-checklist" tabindex="0">
+        <ul class="list-group mb-3 checklist">
+          {{#each checklist}}
+            <li class="list-group-item d-flex align-items-center gap-2">
+              <form method="post" action="/admin/workspaces/{{../ws.id}}/pages/{{../page.id}}/checklist/{{id}}/toggle" class="d-flex align-items-center gap-2 flex-grow-1 m-0">
+                <input class="form-check-input mt-0" type="checkbox" onchange="this.form.submit()"{{#if checked}} checked{{/if}} aria-label="Mark “{{text}}” as {{#if checked}}not done{{else}}done{{/if}}">
+                <span{{#if checked}} class="text-decoration-line-through text-muted"{{/if}}>{{text}}</span>
+                <noscript><button class="btn btn-sm btn-outline-primary ms-auto" type="submit">Toggle</button></noscript>
+              </form>
+              <form method="post" action="/admin/workspaces/{{../ws.id}}/pages/{{../page.id}}/checklist/{{id}}/delete" class="m-0">
+                <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="Remove “{{text}}”">×</button>
+              </form>
+            </li>
+          {{else}}
+            <li class="list-group-item text-muted">The checklist is empty. Add the first item below.</li>
+          {{/each}}
+        </ul>
+        <form method="post" action="/admin/workspaces/{{ws.id}}/pages/{{page.id}}/checklist">
+          <label class="form-label fw-bold" for="checklist-text">Add items</label>
+          <textarea class="form-control mb-2" id="checklist-text" name="text" rows="2" maxlength="20000" required placeholder="One item per row."></textarea>
+          <button class="btn btn-primary" type="submit">Add to checklist</button>
+        </form>
+      </div>
+
+      <div class="tab-pane fade{{#if (eq tab "tasks")}} show active{{/if}}" id="pane-tasks" role="tabpanel" aria-labelledby="tab-tasks" tabindex="0">
+        <form class="quick-task mb-2" method="post" action="/admin/workspaces/{{ws.id}}/tasks">
+          <input type="hidden" name="from" value="page">
+          <input type="hidden" name="pageId" value="{{page.id}}">
+          <input class="form-control" type="text" name="title" maxlength="200" required placeholder="New task for this page…" aria-label="Task title">
+          <input class="form-control" type="date" name="dueDate" aria-label="Due date">
+          <select class="form-select" name="priority" aria-label="Priority">
+            <option value="LOW">Low</option>
+            <option value="MEDIUM" selected>Medium</option>
+            <option value="HIGH">High</option>
+          </select>
+          <button class="btn btn-primary" type="submit">+ Add task</button>
+        </form>
+        {{> task-list tasks=tasks empty="No tasks linked to this page yet." wsId=ws.id}}
+      </div>
+
+      <div class="tab-pane fade{{#if (eq tab "files")}} show active{{/if}}" id="pane-files" role="tabpanel" aria-labelledby="tab-files" tabindex="0">
+        <p class="small text-muted">Documents or images that belong to this page.</p>
+        <ul>
+          {{#each page.attachments}}
+            <li><a href="/admin/workspaces/{{../ws.id}}/attachments/{{id}}">{{filename}}</a> <small class="text-muted">{{filesize size}}</small></li>
+          {{else}}
+            <li class="text-muted">No files.</li>
+          {{/each}}
+        </ul>
+        <a class="btn btn-sm btn-outline-primary" href="/admin/workspaces/{{ws.id}}/attachments/new">Upload a file</a>
+      </div>
+    </div>
   </div>
 </div>

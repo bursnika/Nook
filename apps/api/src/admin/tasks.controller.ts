@@ -88,7 +88,7 @@ export class TasksAdminController {
       // the service has just verified that this page belongs to the workspace
       if (body.from === 'page' && created.pageId)
         return res.redirect(
-          `/admin/workspaces/${workspaceId}/pages/${created.pageId}?flash=task-created`,
+          `/admin/workspaces/${workspaceId}/pages/${created.pageId}?tab=tasks&flash=task-created`,
         );
       return res.redirect(`/admin/workspaces/${workspaceId}/tasks/${created.id}?flash=created`);
     } catch (error) {

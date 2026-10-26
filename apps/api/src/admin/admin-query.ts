@@ -13,6 +13,11 @@ export class AdminListQuery {
   @IsString()
   q?: string;
 
+  /** Which tab of the page view to open (note, checklist, tasks, files). */
+  @IsOptional()
+  @IsIn(['note', 'checklist', 'tasks', 'files'])
+  tab?: string;
+
   /** Set by the redirect after a create/update/delete. */
   @IsOptional()
   @IsString()

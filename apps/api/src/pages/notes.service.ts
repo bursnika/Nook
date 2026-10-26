@@ -7,7 +7,7 @@ const POSITION_STEP = 1024;
 const TITLE_LENGTH = 80;
 const MAX_BLOCKS = 200;
 
-/** A note is a page whose body is one paragraph block per line of text. */
+/** A note is a page whose body is one paragraph per line of text; its checklist is the to-do items. */
 @Injectable()
 export class NotesService {
   constructor(
@@ -57,6 +57,55 @@ export class NotesService {
       })),
     });
     await this.cache.invalidateWorkspace(workspaceId);
+  }
+
+  /** Adds one unchecked checklist item per line. */
+  async addItems(workspaceId: string, pageId: string, text: string) {
+    await this.requirePage(workspaceId, pageId);
+    const { _max } = await this.prisma.block.aggregate({
+      where: { pageId },
+      _max: { position: true },
+    });
+    const start = _max.position ?? 0;
+    await this.prisma.block.createMany({
+      data: toLines(text).map((line, index) => ({
+        pageId,
+        type: BlockType.TODO,
+        content: { text: line, checked: false },
+        position: start + (index + 1) * POSITION_STEP,
+      })),
+    });
+    await this.cache.invalidateWorkspace(workspaceId);
+  }
+
+  async toggleItem(workspaceId: string, pageId: string, blockId: string) {
+    await this.requirePage(workspaceId, pageId);
+    const item = await this.prisma.block.findFirstOrThrow({
+      where: { id: blockId, pageId, type: BlockType.TODO },
+    });
+    const content = item.content as { text: string; checked?: boolean };
+    await this.prisma.block.update({
+      where: { id: item.id },
+      data: { content: { ...content, checked: !content.checked } },
+    });
+    await this.cache.invalidateWorkspace(workspaceId);
+  }
+
+  async removeItem(workspaceId: string, pageId: string, blockId: string) {
+    await this.requirePage(workspaceId, pageId);
+    const item = await this.prisma.block.findFirstOrThrow({
+      where: { id: blockId, pageId, type: BlockType.TODO },
+      select: { id: true },
+    });
+    await this.prisma.block.delete({ where: { id: item.id } });
+    await this.cache.invalidateWorkspace(workspaceId);
+  }
+
+  private requirePage(workspaceId: string, pageId: string) {
+    return this.prisma.page.findFirstOrThrow({
+      where: { id: pageId, workspaceId },
+      select: { id: true },
+    });
   }
 }
 

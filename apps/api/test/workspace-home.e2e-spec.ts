@@ -317,11 +317,11 @@ describe('Workspace home: overview, calendar and notes', () => {
       await ctx.prisma.task.create({ data: { workspaceId: wsId, title: 'not on the page' } });
       const res = await add({ from: 'page', pageId: page.id, title: 'Book tickets' }).expect(302);
       expect(res.headers.location).toBe(
-        `/admin/workspaces/${wsId}/pages/${page.id}?flash=task-created`,
+        `/admin/workspaces/${wsId}/pages/${page.id}?tab=tasks&flash=task-created`,
       );
       const view = await get(res.headers.location).expect(200);
       expect(view.text).toContain('Task added.');
-      expect(view.text).toContain('Tasks on this page');
+      expect(view.text).toContain('id="pane-tasks"');
       expect(view.text).not.toContain('not on the page');
       expect(view.text.indexOf('Book tickets')).toBeLessThan(view.text.indexOf('already done'));
     });
@@ -392,7 +392,9 @@ describe('Workspace home: overview, calendar and notes', () => {
         .type('form')
         .send({ text: 'three\nfour' })
         .expect(302);
-      expect(res.headers.location).toBe(`/admin/workspaces/${wsId}/pages/${page.id}?flash=updated`);
+      expect(res.headers.location).toBe(
+        `/admin/workspaces/${wsId}/pages/${page.id}?tab=note&flash=updated`,
+      );
       const blocks = await ctx.prisma.block.findMany({
         where: { pageId: page.id },
         orderBy: { position: 'asc' },
@@ -403,6 +405,78 @@ describe('Workspace home: overview, calendar and notes', () => {
         'three',
         'four',
       ]);
+    });
+
+    describe('checklist', () => {
+      const post = (path: string, form: Record<string, string> = {}, token = tok.owner) =>
+        http().post(path).set('Authorization', token).type('form').send(form);
+
+      it('adds items, ticks and removes them, and keeps them off the note tab', async () => {
+        await note({ text: 'plain line' }).expect(302);
+        const page = await ctx.prisma.page.findFirstOrThrow();
+        const base = `/admin/workspaces/${wsId}/pages/${page.id}`;
+
+        const added = await post(`${base}/checklist`, { text: 'milk\neggs' }).expect(302);
+        expect(added.headers.location).toBe(`${base}?tab=checklist&flash=updated`);
+        const items = await ctx.prisma.block.findMany({
+          where: { pageId: page.id, type: 'TODO' },
+          orderBy: { position: 'asc' },
+        });
+        expect(items.map((b) => b.content)).toEqual([
+          { text: 'milk', checked: false },
+          { text: 'eggs', checked: false },
+        ]);
+
+        await post(`${base}/checklist/${items[0].id}/toggle`).expect(302);
+        let reloaded = await ctx.prisma.block.findUniqueOrThrow({ where: { id: items[0].id } });
+        expect(reloaded.content).toEqual({ text: 'milk', checked: true });
+        await post(`${base}/checklist/${items[0].id}/toggle`).expect(302);
+        reloaded = await ctx.prisma.block.findUniqueOrThrow({ where: { id: items[0].id } });
+        expect(reloaded.content).toEqual({ text: 'milk', checked: false });
+
+        const view = await get(`${base}?tab=checklist`).expect(200);
+        expect(view.text).toContain('0/2');
+        expect(view.text).toContain('id="pane-checklist"');
+        expect(view.text).not.toMatch(/blocks?\b/i);
+
+        await post(`${base}/checklist/${items[1].id}/delete`).expect(302);
+        expect(await ctx.prisma.block.count({ where: { pageId: page.id, type: 'TODO' } })).toBe(1);
+        expect(await ctx.prisma.block.count({ where: { pageId: page.id } })).toBe(2);
+      });
+
+      it('opens the requested tab and rejects an unknown one', async () => {
+        await note({ text: 'one' }).expect(302);
+        const page = await ctx.prisma.page.findFirstOrThrow();
+        const base = `/admin/workspaces/${wsId}/pages/${page.id}`;
+        const view = await get(`${base}?tab=files`).expect(200);
+        expect(view.text).toMatch(/class="nav-link active" id="tab-files"/);
+        await get(`${base}?tab=nope`).expect(400);
+      });
+
+      it('does not touch items of another workspace or page', async () => {
+        await note({ text: 'one' }).expect(302);
+        const page = await ctx.prisma.page.findFirstOrThrow();
+        await post(`/admin/workspaces/${wsId}/pages/${page.id}/checklist`, { text: 'x' }).expect(
+          302,
+        );
+        const item = await ctx.prisma.block.findFirstOrThrow({ where: { type: 'TODO' } });
+        await post(
+          `/admin/workspaces/${wsId}/pages/${page.id}/checklist/${item.id}/toggle`,
+          {},
+          tok.outsider,
+        ).expect(404);
+        await post(
+          `/admin/workspaces/${otherWsId}/pages/${page.id}/checklist/${item.id}/delete`,
+          {},
+          tok.outsider,
+        ).expect(404);
+        expect(await ctx.prisma.block.count({ where: { type: 'TODO' } })).toBe(1);
+        // a paragraph is not a checklist item
+        const paragraph = await ctx.prisma.block.findFirstOrThrow({ where: { type: 'PARAGRAPH' } });
+        await post(
+          `/admin/workspaces/${wsId}/pages/${page.id}/checklist/${paragraph.id}/toggle`,
+        ).expect(404);
+      });
     });
 
     it('does not let another workspace write notes or append to pages', async () => {

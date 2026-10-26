@@ -119,7 +119,7 @@ export class PagesAdminController {
   @Render('admin/pages/show')
   async show(
     @Param() { workspaceId, id }: WorkspaceItemParams,
-    @Query() { flash }: AdminListQuery,
+    @Query() { flash, tab }: AdminListQuery,
   ) {
     const [ws, page, linked] = await Promise.all([
       this.workspaces.get(workspaceId),
@@ -134,12 +134,23 @@ export class PagesAdminController {
         isOverdue: task.status !== 'DONE' && !!task.dueDate && task.dueDate < now,
       }),
     );
+    const checklist = page.blocks
+      .filter((block) => block.type === 'TODO')
+      .map((block) => {
+        const content = block.content as { text: string; checked?: boolean };
+        return { id: block.id, text: content.text, checked: content.checked === true };
+      });
     return {
       title: page.title,
       section: 'pages',
       ws,
       flash: flashMessage(flash),
       page,
+      // the note is every block but the to-dos, which make up the checklist
+      noteBlocks: page.blocks.filter((block) => block.type !== 'TODO'),
+      checklist,
+      checklistDone: checklist.filter((item) => item.checked).length,
+      tab: tab ?? 'note',
       tasks,
       tasksTotal: linked.total,
     };
