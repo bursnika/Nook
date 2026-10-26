@@ -22,6 +22,7 @@ COPY apps/web/package.json apps/web/
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     --mount=type=cache,id=pnpm-cache,target=/root/.cache/pnpm \
     pnpm install --frozen-lockfile --filter @nook/web...
+COPY tsconfig.base.json ./
 COPY apps/web apps/web
 # optional Google Analytics 4 measurement id, baked into the bundle
 ARG VITE_GA_MEASUREMENT_ID=""
