@@ -13,6 +13,8 @@ export const typeDefs = /* GraphQL */ `
     position: Float!
     pageId: ID
     assigneeId: ID
+    commentCount: Int
+    attachmentCount: Int
   }
 
   type CalendarEvent {

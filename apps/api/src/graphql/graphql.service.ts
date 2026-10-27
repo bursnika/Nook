@@ -13,8 +13,15 @@ export type GraphqlContext = {
 
 const iso = (date: Date | null) => (date ? date.toISOString() : null);
 
-const taskOut = (task: Record<string, unknown> | null | undefined) =>
-  task ? { ...task, dueDate: iso(task.dueDate as Date | null) } : null;
+const taskOut = (task: Record<string, unknown> | null | undefined) => {
+  if (!task) return null;
+  const { _count, ...rest } = task as { _count?: { comments: number; attachments: number } };
+  return {
+    ...rest,
+    ...(_count ? { commentCount: _count.comments, attachmentCount: _count.attachments } : {}),
+    dueDate: iso(task.dueDate as Date | null),
+  };
+};
 
 const eventOut = (event: Record<string, unknown> | null | undefined) =>
   event
@@ -63,6 +70,7 @@ export class GraphqlService {
         where: { workspaceId, ...(status ? { status } : {}) },
         orderBy: [{ position: 'asc' }, { id: 'asc' }],
         take: 500,
+        include: { _count: { select: { comments: true, attachments: true } } },
       });
       return rows.map(taskOut);
     },

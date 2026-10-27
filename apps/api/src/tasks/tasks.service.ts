@@ -4,9 +4,21 @@ import { TaskStatus } from '../generated/prisma/enums.js';
 import { CacheService } from '../cache/cache.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RealtimeBus } from '../realtime/realtime.bus.js';
+import { UploadsService } from '../uploads/uploads.service.js';
 import { CreateTaskDto, ListTasksQuery, UpdateTaskDto } from './task.dto.js';
 
 const POSITION_STEP = 1024;
+
+/** Every task leaves the service with how many comments and files it has, for the badges on a card. */
+const WITH_COUNTS = { _count: { select: { comments: true, attachments: true } } } as const;
+
+type TaskWithCounts = Prisma.TaskGetPayload<{ include: typeof WITH_COUNTS }>;
+
+const withCounts = ({ _count, ...task }: TaskWithCounts) => ({
+  ...task,
+  commentCount: _count.comments,
+  attachmentCount: _count.attachments,
+});
 
 @Injectable()
 export class TasksService {
@@ -14,6 +26,7 @@ export class TasksService {
     private readonly prisma: PrismaService,
     private readonly bus: RealtimeBus,
     private readonly cache: CacheService,
+    private readonly uploads: UploadsService,
   ) {}
 
   async list(workspaceId: string, query: ListTasksQuery) {
@@ -33,28 +46,34 @@ export class TasksService {
         skip,
         take: limit,
         orderBy: [{ position: 'asc' }, { id: 'asc' }],
+        include: WITH_COUNTS,
       }),
       this.prisma.task.count({ where }),
     ]);
-    return { items, total };
+    return { items: items.map(withCounts), total };
   }
 
-  get(workspaceId: string, id: string) {
-    return this.prisma.task.findFirstOrThrow({ where: { id, workspaceId } });
+  async get(workspaceId: string, id: string) {
+    return withCounts(
+      await this.prisma.task.findFirstOrThrow({ where: { id, workspaceId }, include: WITH_COUNTS }),
+    );
   }
 
   async create(workspaceId: string, dto: CreateTaskDto) {
     await this.assertRefs(workspaceId, dto);
     const status = dto.status ?? TaskStatus.TODO;
-    const task = await this.prisma.task.create({
-      data: {
-        ...dto,
-        workspaceId,
-        status,
-        position: dto.position ?? (await this.nextPosition(workspaceId, status)),
-        completedAt: status === TaskStatus.DONE ? new Date() : null,
-      },
-    });
+    const task = withCounts(
+      await this.prisma.task.create({
+        data: {
+          ...dto,
+          workspaceId,
+          status,
+          position: dto.position ?? (await this.nextPosition(workspaceId, status)),
+          completedAt: status === TaskStatus.DONE ? new Date() : null,
+        },
+        include: WITH_COUNTS,
+      }),
+    );
     await this.cache.invalidateWorkspace(workspaceId);
     this.bus.publishWorkspace(workspaceId, { topic: 'task', kind: 'created', id: task.id, task });
     return task;
@@ -73,21 +92,37 @@ export class TasksService {
     const rescheduled =
       dto.dueDate !== undefined && dto.dueDate?.getTime() !== current.dueDate?.getTime();
 
-    const task = await this.prisma.task.update({
-      where: { id },
-      data: {
-        ...dto,
-        completedAt,
-        ...(rescheduled ? { reminderSentAt: null } : {}),
-      },
-    });
+    const task = withCounts(
+      await this.prisma.task.update({
+        where: { id },
+        data: {
+          ...dto,
+          completedAt,
+          ...(rescheduled ? { reminderSentAt: null } : {}),
+        },
+        include: WITH_COUNTS,
+      }),
+    );
     await this.cache.invalidateWorkspace(workspaceId);
     this.bus.publishWorkspace(workspaceId, { topic: 'task', kind: 'updated', id, task });
     return task;
   }
 
+  /** After a comment or a file was added or removed: the counts on the card change for everyone. */
+  async touch(workspaceId: string, id: string) {
+    const task = await this.get(workspaceId, id);
+    await this.cache.invalidateWorkspace(workspaceId);
+    this.bus.publishWorkspace(workspaceId, { topic: 'task', kind: 'updated', id, task });
+  }
+
   async remove(workspaceId: string, id: string) {
+    const files = await this.prisma.attachment.findMany({
+      where: { taskId: id, workspaceId },
+      select: { url: true },
+    });
+    // the attachment records go with the task (cascade); the stored files are removed here
     await this.prisma.task.delete({ where: { id, workspaceId } });
+    await Promise.all(files.map((file) => this.uploads.remove(file.url)));
     await this.cache.invalidateWorkspace(workspaceId);
     this.bus.publishWorkspace(workspaceId, { topic: 'task', kind: 'deleted', id });
   }
