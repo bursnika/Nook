@@ -55,6 +55,7 @@ export class AttachmentsController {
       properties: {
         file: { type: 'string', format: 'binary' },
         pageId: { type: 'string', format: 'uuid' },
+        taskId: { type: 'string', format: 'uuid' },
       },
     },
   })

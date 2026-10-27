@@ -7,6 +7,10 @@ export class UploadAttachmentDto {
   @IsOptional()
   @IsUUID()
   pageId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  taskId?: string;
 }
 
 export class UpdateAttachmentDto extends PartialType(UploadAttachmentDto) {
@@ -21,6 +25,10 @@ export class ListAttachmentsQuery extends PaginationQuery {
   @IsOptional()
   @IsUUID()
   pageId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  taskId?: string;
 
   @IsOptional()
   @IsString()
