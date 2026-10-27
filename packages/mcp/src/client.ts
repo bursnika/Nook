@@ -16,7 +16,7 @@ export interface NookConfig {
   workspaceId?: string;
 }
 
-export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'ON_HOLD' | 'DONE';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 export const BLOCK_TYPES = [
   'PARAGRAPH',

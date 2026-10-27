@@ -170,6 +170,10 @@ h4,
   color: var(--nook-blue-700);
   background: var(--nook-blue-100);
 }
+.chip-on_hold {
+  color: var(--nook-pink-700);
+  background: var(--nook-pink-100);
+}
 .chip-done {
   color: var(--nook-lav-700);
   background: var(--nook-lav-100);

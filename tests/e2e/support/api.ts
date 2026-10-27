@@ -1,6 +1,6 @@
 import { expect, type APIRequestContext } from '@playwright/test';
 
-export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'ON_HOLD' | 'DONE';
 export type BlockType =
   | 'PARAGRAPH'
   | 'HEADING_1'

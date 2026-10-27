@@ -246,7 +246,7 @@ export class GoogleCalendarService {
             },
           });
         }
-        // Keep a local "in progress"; only a change of done / not done in Google moves the status.
+        // Keep a local "in progress" or "on hold"; only a change of done / not done in Google moves the status.
         const status = task.completed
           ? TaskStatus.DONE
           : localStatus === TaskStatus.DONE

@@ -111,7 +111,7 @@ export function registerTools(server: McpServer, { client, now = () => new Date(
       inputSchema: {
         workspaceId,
         status: z
-          .enum(['TODO', 'IN_PROGRESS', 'DONE'])
+          .enum(['TODO', 'IN_PROGRESS', 'ON_HOLD', 'DONE'])
           .optional()
           .describe('Only tasks in this status.'),
         priority: z
