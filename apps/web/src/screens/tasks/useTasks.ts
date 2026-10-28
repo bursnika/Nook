@@ -13,6 +13,7 @@ export interface TaskPatch {
   status?: TaskStatus;
   priority?: TaskPriority;
   dueDate?: string | null;
+  assigneeId?: string | null;
   position?: number;
 }
 
@@ -26,6 +27,8 @@ export interface TasksApi {
   patch: (id: string, patch: TaskPatch) => Promise<void>;
   remove: (id: string) => Promise<void>;
   place: (changes: readonly Placement[]) => Promise<void>;
+  /** Reads one task again, e.g. after its comments or files changed. */
+  refresh: (id: string) => Promise<void>;
 }
 
 /**
@@ -144,6 +147,16 @@ export function useTasks(workspaceId: string): TasksApi {
     [base, write],
   );
 
+  const refresh = useCallback<TasksApi['refresh']>(
+    async (id) => {
+      const task = await api<Task>(`${base}/${id}`);
+      setData((current) =>
+        current ? applyTaskChange(current, { kind: 'updated', taskId: id, task }) : current,
+      );
+    },
+    [base, setData],
+  );
+
   return {
     tasks: list.data ?? [],
     loading: list.loading,
@@ -154,5 +167,6 @@ export function useTasks(workspaceId: string): TasksApi {
     patch,
     remove,
     place,
+    refresh,
   };
 }

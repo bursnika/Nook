@@ -52,6 +52,7 @@ export function Dialog({
   role = 'dialog',
   tone = 'lavender',
   wide = false,
+  size = wide ? 'wide' : undefined,
 }: {
   title: string;
   onClose: () => void;
@@ -60,6 +61,8 @@ export function Dialog({
   role?: 'dialog' | 'alertdialog';
   tone?: 'pink' | 'blue' | 'lavender';
   wide?: boolean;
+  /** `issue` is the large two-column window of a Kanban card. */
+  size?: 'wide' | 'issue';
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -78,7 +81,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      className={`modal ${wide ? 'modal--wide' : ''}`}
+      className={`modal ${size ? `modal--${size}` : ''}`}
       role={role}
       aria-labelledby={titleId}
       onClose={() => closeRef.current()}
