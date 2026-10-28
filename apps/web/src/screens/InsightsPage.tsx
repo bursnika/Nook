@@ -85,7 +85,10 @@ function InsightsView({ data }: { data: Insights }) {
   const reduced = useReducedMotion();
   const colors = palette();
   const status = TASK_STATUSES.map((key) => data.tasksByStatus[key] ?? 0);
-  const open = (data.tasksByStatus.TODO ?? 0) + (data.tasksByStatus.IN_PROGRESS ?? 0);
+  const open =
+    (data.tasksByStatus.TODO ?? 0) +
+    (data.tasksByStatus.IN_PROGRESS ?? 0) +
+    (data.tasksByStatus.ON_HOLD ?? 0);
   const baseOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -183,7 +186,7 @@ function InsightsView({ data }: { data: Insights }) {
                   datasets: [
                     {
                       data: status,
-                      backgroundColor: [colors.gray, colors.blue, colors.lavender],
+                      backgroundColor: [colors.gray, colors.blue, colors.pinkSoft, colors.lavender],
                       borderColor: colors.ink,
                       borderWidth: 2,
                     },

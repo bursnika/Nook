@@ -170,6 +170,10 @@
   color: var(--blue-700);
   background: var(--blue-100);
 }
+.badge--hold {
+  color: var(--pink-700);
+  background: var(--pink-100);
+}
 .badge--done {
   color: var(--lav-700);
   background: var(--lav-100);

@@ -101,7 +101,9 @@ describe('Insights', () => {
     show();
     expect(await screen.findByText('Done in 7 days')).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: /Tasks by status: To do 2, In progress 1, Done 3/ }),
+      screen.getByRole('img', {
+        name: /Tasks by status: Backlog 2, In progress 1, On hold 0, Complete 3/,
+      }),
     ).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /Tasks finished per week: .*3$/ })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /2 changes in the last 1 days/ })).toBeInTheDocument();

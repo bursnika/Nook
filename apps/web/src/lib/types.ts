@@ -11,16 +11,18 @@ export interface Workspace {
   memberships?: { role: Role }[];
 }
 
-export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
+/** TODO is the backlog and DONE is complete. */
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'ON_HOLD' | 'DONE';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
-export const TASK_STATUSES: readonly TaskStatus[] = ['TODO', 'IN_PROGRESS', 'DONE'];
+export const TASK_STATUSES: readonly TaskStatus[] = ['TODO', 'IN_PROGRESS', 'ON_HOLD', 'DONE'];
 export const TASK_PRIORITIES: readonly TaskPriority[] = ['LOW', 'MEDIUM', 'HIGH'];
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
-  TODO: 'To do',
+  TODO: 'Backlog',
   IN_PROGRESS: 'In progress',
-  DONE: 'Done',
+  ON_HOLD: 'On hold',
+  DONE: 'Complete',
 };
 export const PRIORITY_LABEL: Record<TaskPriority, string> = {
   LOW: 'Low',
@@ -41,6 +43,35 @@ export interface Task {
   position: number;
   pageId: string | null;
   assigneeId: string | null;
+  commentCount?: number;
+  attachmentCount?: number;
+  /** ISO timestamps; live updates over GraphQL leave them out. */
+  createdAt?: string;
+  updatedAt?: string;
+  completedAt?: string | null;
+}
+
+export interface Member {
+  id: string;
+  role: Role;
+  user: { id: string; name: string; email: string; avatarUrl: string | null };
+}
+
+export interface TaskComment {
+  id: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  author: { id: string; name: string; avatarUrl: string | null };
+}
+
+export interface Attachment {
+  id: string;
+  filename: string;
+  url: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
 }
 
 export interface CalendarEvent {

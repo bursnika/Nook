@@ -13,7 +13,7 @@ export interface Placement {
 
 export function columnsOf(tasks: readonly Task[]): Columns {
   const sorted = [...tasks].sort((a, b) => a.position - b.position || a.id.localeCompare(b.id));
-  const columns: Columns = { TODO: [], IN_PROGRESS: [], DONE: [] };
+  const columns: Columns = { TODO: [], IN_PROGRESS: [], ON_HOLD: [], DONE: [] };
   for (const task of sorted) columns[task.status].push(task.id);
   return columns;
 }

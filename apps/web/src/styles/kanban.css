@@ -5,7 +5,7 @@
 }
 .board {
   display: grid;
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
   gap: 18px;
   align-items: start;
   overflow-x: auto;
@@ -38,6 +38,9 @@
 }
 .column--in_progress .column__head {
   background: var(--blue-200);
+}
+.column--on_hold .column__head {
+  background: var(--pink-200);
 }
 .column--done .column__head {
   background: var(--lav-200);
@@ -100,6 +103,14 @@
     calc(-1 * var(--px)) 0 0 0 var(--ink),
     var(--px) 0 0 0 var(--ink),
     inset 4px 0 0 0 var(--blue-500);
+}
+.card--on_hold {
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink),
+    0 var(--px) 0 0 var(--ink),
+    calc(-1 * var(--px)) 0 0 0 var(--ink),
+    var(--px) 0 0 0 var(--ink),
+    inset 4px 0 0 0 var(--pink-500);
 }
 .card--done {
   box-shadow:
@@ -206,7 +217,7 @@
 
 @media (max-width: 860px) {
   .board {
-    grid-template-columns: repeat(3, minmax(260px, 1fr));
+    grid-template-columns: repeat(4, minmax(260px, 1fr));
     scroll-snap-type: x proximity;
   }
 }

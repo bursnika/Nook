@@ -26,7 +26,8 @@ export function applyTaskChange(tasks: readonly Task[], change: TaskChange): Tas
   const index = tasks.findIndex((task) => task.id === incoming.id);
   if (index < 0) return [...tasks, incoming];
   if (sameTask(tasks[index]!, incoming)) return tasks as Task[];
-  return tasks.map((task, i) => (i === index ? incoming : task));
+  // a live update has no timestamps, so the ones loaded over REST are kept
+  return tasks.map((task, i) => (i === index ? { ...task, ...incoming } : task));
 }
 
 function sameTask(a: Task, b: Task): boolean {
@@ -38,7 +39,9 @@ function sameTask(a: Task, b: Task): boolean {
     a.dueDate === b.dueDate &&
     a.position === b.position &&
     a.pageId === b.pageId &&
-    a.assigneeId === b.assigneeId
+    a.assigneeId === b.assigneeId &&
+    a.commentCount === b.commentCount &&
+    a.attachmentCount === b.attachmentCount
   );
 }
 

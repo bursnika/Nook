@@ -21,7 +21,12 @@ const board = () => {
 
 describe('columnsOf', () => {
   it('groups by status and orders by position', () => {
-    expect(columnsOf(board())).toEqual({ TODO: ['a', 'b', 'c'], IN_PROGRESS: ['d'], DONE: [] });
+    expect(columnsOf(board())).toEqual({
+      TODO: ['a', 'b', 'c'],
+      IN_PROGRESS: ['d'],
+      ON_HOLD: [],
+      DONE: [],
+    });
   });
 
   it('breaks position ties by id so the order is stable', () => {
@@ -91,7 +96,7 @@ describe('placements', () => {
       makeTask({ id: 'q', position: 1 }),
       makeTask({ id: 'r', position: 1 }),
     ];
-    const columns = { TODO: ['p', 'r', 'q'], IN_PROGRESS: [], DONE: [] };
+    const columns = { TODO: ['p', 'r', 'q'], IN_PROGRESS: [], ON_HOLD: [], DONE: [] };
     const result = placements(columns, tasks, 'r');
     expect(result.map((change) => change.id)).toEqual(['p', 'r', 'q']);
     expect(result.map((change) => change.position)).toEqual([STEP, 2 * STEP, 3 * STEP]);

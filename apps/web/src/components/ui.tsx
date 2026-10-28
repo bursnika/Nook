@@ -154,7 +154,7 @@ export function Badge({
   tone,
   children,
 }: {
-  tone: 'todo' | 'doing' | 'done' | 'late' | 'low' | 'medium' | 'high';
+  tone: 'todo' | 'doing' | 'hold' | 'done' | 'late' | 'low' | 'medium' | 'high';
   children: ReactNode;
 }) {
   return <span className={`badge badge--${tone}`}>{children}</span>;

@@ -314,7 +314,15 @@ export function TaskDialog({
       )}
       <p>
         <Badge
-          tone={task.status === 'DONE' ? 'done' : task.status === 'IN_PROGRESS' ? 'doing' : 'todo'}
+          tone={
+            task.status === 'DONE'
+              ? 'done'
+              : task.status === 'IN_PROGRESS'
+                ? 'doing'
+                : task.status === 'ON_HOLD'
+                  ? 'hold'
+                  : 'todo'
+          }
         >
           {STATUS_LABEL[task.status]}
         </Badge>{' '}

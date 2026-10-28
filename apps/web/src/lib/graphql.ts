@@ -5,7 +5,7 @@ import type { EventChange, TaskChange } from './merge';
 export type LiveStatus = 'connecting' | 'live' | 'offline';
 
 const TASK_FIELDS =
-  'id workspaceId title description status priority dueDate position pageId assigneeId';
+  'id workspaceId title description status priority dueDate position pageId assigneeId commentCount attachmentCount';
 const EVENT_FIELDS = 'id workspaceId title description startsAt endsAt allDay';
 
 export const TASK_CHANGED = (workspaceId: string) =>

@@ -47,7 +47,7 @@ describe('Kanban board', () => {
       makeTask({ id: 'a', title: 'Write report', status: 'TODO' }),
       makeTask({ id: 'b', title: 'Review', status: 'IN_PROGRESS' }),
     ]);
-    const todo = await screen.findByRole('region', { name: 'To do' });
+    const todo = await screen.findByRole('region', { name: 'Backlog' });
     expect(within(todo).getByText('Write report')).toBeInTheDocument();
     const doing = screen.getByRole('region', { name: 'In progress' });
     expect(within(doing).getByText('Review')).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe('Kanban board', () => {
     const doing = screen.getByRole('region', { name: 'In progress' });
     expect(within(doing).getByText('Write report')).toBeInTheDocument();
     expect(
-      within(screen.getByRole('region', { name: 'To do' })).queryByText('Write report'),
+      within(screen.getByRole('region', { name: 'Backlog' })).queryByText('Write report'),
     ).toBeNull();
     await waitFor(() => expect(patches).toHaveLength(1));
     expect(patches[0]?.url).toBe('/api/workspaces/ws-1/tasks/a');
@@ -99,7 +99,7 @@ describe('Kanban board', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Server is down');
     await waitFor(() =>
       expect(
-        within(screen.getByRole('region', { name: 'To do' })).getByText('Write report'),
+        within(screen.getByRole('region', { name: 'Backlog' })).getByText('Write report'),
       ).toBeInTheDocument(),
     );
   });
@@ -123,9 +123,9 @@ describe('Kanban board', () => {
       </MemoryRouter>,
     );
     const user = userEvent.setup();
-    const todo = await screen.findByRole('region', { name: 'To do' });
+    const todo = await screen.findByRole('region', { name: 'Backlog' });
     await user.click(within(todo).getByRole('button', { name: '+ Add card' }));
-    await user.type(within(todo).getByLabelText('New card in To do'), 'Buy milk{Enter}');
+    await user.type(within(todo).getByLabelText('New card in Backlog'), 'Buy milk{Enter}');
     expect(await within(todo).findByText('Buy milk')).toBeInTheDocument();
     expect(created).toEqual([{ title: 'Buy milk', status: 'TODO' }]);
   });
