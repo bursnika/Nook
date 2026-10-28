@@ -1,5 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { PixelIcon } from '../../components/PixelIcon';
 import { Badge } from '../../components/ui';
 import { formatTime } from '../../lib/calendar';
 import {
@@ -10,6 +11,7 @@ import {
   type TaskStatus,
 } from '../../lib/types';
 import { LOCALE } from '../../lib/locale';
+import { Avatar, usePerson } from './members';
 
 export function dueText(task: Task): { text: string; late: boolean } | undefined {
   if (!task.dueDate) return undefined;
@@ -33,6 +35,9 @@ function CardBody({
   onMove?: (task: Task, status: TaskStatus) => void;
 }) {
   const due = dueText(task);
+  const assignee = usePerson(task.assigneeId);
+  const comments = task.commentCount ?? 0;
+  const files = task.attachmentCount ?? 0;
   const index = TASK_STATUSES.indexOf(task.status);
   const prev = TASK_STATUSES[index - 1];
   const next = TASK_STATUSES[index + 1];
@@ -56,6 +61,18 @@ function CardBody({
             {due.late ? `Late ${due.text}` : due.text}
           </Badge>
         )}
+        {comments > 0 && (
+          <span className="card__count" title={`${comments} comments`}>
+            <PixelIcon name="chat" size={14} />
+            <span className="sr-only">Comments:</span> {comments}
+          </span>
+        )}
+        {files > 0 && (
+          <span className="card__count" title={`${files} attachments`}>
+            <PixelIcon name="clip" size={9} />
+            <span className="sr-only">Attachments:</span> {files}
+          </span>
+        )}
         <span className="card__moves">
           {prev && (
             <button
@@ -78,6 +95,12 @@ function CardBody({
             </button>
           )}
         </span>
+        {assignee && (
+          <span className="card__assignee" title={`Assigned to ${assignee.name}`}>
+            <Avatar person={assignee} size={22} />
+            <span className="sr-only">Assigned to {assignee.name}</span>
+          </span>
+        )}
       </div>
     </>
   );

@@ -192,6 +192,17 @@
   gap: 6px;
   margin: 6px 0 0 26px;
 }
+.card__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--gray-500);
+}
+.card__assignee {
+  display: inline-flex;
+}
 .card__moves {
   margin-left: auto;
   display: flex;

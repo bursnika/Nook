@@ -82,6 +82,17 @@ const ICONS = {
     '...OLO.....',
     '....O......',
   ],
+  clip: [
+    '..OOOO.',
+    '.O....O',
+    '.O.OO.O',
+    '.O.O..O',
+    '.O.O..O',
+    '.O.O..O',
+    '.O.O..O',
+    '.O....O',
+    '..OOOO.',
+  ],
   trash: [
     '..OOOOOO..',
     'OOOOOOOOOO',
