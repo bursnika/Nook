@@ -211,7 +211,7 @@ test.describe('kanban board', () => {
     await board.ready();
     const done = board.column('Complete');
     await done.getByRole('button', { name: '+ Add card' }).click();
-    const field = ann.page.getByLabel('New card in Done');
+    const field = ann.page.getByLabel('New card in Complete');
     await expect(field).toBeFocused();
     await expect(done.getByRole('button', { name: 'Add', exact: true })).toBeDisabled();
     await field.fill('never saved');

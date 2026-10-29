@@ -136,7 +136,7 @@ test.describe('classic admin (MVC)', () => {
     // edit: add a block through the note form, then rename
     await page.getByLabel('Add to this note').fill('First line\nSecond line');
     await page.getByRole('button', { name: 'Add', exact: true }).click();
-    await expect(page.getByRole('cell', { name: 'Second line' })).toBeVisible();
+    await expect(page.getByText('Second line', { exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Edit', exact: true }).click();
     const renamed = `${title} v2`;
     await page.getByLabel('Title').fill(renamed);
