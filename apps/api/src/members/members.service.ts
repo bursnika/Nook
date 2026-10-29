@@ -3,6 +3,11 @@ import { Role } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AddMemberDto, UpdateMemberDto } from './member.dto.js';
 
+/** What a workspace member may learn about a colleague: never the token hashes or the Google id. */
+const PUBLIC_USER = {
+  select: { id: true, name: true, email: true, avatarUrl: true, createdAt: true },
+} as const;
+
 @Injectable()
 export class MembersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -10,7 +15,7 @@ export class MembersService {
   list(workspaceId: string) {
     return this.prisma.membership.findMany({
       where: { workspaceId },
-      include: { user: true },
+      include: { user: PUBLIC_USER },
       orderBy: { id: 'asc' },
     });
   }
@@ -19,7 +24,7 @@ export class MembersService {
     await this.prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId } });
     return this.prisma.membership.create({
       data: { workspaceId, userId: dto.userId, role: dto.role },
-      include: { user: true },
+      include: { user: PUBLIC_USER },
     });
   }
 
@@ -41,7 +46,7 @@ export class MembersService {
     return this.prisma.membership.update({
       where: { id },
       data: { role: dto.role },
-      include: { user: true },
+      include: { user: PUBLIC_USER },
     });
   }
 

@@ -182,4 +182,15 @@ describe('Task board: on hold, comments and task files', () => {
       .expect(400);
     expect(storedFiles()).toHaveLength(0);
   });
+
+  it('lists members without private user fields', async () => {
+    await ctx.prisma.user.update({
+      where: { id: owner.id },
+      data: { widgetTokenHash: 'secret-hash', googleId: 'google-sub' },
+    });
+    const res = await as('member').get(`/api/workspaces/${wsA.id}/members`).expect(200);
+    expect(res.body).toHaveLength(3);
+    expect(JSON.stringify(res.body)).not.toMatch(/widgetTokenHash|secret-hash|googleId/);
+    expect(res.body[0].user).toMatchObject({ name: expect.any(String), email: expect.any(String) });
+  });
 });
