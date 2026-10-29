@@ -17,11 +17,15 @@ vi.mock('../lib/workspace', () => ({
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
+/** The board also loads the members of the workspace for the assignee avatars. */
+const members = (url: string) => (url.endsWith('/members') ? json([]) : undefined);
+
 function setup(tasks: Task[]) {
   const patches: { url: string; body: Record<string, unknown> }[] = [];
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
+      if (members(url)) return members(url)!;
       if (init?.method === 'PATCH') {
         const body = JSON.parse(String(init.body)) as Record<string, unknown>;
         patches.push({ url, body });
@@ -76,16 +80,18 @@ describe('Kanban board', () => {
   it('puts the card back and says so when saving fails', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (_url: string, init?: RequestInit) =>
-        init?.method === 'PATCH'
-          ? json({ message: 'Server is down' }, 500)
-          : json({
-              items: [makeTask({ id: 'a', title: 'Write report', status: 'TODO' })],
-              total: 1,
-              skip: 0,
-              limit: 100,
-              nextLink: null,
-            }),
+      vi.fn(
+        async (url: string, init?: RequestInit) =>
+          members(url) ??
+          (init?.method === 'PATCH'
+            ? json({ message: 'Server is down' }, 500)
+            : json({
+                items: [makeTask({ id: 'a', title: 'Write report', status: 'TODO' })],
+                total: 1,
+                skip: 0,
+                limit: 100,
+                nextLink: null,
+              })),
       ),
     );
     render(
@@ -108,7 +114,8 @@ describe('Kanban board', () => {
     const created: unknown[] = [];
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (_url: string, init?: RequestInit) => {
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (members(url)) return members(url)!;
         if (init?.method === 'POST') {
           const body = JSON.parse(String(init.body)) as Record<string, unknown>;
           created.push(body);
