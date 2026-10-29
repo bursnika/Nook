@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-export type ColumnName = 'To do' | 'In progress' | 'Done';
+export type ColumnName = 'Backlog' | 'In progress' | 'On hold' | 'Complete';
 
 /** Helpers for the Kanban board (apps/web/src/screens/tasks). */
 export class BoardScreen {

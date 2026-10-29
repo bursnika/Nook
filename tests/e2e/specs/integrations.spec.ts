@@ -132,7 +132,9 @@ test.describe('settings and integrations', () => {
     await expect(charts).toHaveCount(3);
     await expect(ann.page.getByRole('img', { name: /^Tasks finished per week/ })).toBeVisible();
     await expect(
-      ann.page.getByRole('img', { name: /^Tasks by status: To do \d+, In progress \d+, Done \d+/ }),
+      ann.page.getByRole('img', {
+        name: /^Tasks by status: Backlog \d+, In progress \d+, On hold \d+, Complete \d+/,
+      }),
     ).toBeVisible();
     await expect(ann.page.getByRole('img', { name: /^Tasks by priority/ })).toBeVisible();
     await expect(

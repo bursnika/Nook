@@ -7,9 +7,9 @@ test.describe('kanban board', () => {
     await ann.open('/tasks');
     const board = new BoardScreen(ann.page);
     await board.ready();
-    await expect(board.column('To do').getByText('Seed: to do')).toBeVisible();
+    await expect(board.column('Backlog').getByText('Seed: to do')).toBeVisible();
     await expect(board.column('In progress').getByText('Seed: in progress')).toBeVisible();
-    await expect(board.column('Done').getByText('Seed: done')).toBeVisible();
+    await expect(board.column('Complete').getByText('Seed: done')).toBeVisible();
     await expect(board.column('In progress').getByText('High')).toBeVisible();
   });
 
@@ -21,7 +21,7 @@ test.describe('kanban board', () => {
     await ann.open('/tasks');
     const board = new BoardScreen(ann.page);
     await board.ready();
-    await expect(board.column('To do').getByText(title)).toBeVisible();
+    await expect(board.column('Backlog').getByText(title)).toBeVisible();
 
     await board.dragCard(title, 'In progress');
     await expect(board.column('In progress').getByText(title)).toBeVisible();
@@ -30,7 +30,7 @@ test.describe('kanban board', () => {
     await ann.page.reload();
     await board.ready();
     await expect(board.column('In progress').getByText(title)).toBeVisible();
-    await expect(board.column('To do').getByText(title)).toHaveCount(0);
+    await expect(board.column('Backlog').getByText(title)).toHaveCount(0);
     await ann.api.deleteTask(task.id);
   });
 
@@ -41,13 +41,13 @@ test.describe('kanban board', () => {
     const board = new BoardScreen(ann.page);
     await board.ready();
 
-    await board.moveCardWithKeys(title, 'ArrowRight', 'Done');
-    await expect(board.column('Done').getByText(title)).toBeVisible();
-    await expect.poll(async () => (await ann.api.task(task.id)).status).toBe('DONE');
+    await board.moveCardWithKeys(title, 'ArrowRight', 'On hold');
+    await expect(board.column('On hold').getByText(title)).toBeVisible();
+    await expect.poll(async () => (await ann.api.task(task.id)).status).toBe('ON_HOLD');
 
     await ann.page.reload();
     await board.ready();
-    await expect(board.column('Done').getByText(title)).toBeVisible();
+    await expect(board.column('On hold').getByText(title)).toBeVisible();
     await ann.api.deleteTask(task.id);
   });
 
@@ -60,8 +60,10 @@ test.describe('kanban board', () => {
 
     await ann.page.getByRole('button', { name: `Move “${title}” to In progress` }).click();
     await expect(board.column('In progress').getByText(title)).toBeVisible();
-    await ann.page.getByRole('button', { name: `Move “${title}” to Done` }).click();
-    await expect(board.column('Done').getByText(title)).toBeVisible();
+    await ann.page.getByRole('button', { name: `Move “${title}” to On hold` }).click();
+    await expect(board.column('On hold').getByText(title)).toBeVisible();
+    await ann.page.getByRole('button', { name: `Move “${title}” to Complete` }).click();
+    await expect(board.column('Complete').getByText(title)).toBeVisible();
     await expect.poll(async () => (await ann.api.task(task.id)).status).toBe('DONE');
     await ann.api.deleteTask(task.id);
   });
@@ -100,7 +102,7 @@ test.describe('kanban board', () => {
     const renamed = `${title} (edited)`;
     await dialog.getByLabel('Title').fill(renamed);
     await dialog.getByLabel('Priority').selectOption('HIGH');
-    await dialog.getByLabel('Notes').fill('Written by the e2e test');
+    await dialog.getByLabel('Description').fill('Written by the e2e test');
     await dialog.getByRole('button', { name: 'Save' }).click();
     await expect(dialog).toBeHidden();
     await expect(board.card(renamed)).toContainText('Written by the e2e test');
@@ -123,6 +125,44 @@ test.describe('kanban board', () => {
       .toBe(404);
   });
 
+  test('an opened card is assigned, discussed and gets a file', async ({ ann, bob }) => {
+    const title = unique('Issue card');
+    const task = await ann.api.createTask({ title });
+    await ann.open('/tasks');
+    const board = new BoardScreen(ann.page);
+    await board.ready();
+
+    await ann.page.getByRole('button', { name: title, exact: true }).click();
+    const dialog = ann.page.getByRole('dialog', { name: 'Edit card' });
+    await dialog.getByRole('button', { name: 'Assign to me' }).click();
+    await dialog.getByLabel('Status').selectOption('ON_HOLD');
+
+    await dialog.getByLabel('Add a comment').fill('Waiting for the numbers');
+    await dialog.getByRole('button', { name: 'Comment', exact: true }).click();
+    await expect(dialog.getByText('Waiting for the numbers')).toBeVisible();
+
+    await dialog.getByLabel('Choose files to attach').setInputFiles({
+      name: 'numbers.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('42'),
+    });
+    await expect(dialog.getByRole('link', { name: 'numbers.txt' })).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog).toBeHidden();
+    const card = board.column('On hold').locator('.card').filter({ hasText: title });
+    await expect(card).toContainText('Comments: 1');
+    await expect(card).toContainText('Attachments: 1');
+    await expect(card.getByText(/Assigned to/)).toHaveCount(1);
+
+    // another member sees the comment and the file
+    const comments = await bob.api.get<{ body: string }[]>(
+      `/workspaces/${bob.api.workspaceId}/tasks/${task.id}/comments`,
+    );
+    expect(comments.map((c) => c.body)).toEqual(['Waiting for the numbers']);
+    await ann.api.deleteTask(task.id);
+  });
+
   test('New task dialog creates a card', async ({ ann }) => {
     const title = unique('Dialog new');
     await ann.open('/tasks');
@@ -133,7 +173,7 @@ test.describe('kanban board', () => {
     await dialog.getByLabel('Title').fill(title);
     await dialog.getByLabel('Status').selectOption('DONE');
     await dialog.getByRole('button', { name: 'Create' }).click();
-    await expect(board.column('Done').getByText(title)).toBeVisible();
+    await expect(board.column('Complete').getByText(title)).toBeVisible();
     const tasks = await ann.api.get<{ items: { id: string; title: string }[] }>(
       `/workspaces/${ann.api.workspaceId}/tasks?limit=100`,
     );
@@ -156,7 +196,7 @@ test.describe('kanban board', () => {
 
     // and the change of another person moves it too
     await bob.api.patch(`/workspaces/${bob.api.workspaceId}/tasks/${task.id}`, { status: 'DONE' });
-    await expect(board.column('Done').getByText(title)).toBeVisible();
+    await expect(board.column('Complete').getByText(title)).toBeVisible();
     await expect(board.column('In progress').getByText(title)).toHaveCount(0);
 
     await bob.api.deleteTask(task.id);
@@ -169,7 +209,7 @@ test.describe('kanban board', () => {
     await ann.open('/tasks');
     const board = new BoardScreen(ann.page);
     await board.ready();
-    const done = board.column('Done');
+    const done = board.column('Complete');
     await done.getByRole('button', { name: '+ Add card' }).click();
     const field = ann.page.getByLabel('New card in Done');
     await expect(field).toBeFocused();
