@@ -10,6 +10,14 @@ import { PublicService } from './public.service.js';
 export class PublicController {
   constructor(private readonly publicPages: PublicService) {}
 
+  /** The product landing page: what Nook is, with a way into the app. */
+  @Get()
+  @Header('Cache-Control', 'public, max-age=300')
+  @Render('public/home')
+  home() {
+    return this.publicPages.home();
+  }
+
   @Get('p/:slug')
   @Header('Cache-Control', 'public, max-age=60')
   @Render('public/page')

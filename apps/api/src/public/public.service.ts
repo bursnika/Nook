@@ -13,6 +13,36 @@ const absolute = (link: string | null) =>
 export class PublicService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** The product landing page at `/`, with its own SEO tags and structured data. */
+  home() {
+    const description =
+      'Nook is a pixel-cute planner: notes, a Jira-style Kanban board, a calendar with Google sync, live collaboration and an AI assistant, all in one retro desktop.';
+    const title = 'Nook, a pixel-cute planner for notes, tasks and your calendar';
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: SITE_NAME,
+      url: env.publicUrl,
+      description,
+      applicationCategory: 'ProductivityApplication',
+      operatingSystem: 'Any (web, installable as a PWA)',
+      offers: [
+        { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'USD' },
+        { '@type': 'Offer', name: 'Pro', priceCurrency: 'USD' },
+      ],
+    };
+    return {
+      layout: false,
+      title,
+      description,
+      canonical: `${env.publicUrl}/`,
+      siteName: SITE_NAME,
+      gaId: env.gaMeasurementId,
+      jsonLd: safeJson(jsonLd),
+      appUrl: '/app/',
+    };
+  }
+
   /** Everything the landing page needs, SEO tags included. Unpublished pages do not exist for the public. */
   async landing(slug: string) {
     const page = await this.prisma.page.findFirst({
@@ -68,16 +98,17 @@ export class PublicService {
       orderBy: { updatedAt: 'desc' },
       take: 50000,
     });
-    const urls = pages
-      .map(
+    const urls = [
+      `  <url><loc>${env.publicUrl}/</loc></url>`,
+      ...pages.map(
         (p) =>
           `  <url><loc>${env.publicUrl}/p/${p.slug}</loc><lastmod>${p.updatedAt.toISOString()}</lastmod></url>`,
-      )
-      .join('\n');
+      ),
+    ].join('\n');
     return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
   }
 
   robots() {
-    return `User-agent: *\nAllow: /p/\nDisallow: /admin\nDisallow: /api\nDisallow: /uploads\n\nSitemap: ${env.publicUrl}/sitemap.xml\n`;
+    return `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\nDisallow: /uploads\n\nSitemap: ${env.publicUrl}/sitemap.xml\n`;
   }
 }

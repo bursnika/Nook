@@ -28,6 +28,7 @@ export function configureApp(app: INestApplication) {
       { path: 'admin', method: RequestMethod.ALL },
       { path: 'admin/*path', method: RequestMethod.ALL },
       { path: 'graphql', method: RequestMethod.ALL },
+      { path: '/', method: RequestMethod.GET },
       { path: 'p/:slug', method: RequestMethod.GET },
       { path: 'sitemap.xml', method: RequestMethod.GET },
       { path: 'robots.txt', method: RequestMethod.GET },
@@ -115,12 +116,9 @@ function setupViews(app: NestExpressApplication) {
 function setupSpa(app: NestExpressApplication) {
   const server = app.getHttpAdapter().getInstance() as Express;
   const index = join(env.webDist, 'index.html');
-  if (!existsSync(index)) {
-    server.get('/', (_req, res) => res.redirect('/admin'));
-    return;
-  }
+  // the bare address is the landing page (PublicController); it links to /app/
+  if (!existsSync(index)) return;
   app.useStaticAssets(env.webDist, { prefix: '/app/', index: false, maxAge: '1h' });
-  server.get('/', (_req, res) => res.redirect('/app/'));
   server.get(['/app', '/app/*path'], (_req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(index);

@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{title}}</title>
+    <meta name="description" content="{{description}}" />
+    <link rel="canonical" href="{{canonical}}" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="{{siteName}}" />
+    <meta property="og:title" content="{{title}}" />
+    <meta property="og:description" content="{{description}}" />
+    <meta property="og:url" content="{{canonical}}" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="{{title}}" />
+    <meta name="twitter:description" content="{{description}}" />
+    <meta name="theme-color" content="#f9c6de" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23b8326f' d='M2 4h3v1h1v1h1V5h1V4h3v1h1v3h-1v1h-1v1h-1v1H9v1H8v1H7v-1H6v-1H5v-1H4V9H3V8H2z'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Tiny5&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/home.css" />
+    <script type="application/ld+json">{{{jsonLd}}}</script>
+    {{#if gaId}}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{gaId}}"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','{{gaId}}');</script>
+    {{/if}}
+  </head>
+  <body>
+    <a class="skip" href="#features">Skip to the features</a>
+
+    <header class="top">
+      <div class="wrap top__bar">
+        <a class="brand" href="/" aria-label="Nook, home">♡ Nook</a>
+        <nav class="top__nav" aria-label="Main">
+          <a href="#features">Features</a>
+          <a href="#board">Board</a>
+          <a href="#plans">Plans</a>
+        </nav>
+        <a class="btn btn--primary" href="{{appUrl}}">Open Nook</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero__copy">
+          <p class="eyebrow">Notes · tasks · calendar</p>
+          <h1 id="hero-title">Your whole plan, in one pixel-cute corner.</h1>
+          <p class="lead">
+            Nook is a planner that feels like a tiny retro desktop. Write notes in blocks, run your tasks on a
+            Jira-style board, see everything in your calendar and ask an assistant to plan the week.
+          </p>
+          <p class="hero__cta">
+            <a class="btn btn--primary btn--big" href="{{appUrl}}">Open Nook, it's free</a>
+            <a class="btn btn--big" href="#features">See what's inside</a>
+          </p>
+          <p class="hero__note">Sign in with Google. Installs on your phone as an app.</p>
+        </div>
+
+        <div class="hero__art" aria-hidden="true">
+          <div class="win win--pink">
+            <div class="win__bar"><span>♡ Today</span><span class="win__x">×</span></div>
+            <div class="win__body">
+              <p class="mini-title">Tuesday, 3 Nov</p>
+              <ul class="mini-list">
+                <li><span class="tick tick--on"></span> Send the report</li>
+                <li><span class="tick"></span> Review Bob's draft</li>
+                <li><span class="tick"></span> Dentist at 15:30</li>
+              </ul>
+              <div class="mini-bar"><i></i></div>
+              <p class="mini-meta">1 of 3 done</p>
+            </div>
+          </div>
+          <div class="win win--blue">
+            <div class="win__bar"><span>Break timer</span><span class="win__x">×</span></div>
+            <div class="win__body win__body--center"><span class="timer">24:59</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="section wrap" aria-labelledby="features-title">
+        <h2 id="features-title">Everything you plan with, in one place</h2>
+        <p class="section__lead">No tab juggling: notes, tasks and time live side by side and stay in sync.</p>
+        <ul class="cards">
+          <li class="card card--pink">
+            <h3>Block editor</h3>
+            <p>Headings, lists, to-dos, quotes and code. Type <kbd>/</kbd> for the menu, drag blocks to reorder, import and export Markdown.</p>
+          </li>
+          <li class="card card--blue">
+            <h3>Kanban like a tracker</h3>
+            <p>Backlog, In progress, On hold and Complete. Open a card to assign it, set a due date, attach files and talk it through in comments.</p>
+          </li>
+          <li class="card card--lav">
+            <h3>Calendar with Google</h3>
+            <p>Events and task deadlines in one view. Connect Google Calendar and Google Tasks and keep both in sync.</p>
+          </li>
+          <li class="card card--blue">
+            <h3>Live together</h3>
+            <p>See other people's cursors, edits and cards move in real time, on any connection: WebSocket, long poll or adaptive polling.</p>
+          </li>
+          <li class="card card--lav">
+            <h3>AI planning assistant</h3>
+            <p>Ask “what is due on Friday?” or “move the report to On hold”. The assistant reads and updates your tasks and shows each step.</p>
+          </li>
+          <li class="card card--pink">
+            <h3>Everywhere you are</h3>
+            <p>Installable app, home-screen widgets with today's plan, a Telegram bot with a morning digest and reminders before deadlines.</p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="board" class="section wrap" aria-labelledby="board-title">
+        <h2 id="board-title">A board that reads at a glance</h2>
+        <p class="section__lead">Drag cards between columns with the mouse, the keyboard or the arrow buttons. Everyone sees the move at once.</p>
+        <div class="board" aria-hidden="true">
+          <div class="col col--gray">
+            <h3>Backlog <b>2</b></h3>
+            <div class="ticket"><strong>Plan the trip</strong><span class="tag tag--low">Low</span></div>
+            <div class="ticket"><strong>Buy a gift</strong><span class="tag tag--mid">Medium</span></div>
+          </div>
+          <div class="col col--blue">
+            <h3>In progress <b>1</b></h3>
+            <div class="ticket">
+              <strong>Write the report</strong>
+              <span class="tag tag--high">High</span>
+              <span class="ticket__meta"><span class="ava ava--p">AL</span> 2 comments · 1 file</span>
+            </div>
+          </div>
+          <div class="col col--pink">
+            <h3>On hold <b>1</b></h3>
+            <div class="ticket">
+              <strong>Wait for the numbers</strong>
+              <span class="tag tag--mid">Medium</span>
+              <span class="ticket__meta"><span class="ava ava--b">BS</span> 1 comment</span>
+            </div>
+          </div>
+          <div class="col col--lav">
+            <h3>Complete <b>1</b></h3>
+            <div class="ticket ticket--done"><strong>Book the dentist</strong><span class="tag tag--low">Low</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="plans" class="section wrap" aria-labelledby="plans-title">
+        <h2 id="plans-title">Start free, grow when you need more</h2>
+        <div class="plans">
+          <div class="plan">
+            <h3>Free</h3>
+            <p class="plan__price">$0</p>
+            <ul>
+              <li>Pages, editor and Markdown import</li>
+              <li>Kanban board with comments and files</li>
+              <li>Calendar and Google sync</li>
+              <li>Live collaboration</li>
+            </ul>
+            <a class="btn btn--big" href="{{appUrl}}">Start free</a>
+          </div>
+          <div class="plan plan--pro">
+            <h3>Pro</h3>
+            <p class="plan__price">Everything in Free, plus</p>
+            <ul>
+              <li>Insights: charts and an activity map</li>
+              <li>AI planning assistant</li>
+              <li>Two-way Google Calendar sync</li>
+            </ul>
+            <a class="btn btn--primary btn--big" href="{{appUrl}}">Try Pro</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section wrap final" aria-labelledby="final-title">
+        <div class="win win--pink win--wide">
+          <div class="win__bar"><span>♡ Welcome</span><span class="win__x">×</span></div>
+          <div class="win__body win__body--center">
+            <h2 id="final-title">Ready to tidy up your week?</h2>
+            <p>It takes one click to sign in with Google. Your first workspace is waiting.</p>
+            <a class="btn btn--primary btn--big" href="{{appUrl}}">Open Nook</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap foot__bar">
+        <span>♡ Nook, a pixel-cute planner</span>
+        <nav aria-label="Footer">
+          <a href="#features">Features</a>
+          <a href="{{appUrl}}">Open the app</a>
+          <a href="/sitemap.xml">Sitemap</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

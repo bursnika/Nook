@@ -31,8 +31,11 @@ describe('Serving the React app', () => {
     expect(res.text).toContain('<div id="root">');
   });
 
-  it('sends the bare address and /app to the app', async () => {
-    await http().get('/').expect(302).expect('Location', '/app/');
+  it('serves the landing page on the bare address and sends /app to the app', async () => {
+    const home = await http().get('/').expect(200);
+    expect(home.headers['content-type']).toContain('text/html');
+    expect(home.text).toContain('<h1');
+    expect(home.text).toContain('href="/app/"');
     await http().get('/app').expect(301).expect('Location', '/app/');
   });
 
