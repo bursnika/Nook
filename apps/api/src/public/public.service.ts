@@ -109,6 +109,6 @@ export class PublicService {
   }
 
   robots() {
-    return `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\nDisallow: /uploads\n\nSitemap: ${env.publicUrl}/sitemap.xml\n`;
+    return `User-agent: *\nAllow: /$\nAllow: /p/\nDisallow: /admin\nDisallow: /api\nDisallow: /uploads\n\nSitemap: ${env.publicUrl}/sitemap.xml\n`;
   }
 }

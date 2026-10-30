@@ -13,7 +13,6 @@ env:
   # every job that touches the API needs a database url and a secret; these are throwaway CI values
   DATABASE_URL: postgresql://nook:nook@localhost:5432/nook?schema=public
   JWT_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
-  ADMIN_EMAILS: newman@nook.local
 
 jobs:
   check:

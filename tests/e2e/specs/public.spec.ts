@@ -67,6 +67,7 @@ test.describe('public landing pages (/p/:slug)', () => {
     expect(sitemap.headers()['content-type']).toContain('application/xml');
     const xml = await sitemap.text();
     expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
+    expect(xml).toContain(`<loc>${SITE}/</loc>`);
     expect(xml).toContain(`<loc>${SITE}/p/${PUBLIC_SLUG}</loc>`);
     expect(xml).toMatch(/<lastmod>\d{4}-\d{2}-\d{2}T[\d:.]+Z<\/lastmod>/);
 
@@ -75,6 +76,7 @@ test.describe('public landing pages (/p/:slug)', () => {
     expect(robots.headers()['content-type']).toContain('text/plain');
     const text = await robots.text();
     expect(text).toContain('Allow: /p/');
+    expect(text).toContain('Allow: /$');
     expect(text).toContain('Disallow: /admin');
     expect(text).toContain(`Sitemap: ${SITE}/sitemap.xml`);
   });
