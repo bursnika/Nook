@@ -43,4 +43,27 @@ describe('api', () => {
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ status: 403, message: 'Nope', body: { feature: 'insights' } });
   });
+
+  it('refreshes an expired session once and repeats the request', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(json({ message: 'Sign in required' }, 401))
+      .mockResolvedValueOnce(json({ accessToken: 'new' }))
+      .mockResolvedValueOnce(json({ token: 'nkw_1' }));
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await api('/widget/token', { method: 'POST' })).toEqual({ token: 'nkw_1' });
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      '/api/widget/token',
+      '/api/auth/refresh',
+      '/api/widget/token',
+    ]);
+  });
+
+  it('sends the person to Google when the session cannot be refreshed', async () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { pathname: '/app/w/1/settings', search: '', assign });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ message: 'Sign in required' }, 401)));
+    await expect(api('/widget/token')).rejects.toBeInstanceOf(ApiError);
+    expect(assign).toHaveBeenCalledWith('/api/auth/google?returnTo=%2Fapp%2Fw%2F1%2Fsettings');
+  });
 });

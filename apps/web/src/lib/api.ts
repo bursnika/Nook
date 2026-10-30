@@ -19,21 +19,48 @@ export interface Paged<T> {
   nextLink: string | null;
 }
 
+/** One refresh at a time: several requests that hit an expired access token share the same rotation. */
+let refreshing: Promise<boolean> | undefined;
+
+/** The access token is short-lived; the refresh cookie rotates it. False means the session is really over. */
+function refreshSession(): Promise<boolean> {
+  refreshing ??= fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' })
+    .then((response) => response.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshing = undefined;
+    });
+  return refreshing;
+}
+
+function sendToLogin(): never {
+  const back = window.location.pathname + window.location.search;
+  window.location.assign(`/api/auth/google?returnTo=${encodeURIComponent(back)}`);
+  throw new ApiError(401, 'Sign in required');
+}
+
 export async function api<T = unknown>(
   path: string,
   init: RequestInit & { json?: unknown } = {},
 ): Promise<T> {
   const { json, headers, ...rest } = init;
-  const response = await fetch(`/api${path}`, {
-    credentials: 'same-origin',
-    ...rest,
-    headers: {
-      Accept: 'application/json',
-      ...(json === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...headers,
-    },
-    body: json === undefined ? rest.body : JSON.stringify(json),
-  });
+  const send = () =>
+    fetch(`/api${path}`, {
+      credentials: 'same-origin',
+      ...rest,
+      headers: {
+        Accept: 'application/json',
+        ...(json === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...headers,
+      },
+      body: json === undefined ? rest.body : JSON.stringify(json),
+    });
+  let response = await send();
+  if (response.status === 401 && !path.startsWith('/auth/')) {
+    // an expired access token: rotate the session once and repeat the request
+    if (await refreshSession()) response = await send();
+    if (response.status === 401) sendToLogin();
+  }
   if (response.status === 204) return undefined as T;
   const text = await response.text();
   const body: unknown = text ? safeParse(text) : undefined;
