@@ -55,13 +55,18 @@ export const env = {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackUrl:
-      process.env.GOOGLE_CALLBACK_URL ?? 'http://localhost:3000/api/auth/google/callback',
+      process.env.GOOGLE_CALLBACK_URL ??
+      (process.env.RENDER_EXTERNAL_URL
+        ? `${process.env.RENDER_EXTERNAL_URL}/api/auth/google/callback`
+        : 'http://localhost:3000/api/auth/google/callback'),
   },
   /** Public address of the site: canonical links, Open Graph and the sitemap are built from it. */
-  publicUrl: (process.env.PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 3000}`).replace(
-    /\/+$/,
-    '',
-  ),
+  // on Render the service's own address is known at runtime (RENDER_EXTERNAL_URL)
+  publicUrl: (
+    process.env.PUBLIC_URL ??
+    process.env.RENDER_EXTERNAL_URL ??
+    `http://localhost:${process.env.PORT ?? 3000}`
+  ).replace(/\/+$/, ''),
   /** GA4 measurement id (G-XXXX); the analytics snippet is only rendered when it is set. */
   gaMeasurementId: process.env.GA_MEASUREMENT_ID || undefined,
   telegram: {

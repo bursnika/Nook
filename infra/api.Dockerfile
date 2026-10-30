@@ -57,3 +57,15 @@ EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
   CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
 CMD ["node", "apps/api/dist/src/main.js"]
+
+# Render builds the last stage of the file, so keep this one at the bottom (CI and compose name their targets).
+# Like `runtime`, but with the Prisma CLI so the container applies pending migrations itself before it starts:
+# Render runs pre-deploy commands only on paid plans.
+FROM build AS render
+ENV NODE_ENV=production \
+    UPLOAD_DIR=/data/uploads
+COPY --from=web-build /repo/apps/web/dist apps/web/dist
+RUN mkdir -p /data/uploads && chown -R node:node /data
+USER node
+EXPOSE 10000
+CMD ["sh", "-c", "(cd apps/api && ./node_modules/.bin/prisma migrate deploy) && exec node apps/api/dist/src/main.js"]
