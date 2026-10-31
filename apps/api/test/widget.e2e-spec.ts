@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { env } from '../src/env.js';
 import { bearer } from './auth-helpers.js';
 import { createTestApp, resetDb, type TestApp } from './helpers.js';
 
@@ -97,6 +98,24 @@ describe('Widget token and today endpoint', () => {
     expect(byHeader.body.counts).toEqual({ tasks: 2, events: 1 });
     const byQuery = await http().get(`/api/widget/today?token=${token}`).expect(200);
     expect(byQuery.body.counts).toEqual(byHeader.body.counts);
+  });
+
+  it('shows a platform administrator the workspaces the app shows them, members or not', async () => {
+    const token = await issue();
+    const other = await ctx.prisma.workspace.create({ data: { name: 'Other', slug: 'other' } });
+    await ctx.prisma.task.create({
+      data: { workspaceId: other.id, title: 'Elsewhere', dueDate: new Date() },
+    });
+    const plain = await http().get(`/api/widget/today?token=${token}`).expect(200);
+    expect(plain.body.counts.tasks).toBe(0);
+
+    env.adminEmails.add('w@example.com');
+    try {
+      const admin = await http().get(`/api/widget/today?token=${token}`).expect(200);
+      expect(admin.body.tasks.map((t: { title: string }) => t.title)).toEqual(['Elsewhere']);
+    } finally {
+      env.adminEmails.delete('w@example.com');
+    }
   });
 
   it('refuses missing, wrong and ordinary access tokens', async () => {

@@ -26,14 +26,25 @@ export const dayBounds = (day: string) => ({
 /**
  * What is on a person's plate for one UTC day, across every workspace they belong to: open tasks due that
  * day or earlier (overdue ones keep showing) and the day's events. Shared by the Telegram bot and the widgets.
+ * A platform administrator sees every workspace in the app without being a member, so `everywhere` gives the
+ * same view here.
  */
-export async function planFor(prisma: PrismaService, userId: string, day: string) {
+export async function planFor(
+  prisma: PrismaService,
+  userId: string,
+  day: string,
+  everywhere = false,
+) {
   const { from, to } = dayBounds(day);
-  const memberships = await prisma.membership.findMany({
-    where: { userId },
-    select: { workspace: { select: { id: true, name: true } } },
-  });
-  const names = new Map(memberships.map((m) => [m.workspace.id, m.workspace.name]));
+  const workspaces = everywhere
+    ? await prisma.workspace.findMany({ select: { id: true, name: true } })
+    : (
+        await prisma.membership.findMany({
+          where: { userId },
+          select: { workspace: { select: { id: true, name: true } } },
+        })
+      ).map((m) => m.workspace);
+  const names = new Map(workspaces.map((w) => [w.id, w.name]));
   const workspaceId = { in: [...names.keys()] };
   const [tasks, events] = await Promise.all([
     prisma.task.findMany({

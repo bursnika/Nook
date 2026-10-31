@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { env } from '../env.js';
 import { dayOf, planFor } from './today.js';
 
 /** Widget tokens start with this, so a leaked one is recognisable in logs and secret scanners. */
@@ -45,7 +46,12 @@ export class WidgetService {
 
   async today(userId: string, now = new Date()) {
     const day = dayOf(now);
-    const { tasks, events } = await planFor(this.prisma, userId, day);
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    const everywhere = !!user && env.adminEmails.has(user.email.toLowerCase());
+    const { tasks, events } = await planFor(this.prisma, userId, day, everywhere);
     return {
       date: day,
       generatedAt: now.toISOString(),
