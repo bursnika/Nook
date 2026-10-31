@@ -171,7 +171,7 @@ export function AppShell() {
             type="button"
             className="btn taskbar__task"
             aria-pressed={!minimized}
-            onClick={() => setMinimized((value) => !value)}
+            onClick={() => setMinimized(false)}
           >
             {title}
           </button>
