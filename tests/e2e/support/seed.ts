@@ -26,7 +26,6 @@ export const PUBLIC_INTRO = 'Nook pages can be published for everyone with the l
 const FEATURE_FLAGS = [
   { key: 'insights', description: 'Insights page with productivity statistics' },
   { key: 'google-two-way-sync', description: 'Two-way Google Calendar synchronisation' },
-  { key: 'ai-assistant', description: 'AI planning assistant' },
 ];
 
 export function connect(): PrismaClient {

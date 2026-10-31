@@ -11,7 +11,6 @@ import WorkspacePicker from './screens/WorkspacePicker';
 const TasksPage = lazy(() => import('./screens/TasksPage'));
 const CalendarPage = lazy(() => import('./screens/CalendarPage'));
 const InsightsPage = lazy(() => import('./screens/InsightsPage'));
-const AssistantPage = lazy(() => import('./assistant/AssistantPage'));
 const SettingsPage = lazy(() => import('./screens/SettingsPage'));
 const PagesIndex = lazy(() => import('./screens/PagesIndex'));
 const EditorPage = lazy(() => import('./editor/EditorPage'));
@@ -52,7 +51,6 @@ export function App() {
           <Route path="pages" element={<PagesIndex />} />
           <Route path="pages/:pageId" element={<EditorPage />} />
           <Route path="insights" element={<InsightsPage />} />
-          <Route path="assistant" element={<AssistantPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<WorkspaceNotFound />} />
         </Route>

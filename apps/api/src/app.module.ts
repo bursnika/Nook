@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { AdminModule } from './admin/admin.module.js';
-import { AssistantModule } from './assistant/assistant.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { AttachmentsModule } from './attachments/attachments.module.js';
 import { BlocksModule } from './blocks/blocks.module.js';
@@ -42,7 +41,6 @@ import { WorkspacesModule } from './workspaces/workspaces.module.js';
     FeaturesModule,
     OverviewModule,
     GoogleCalendarModule,
-    AssistantModule,
     AdminModule,
     PublicModule,
     RealtimeModule,

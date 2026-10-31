@@ -34,8 +34,6 @@ services:
         sync: false
       - key: TELEGRAM_BOT_USERNAME
         sync: false
-      - key: ANTHROPIC_API_KEY
-        sync: false
       - key: AZURE_STORAGE_CONNECTION_STRING
         sync: false
 

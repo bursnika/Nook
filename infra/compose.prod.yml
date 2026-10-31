@@ -106,9 +106,6 @@ services:
       GOOGLE_SYNC_EVERY_MINUTES: ${GOOGLE_SYNC_EVERY_MINUTES:-30}
       AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}
       AZURE_STORAGE_CONTAINER: ${AZURE_STORAGE_CONTAINER:-nook-uploads}
-      # Optional: AI planning assistant (Pro); without a key it answers 503 (docs/c21-assistant.md)
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5-5}
     volumes:
       - uploads:/data/uploads
     depends_on:
