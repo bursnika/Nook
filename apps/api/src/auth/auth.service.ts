@@ -110,7 +110,7 @@ export class AuthService {
           select: {
             id: true,
             role: true,
-            workspace: { select: { id: true, name: true, slug: true, plan: true } },
+            workspace: { select: { id: true, name: true, slug: true } },
           },
           orderBy: { id: 'asc' },
         },

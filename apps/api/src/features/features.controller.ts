@@ -1,47 +1,26 @@
-import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { IsEnum } from 'class-validator';
-import { RequireFeature, Roles } from '../auth/decorators.js';
+import { RequireFeature } from '../auth/decorators.js';
 import { WorkspaceParams } from '../common/params.js';
-import { Plan, Role } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { WorkspacesService } from '../workspaces/workspaces.service.js';
 import { FeaturesService } from './features.service.js';
 import { activityByDay, insightsSince, weeklyCompleted } from './insights.js';
-
-class ChangePlanDto {
-  @IsEnum(Plan)
-  plan!: Plan;
-}
 
 @ApiTags('features')
 @Controller('workspaces/:workspaceId')
 export class FeaturesController {
   constructor(
     private readonly features: FeaturesService,
-    private readonly workspaces: WorkspacesService,
     private readonly prisma: PrismaService,
   ) {}
 
-  /** What the workspace can use right now, so the UI can show or hide Pro-only parts. */
+  /** Which features are switched on, so the UI can hide the ones an administrator turned off. */
   @Get('features')
-  async list(@Param() { workspaceId }: WorkspaceParams) {
-    const [workspace, features] = await Promise.all([
-      this.workspaces.get(workspaceId),
-      this.features.list(workspaceId),
-    ]);
-    return { plan: workspace.plan, features };
+  async list() {
+    return { features: await this.features.list() };
   }
 
-  /** Stand-in for billing: owners switch the plan themselves. */
-  @Post('plan')
-  @HttpCode(200)
-  @Roles(Role.OWNER)
-  changePlan(@Param() { workspaceId }: WorkspaceParams, @Body() { plan }: ChangePlanDto) {
-    return this.workspaces.setPlan(workspaceId, plan);
-  }
-
-  /** The Pro-only Insights page: how work is going in this workspace. */
+  /** The Insights page: how work is going in this workspace. */
   @Get('insights')
   @RequireFeature('insights')
   async insights(@Param() { workspaceId }: WorkspaceParams) {

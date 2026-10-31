@@ -278,7 +278,6 @@ export async function createTestApp(
 const FEATURE_FLAGS = [
   { key: 'insights', description: 'Insights page with productivity statistics' },
   { key: 'google-two-way-sync', description: 'Two-way Google Calendar synchronisation' },
-  { key: 'ai-assistant', description: 'AI planning assistant' },
 ];
 
 /**
@@ -295,7 +294,7 @@ export async function resetDb(prisma: PrismaService) {
     await prisma.featureFlag.upsert({
       where: { key: flag.key },
       update: { enabled: true },
-      create: { ...flag, minPlan: 'PRO', enabled: true },
+      create: { ...flag, enabled: true },
     });
   }
 }

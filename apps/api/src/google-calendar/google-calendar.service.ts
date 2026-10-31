@@ -77,9 +77,7 @@ export class GoogleCalendarService {
       connected: connection !== null,
       tasksGranted: connection ? grants(connection.scope, TASKS_SCOPE) : false,
       editGranted: connection ? grants(connection.scope, EVENTS_WRITE_SCOPE) : false,
-      twoWay: workspaceId
-        ? (await this.features.check(workspaceId, 'google-two-way-sync')).available
-        : false,
+      twoWay: workspaceId ? (await this.features.check('google-two-way-sync')).available : false,
       lastSyncAt: connection?.lastSyncAt ?? null,
     };
   }

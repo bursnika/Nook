@@ -1,28 +1,13 @@
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
   <div>
-    <h1 class="mb-1">Team &amp; plan</h1>
-    <span class="text-muted">{{ws.name}} · {{ws.slug}}</span> · <span class="chip chip-{{lower ws.plan}}">{{ws.plan}}</span>
+    <h1 class="mb-1">Team</h1>
+    <span class="text-muted">{{ws.name}} · {{ws.slug}}</span>
   </div>
   <div class="d-flex gap-2">
     {{#if canManage}}<a class="btn btn-outline-primary" href="/admin/workspaces/{{ws.id}}/edit">Edit</a>{{/if}}
     {{#if isOwner}}
       <form method="post" action="/admin/workspaces/{{ws.id}}/delete" data-confirm="Delete this workspace with all its pages, tasks and files?">
         <button class="btn btn-outline-danger" type="submit">Delete</button>
-      </form>
-    {{/if}}
-  </div>
-</div>
-
-<div class="card p-3 mb-4">
-  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <div>
-      <h2 class="h5 mb-1">Plan: {{ws.plan}}</h2>
-      <div class="text-muted small">Pro unlocks Insights, two-way Google Calendar sync and the AI assistant.</div>
-    </div>
-    {{#if isOwner}}
-      <form method="post" action="/admin/workspaces/{{ws.id}}/plan">
-        <input type="hidden" name="plan" value="{{otherPlan}}">
-        <button class="btn btn-primary" type="submit">Switch to {{otherPlan}}</button>
       </form>
     {{/if}}
   </div>

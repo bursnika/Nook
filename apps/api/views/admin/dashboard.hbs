@@ -13,12 +13,12 @@
 </div>
 <div class="table-frame">
   <table class="table table-hover align-middle">
-    <thead><tr><th>Name</th><th>Slug</th><th>Plan</th></tr></thead>
+    <thead><tr><th>Name</th><th>Slug</th></tr></thead>
     <tbody>
       {{#each recent}}
-        <tr><td><a href="/admin/workspaces/{{id}}">{{name}}</a></td><td>{{slug}}</td><td><span class="chip chip-{{lower plan}}">{{plan}}</span></td></tr>
+        <tr><td><a href="/admin/workspaces/{{id}}">{{name}}</a></td><td>{{slug}}</td></tr>
       {{else}}
-        <tr><td colspan="3" class="text-muted p-4">No workspaces yet.</td></tr>
+        <tr><td colspan="2" class="text-muted p-4">No workspaces yet.</td></tr>
       {{/each}}
     </tbody>
   </table>

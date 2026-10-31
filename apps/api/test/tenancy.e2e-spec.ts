@@ -99,7 +99,6 @@ describe('Tenants, roles, invitations and feature flags', () => {
           { title: 'p', startsAt: '2026-01-01T10:00:00Z', endsAt: '2026-01-01T11:00:00Z' },
         ],
         ['post', `${A()}/invitations`, { email: 'x@example.com' }],
-        ['post', `${A()}/plan`, { plan: 'PRO' }],
         ['patch', A(), { name: 'hacked' }],
         ['patch', `${A()}/pages/${pageA.id}`, { title: 'hacked' }],
         ['delete', `${A()}/pages/${pageA.id}`],
@@ -112,7 +111,7 @@ describe('Tenants, roles, invitations and feature flags', () => {
         expect(res.status, `${method.toUpperCase()} ${url}`).toBe(404);
       }
       expect(await ctx.prisma.workspace.findUniqueOrThrow({ where: { id: wsA.id } })).toMatchObject(
-        { name: 'Alpha', plan: 'FREE' },
+        { name: 'Alpha' },
       );
       expect(await ctx.prisma.page.findMany({ where: { workspaceId: wsA.id } })).toHaveLength(1);
       expect(await ctx.prisma.task.count()).toBe(0);
@@ -152,11 +151,10 @@ describe('Tenants, roles, invitations and feature flags', () => {
       await as(tok.platform).get(`${A()}/pages/${pageA.id}`).expect(200);
     });
 
-    it('treats a creator as the owner of a new workspace and refuses a self-chosen plan', async () => {
+    it('treats a creator as the owner of a new workspace and refuses unknown fields', async () => {
       const res = await as(tok.outsider)
         .post('/api/workspaces', { name: 'Mine', slug: 'mine' })
         .expect(201);
-      expect(res.body.plan).toBe('FREE');
       expect(
         (
           await ctx.prisma.membership.findFirstOrThrow({
@@ -202,9 +200,6 @@ describe('Tenants, roles, invitations and feature flags', () => {
         (t, a) => as(t).post(`${a}/invitations`, { email: 'n@example.com' }),
         201,
       ],
-      ['member', 'switch the plan', (t, a) => as(t).post(`${a}/plan`, { plan: 'PRO' }), 403],
-      ['admin', 'switch the plan', (t, a) => as(t).post(`${a}/plan`, { plan: 'PRO' }), 403],
-      ['owner', 'switch the plan', (t, a) => as(t).post(`${a}/plan`, { plan: 'PRO' }), 200],
       ['member', 'delete the workspace', (t, a) => as(t).delete(a), 403],
       ['admin', 'delete the workspace', (t, a) => as(t).delete(a), 403],
       ['owner', 'delete the workspace', (t, a) => as(t).delete(a), 204],
@@ -364,51 +359,28 @@ describe('Tenants, roles, invitations and feature flags', () => {
     });
   });
 
-  describe('feature flags and plans', () => {
+  describe('feature flags', () => {
     const features = async (token = tok.member) =>
       (await as(token).get(`${A()}/features`).expect(200)).body;
 
-    it('locks Pro features on the Free plan with a machine-readable reason', async () => {
-      const res = await as(tok.member).get(`${A()}/insights`).expect(403);
-      expect(res.body).toMatchObject({
-        code: 'FEATURE_NOT_AVAILABLE',
-        feature: 'insights',
-        requiredPlan: 'PRO',
-      });
-      expect(res.body.message).toContain('PRO');
-
+    it('gives every member every feature while the flags are on', async () => {
       const list = await features();
-      expect(list.plan).toBe('FREE');
+      expect(list.plan).toBeUndefined();
       expect(list.features.map((f: { key: string }) => f.key)).toEqual([
-        'ai-assistant',
         'google-two-way-sync',
         'insights',
       ]);
-      expect(list.features.every((f: { available: boolean }) => f.available === false)).toBe(true);
-    });
-
-    it('unlocks them when an owner switches to Pro, and locks them again on downgrade', async () => {
-      await as(tok.owner).post(`${A()}/plan`, { plan: 'PRO' }).expect(200);
-      expect((await features()).features.every((f: { available: boolean }) => f.available)).toBe(
-        true,
-      );
+      expect(list.features.every((f: { available: boolean }) => f.available)).toBe(true);
       await as(tok.member).get(`${A()}/insights`).expect(200);
-
-      await as(tok.owner).post(`${A()}/plan`, { plan: 'FREE' }).expect(200);
-      await as(tok.member).get(`${A()}/insights`).expect(403);
-      await as(tok.owner).post(`${A()}/plan`, { plan: 'GOLD' }).expect(400);
+      await as(tok.outsider).get(`/api/workspaces/${wsB.id}/insights`).expect(200);
     });
 
-    it('keeps plans per workspace', async () => {
-      await as(tok.owner).post(`${A()}/plan`, { plan: 'PRO' }).expect(200);
-      await as(tok.outsider).get(`/api/workspaces/${wsB.id}/insights`).expect(403);
-    });
-
-    it('can switch a feature off for everybody, whatever the plan', async () => {
-      await as(tok.owner).post(`${A()}/plan`, { plan: 'PRO' }).expect(200);
+    it('can switch a feature off for everybody, with a machine-readable reason', async () => {
       await ctx.prisma.featureFlag.update({ where: { key: 'insights' }, data: { enabled: false } });
       try {
         const res = await as(tok.owner).get(`${A()}/insights`).expect(403);
+        expect(res.body).toMatchObject({ code: 'FEATURE_NOT_AVAILABLE', feature: 'insights' });
+        expect(res.body.requiredPlan).toBeUndefined();
         expect(res.body.message).toContain('switched off');
         expect(
           (await features()).features.find((f: { key: string }) => f.key === 'insights').available,
@@ -422,13 +394,12 @@ describe('Tenants, roles, invitations and feature flags', () => {
       await as(tok.owner).get(`${A()}/insights`).expect(200);
     });
 
-    it('does not reveal the plan to non-members: they get 404 before any feature check', async () => {
+    it('does not reveal features to non-members: they get 404 before any feature check', async () => {
       await as(tok.outsider).get(`${A()}/insights`).expect(404);
       await http().get(`${A()}/insights`).expect(401);
     });
 
     it('computes insights from the workspace data only', async () => {
-      await as(tok.owner).post(`${A()}/plan`, { plan: 'PRO' }).expect(200);
       const day = 24 * 60 * 60 * 1000;
       await ctx.prisma.task.createMany({
         data: [
@@ -512,7 +483,6 @@ describe('Tenants, roles, invitations and feature flags', () => {
       expect(asMember.text).not.toContain('Switch to');
       const asOwner = await page(tok.owner, `/admin/workspaces/${wsA.id}/team`).expect(200);
       expect(asOwner.text).toContain('Create invitation');
-      expect(asOwner.text).toContain('Switch to PRO');
       expect(asOwner.text).not.toContain('Add any user'); // support tool for platform admins
     });
 
@@ -532,24 +502,6 @@ describe('Tenants, roles, invitations and feature flags', () => {
         .type('form')
         .send({ role: 'ADMIN' })
         .expect(403);
-    });
-
-    it('switches the plan through the form, for owners only', async () => {
-      await http()
-        .post(`/admin/workspaces/${wsA.id}/plan`)
-        .set('Authorization', tok.admin)
-        .type('form')
-        .send({ plan: 'PRO' })
-        .expect(403);
-      await http()
-        .post(`/admin/workspaces/${wsA.id}/plan`)
-        .set('Authorization', tok.owner)
-        .type('form')
-        .send({ plan: 'PRO' })
-        .expect(302);
-      expect((await ctx.prisma.workspace.findUniqueOrThrow({ where: { id: wsA.id } })).plan).toBe(
-        'PRO',
-      );
     });
 
     it('creates content as the signed-in user', async () => {

@@ -4,7 +4,7 @@ import type { Request, Response } from 'express';
 import type { AuthUser } from '../auth/auth.types.js';
 import { CurrentUser, PlatformAdminOnly, Roles } from '../auth/decorators.js';
 import { WorkspaceParams } from '../common/params.js';
-import { Plan, Role } from '../generated/prisma/enums.js';
+import { Role } from '../generated/prisma/enums.js';
 import { CreateInvitationDto } from '../invitations/invitation.dto.js';
 import { InvitationsService } from '../invitations/invitations.service.js';
 import { AddMemberDto, UpdateMemberDto } from '../members/member.dto.js';
@@ -39,11 +39,6 @@ class InvitationParams extends WorkspaceParams {
 class RoleForm extends UpdateMemberDto {
   @IsEnum(Role)
   declare role: Role;
-}
-
-class PlanForm {
-  @IsEnum(Plan)
-  plan!: Plan;
 }
 
 @AdminController('admin/workspaces')
@@ -118,7 +113,7 @@ export class WorkspacesAdminController {
     });
   }
 
-  /** Members, invitations and the plan: the part of a workspace people rarely need. */
+  /** Members and invitations: the part of a workspace people rarely need. */
   @Get(':workspaceId/team')
   @Render('admin/workspaces/team')
   async team(
@@ -174,18 +169,6 @@ export class WorkspacesAdminController {
   async remove(@Param() { workspaceId }: WorkspaceParams, @Res() res: Response) {
     await this.workspaces.remove(workspaceId);
     return res.redirect('/admin/workspaces?flash=deleted');
-  }
-
-  @Post(':workspaceId/plan')
-  @Roles(Role.OWNER)
-  async changePlan(
-    @Param() { workspaceId }: WorkspaceParams,
-    @Body() body: Record<string, unknown>,
-    @Res() res: Response,
-  ) {
-    const { value, ok } = await parseForm(PlanForm, body);
-    if (ok) await this.workspaces.setPlan(workspaceId, value.plan);
-    return res.redirect(`/admin/workspaces/${workspaceId}/team?flash=updated`);
   }
 
   // ---- members -------------------------------------------------------------------------------
@@ -316,7 +299,6 @@ export class WorkspacesAdminController {
       canManage,
       isOwner: role === Role.OWNER,
       isPlatformAdmin: req.user?.isPlatformAdmin === true,
-      otherPlan: workspace.plan === Plan.PRO ? Plan.FREE : Plan.PRO,
       members: members.map((m) => ({
         ...m,
         roles: enumOptions(Object.values(Role), m.role),

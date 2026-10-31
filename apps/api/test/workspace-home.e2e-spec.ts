@@ -500,17 +500,10 @@ describe('Workspace home: overview, calendar and notes', () => {
   });
 
   describe('the team page', () => {
-    it('keeps members, invitations and the plan, and redirects back to itself', async () => {
+    it('keeps members and invitations', async () => {
       const team = await get(`/admin/workspaces/${wsId}/team`).expect(200);
       expect(team.text).toContain('Create invitation');
-      expect(team.text).toContain('Switch to PRO');
-      const res = await http()
-        .post(`/admin/workspaces/${wsId}/plan`)
-        .set('Authorization', tok.owner)
-        .type('form')
-        .send({ plan: 'PRO' })
-        .expect(302);
-      expect(res.headers.location).toBe(`/admin/workspaces/${wsId}/team?flash=updated`);
+      expect(team.text).not.toContain('Switch to');
     });
   });
 });
@@ -528,10 +521,10 @@ describe('Insights data', () => {
 
   it('returns weekly completions, priorities and a daily activity series', async () => {
     const ws = await ctx.prisma.workspace.create({
-      data: { name: 'I', slug: 'insights', plan: 'PRO' },
+      data: { name: 'I', slug: 'insights' },
     });
     const other = await ctx.prisma.workspace.create({
-      data: { name: 'O', slug: 'insights-o', plan: 'PRO' },
+      data: { name: 'O', slug: 'insights-o' },
     });
     const now = Date.now();
     await ctx.prisma.task.createMany({

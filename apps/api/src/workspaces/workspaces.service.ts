@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
-import type { Plan } from '../generated/prisma/enums.js';
 import type { AuthUser } from '../auth/auth.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateWorkspaceDto, ListWorkspacesQuery, UpdateWorkspaceDto } from './workspace.dto.js';
@@ -44,10 +43,6 @@ export class WorkspacesService {
     return this.prisma.workspace.create({
       data: { ...dto, memberships: { create: { userId: ownerId, role: 'OWNER' } } },
     });
-  }
-
-  setPlan(id: string, plan: Plan) {
-    return this.prisma.workspace.update({ where: { id }, data: { plan } });
   }
 
   update(id: string, dto: UpdateWorkspaceDto) {

@@ -99,7 +99,6 @@ describe('Admin (MVC) pages', () => {
       expect((await http().get(created.headers.location).expect(200)).text).toContain(
         'Created successfully.',
       );
-      expect((await ctx.prisma.workspace.findUniqueOrThrow({ where: { id } })).plan).toBe('FREE');
 
       await http()
         .post(`/admin/workspaces/${id}`)
@@ -108,7 +107,6 @@ describe('Admin (MVC) pages', () => {
         .expect(302);
       expect(await ctx.prisma.workspace.findUniqueOrThrow({ where: { id } })).toMatchObject({
         name: 'University',
-        plan: 'FREE',
       });
 
       await http().post(`/admin/workspaces/${id}/delete`).expect(302);

@@ -13,22 +13,22 @@ describe('Workspaces API', () => {
   afterAll(() => app.close());
   beforeEach(() => resetDb(ctx.prisma));
 
-  it('creates a workspace on the FREE plan by default', async () => {
+  it('creates a workspace', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/workspaces')
       .send({ name: 'Uni', slug: 'uni' })
       .expect(201);
-    expect(res.body).toMatchObject({ name: 'Uni', slug: 'uni', plan: 'FREE' });
+    expect(res.body).toMatchObject({ name: 'Uni', slug: 'uni' });
   });
 
-  it('validates slug format and plan', async () => {
+  it('validates the slug format and refuses unknown fields', async () => {
     await request(app.getHttpServer())
       .post('/api/workspaces')
       .send({ name: 'Bad', slug: 'Not Valid!' })
       .expect(400);
     await request(app.getHttpServer())
       .post('/api/workspaces')
-      .send({ name: 'Bad', slug: 'ok', plan: 'PRO' }) // the plan cannot be chosen at creation
+      .send({ name: 'Bad', slug: 'ok', plan: 'PRO' }) // there are no plans any more
       .expect(400);
   });
 
@@ -38,21 +38,11 @@ describe('Workspaces API', () => {
     await request(app.getHttpServer()).post('/api/workspaces').send(body).expect(409);
   });
 
-  it('changes the plan only through the plan endpoint and deletes the workspace', async () => {
+  it('deletes the workspace', async () => {
     const { body } = await request(app.getHttpServer())
       .post('/api/workspaces')
       .send({ name: 'Uni', slug: 'uni' })
       .expect(201);
-    // the generic update must not be a back door to a paid plan
-    await request(app.getHttpServer())
-      .patch(`/api/workspaces/${body.id}`)
-      .send({ plan: 'PRO' })
-      .expect(400);
-    const upgraded = await request(app.getHttpServer())
-      .post(`/api/workspaces/${body.id}/plan`)
-      .send({ plan: 'PRO' })
-      .expect(200);
-    expect(upgraded.body.plan).toBe('PRO');
     await request(app.getHttpServer()).delete(`/api/workspaces/${body.id}`).expect(204);
     await request(app.getHttpServer()).get(`/api/workspaces/${body.id}`).expect(404);
   });

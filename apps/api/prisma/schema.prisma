@@ -9,11 +9,6 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Plan {
-  FREE
-  PRO
-}
-
 enum Role {
   OWNER
   ADMIN
@@ -93,7 +88,6 @@ model Workspace {
   id        String   @id @default(uuid(7))
   name      String
   slug      String   @unique
-  plan      Plan     @default(FREE)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -334,10 +328,9 @@ model Invitation {
   @@index([email])
 }
 
-/// A feature is available when it is enabled and the workspace plan is at least `minPlan`.
+/// A feature is available to everyone while it is enabled; switching it off hides it for all workspaces.
 model FeatureFlag {
   key         String  @id
   description String
-  minPlan     Plan    @default(PRO)
   enabled     Boolean @default(true)
 }

@@ -141,7 +141,7 @@ describe('Google Calendar', () => {
         connected: true,
         tasksGranted: true,
         editGranted: false,
-        twoWay: false,
+        twoWay: true,
         lastSyncAt: null,
       });
     });
@@ -684,20 +684,15 @@ describe('Google Calendar', () => {
       ...extra,
     });
 
-    /** Imports one editable event for a person who may (or may not) change Google events, on a Pro or Free plan. */
+    /** Imports one editable event for a person who may (or may not) change Google events. */
     async function withEvent(
       options: {
-        plan?: 'PRO' | 'FREE';
         scope?: string;
         extra?: Partial<GoogleEvent>;
         email?: string;
       } = {},
     ) {
       const who = await person(options.email ?? 'a@example.com');
-      await ctx.prisma.workspace.update({
-        where: { id: who.workspaceId },
-        data: { plan: options.plan ?? 'PRO' },
-      });
       await connect(who, { refreshToken: `rt-${who.user.email}`, scope: options.scope ?? WRITE });
       ctx.googleCalendar.calendars.set(`rt-${who.user.email}`, [
         event('e1', 'Lecture', 2, { description: 'Room 4', recurring: true, ...options.extra }),
@@ -784,13 +779,16 @@ describe('Google Calendar', () => {
       expect(ctx.googleCalendar.updates).toHaveLength(0);
     });
 
-    it('is a Pro feature', async () => {
-      const w = await withEvent({ plan: 'FREE' });
+    it('is off while its feature flag is switched off', async () => {
+      const w = await withEvent();
+      await ctx.prisma.featureFlag.update({
+        where: { key: 'google-two-way-sync' },
+        data: { enabled: false },
+      });
       const res = await w.patch().expect(403);
       expect(res.body).toMatchObject({
         code: 'FEATURE_NOT_AVAILABLE',
         feature: 'google-two-way-sync',
-        requiredPlan: 'PRO',
       });
       await w.del().expect(403);
       expect(ctx.googleCalendar.updates).toHaveLength(0);
@@ -855,7 +853,7 @@ describe('Google Calendar', () => {
         .patch(`/api/workspaces/${stranger.workspaceId}/google-calendar/events/${w.row.id}`)
         .set('Authorization', stranger.token)
         .send(body())
-        .expect(403); // personal workspace on the Free plan, and still not their event
+        .expect(404); // their own workspace, but the event is not in it
       await http().patch(w.url).send(body()).expect(401);
       expect(ctx.googleCalendar.updates).toHaveLength(0);
     });
@@ -963,12 +961,8 @@ describe('Google Calendar', () => {
       ...extra,
     });
 
-    async function ready(options: { plan?: 'PRO' | 'FREE'; scope?: string } = {}) {
+    async function ready(options: { scope?: string } = {}) {
       const who = await person('a@example.com');
-      await ctx.prisma.workspace.update({
-        where: { id: who.workspaceId },
-        data: { plan: options.plan ?? 'PRO' },
-      });
       await connect(who, { refreshToken: 'rt-create', scope: options.scope ?? WRITE });
       const url = `/api/workspaces/${who.workspaceId}/google-calendar/events`;
       return {
@@ -1064,8 +1058,12 @@ describe('Google Calendar', () => {
       expect(await ctx.prisma.calendarEvent.count()).toBe(0);
     });
 
-    it('is a Pro feature', async () => {
-      const w = await ready({ plan: 'FREE' });
+    it('is off while its feature flag is switched off', async () => {
+      const w = await ready();
+      await ctx.prisma.featureFlag.update({
+        where: { key: 'google-two-way-sync' },
+        data: { enabled: false },
+      });
       const res = await w.post().expect(403);
       expect(res.body).toMatchObject({
         code: 'FEATURE_NOT_AVAILABLE',
@@ -1083,7 +1081,6 @@ describe('Google Calendar', () => {
 
     it('needs a connected Google Calendar', async () => {
       const who = await person('a@example.com');
-      await ctx.prisma.workspace.update({ where: { id: who.workspaceId }, data: { plan: 'PRO' } });
       await http()
         .post(`/api/workspaces/${who.workspaceId}/google-calendar/events`)
         .set('Authorization', who.token)

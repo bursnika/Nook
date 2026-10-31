@@ -165,7 +165,7 @@ describe('Authentication', () => {
       expect(me.body.memberships).toHaveLength(1);
       expect(me.body.memberships[0]).toMatchObject({
         role: 'OWNER',
-        workspace: { name: "Olena's space", plan: 'FREE' },
+        workspace: { name: "Olena's space" },
       });
     });
 

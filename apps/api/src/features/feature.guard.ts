@@ -10,7 +10,7 @@ import type { Request } from 'express';
 import { REQUIRED_FEATURE } from '../auth/decorators.js';
 import { FeaturesService } from './features.service.js';
 
-/** Blocks routes marked @RequireFeature('key') when the workspace's plan or the flag does not allow it. */
+/** Blocks routes marked @RequireFeature('key') when its flag is switched off. */
 @Injectable()
 export class FeatureGuard implements CanActivate {
   constructor(
@@ -30,7 +30,7 @@ export class FeatureGuard implements CanActivate {
     if (typeof workspaceId !== 'string')
       throw new BadRequestException('A feature-gated route needs a :workspaceId');
 
-    const status = await this.features.check(workspaceId, key);
+    const status = await this.features.check(key);
     if (!status.available) {
       throw new ForbiddenException({
         statusCode: 403,
@@ -38,7 +38,6 @@ export class FeatureGuard implements CanActivate {
         code: 'FEATURE_NOT_AVAILABLE',
         message: status.reason,
         feature: key,
-        requiredPlan: status.minPlan,
       });
     }
     return true;
