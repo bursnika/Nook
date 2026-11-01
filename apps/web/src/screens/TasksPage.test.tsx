@@ -11,7 +11,7 @@ vi.mock('../lib/graphql', () => ({
   useLiveStatus: () => 'live',
 }));
 vi.mock('../lib/workspace', () => ({
-  useWorkspace: () => ({ workspace: { id: 'ws-1', name: 'Test', slug: 'test', plan: 'FREE' } }),
+  useWorkspace: () => ({ workspace: { id: 'ws-1', name: 'Test', slug: 'test' } }),
 }));
 
 const json = (body: unknown, status = 200) =>

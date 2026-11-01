@@ -1,12 +1,10 @@
 /** Shapes of what the API returns, trimmed to the fields the screens use. */
-export type Plan = 'FREE' | 'PRO';
 export type Role = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
 
 export interface Workspace {
   id: string;
   name: string;
   slug: string;
-  plan: Plan;
   /** Only the list endpoint includes the viewer's own membership. */
   memberships?: { role: Role }[];
 }
@@ -132,7 +130,6 @@ export interface PageSummary {
 export interface Feature {
   key: string;
   description: string;
-  minPlan: Plan;
   available: boolean;
   reason?: string;
 }

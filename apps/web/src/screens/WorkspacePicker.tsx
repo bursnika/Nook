@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { CenteredWindow } from '../components/Gate';
 import { PixelIcon } from '../components/PixelIcon';
-import { Badge, ErrorState, Field, LoadingState } from '../components/ui';
+import { ErrorState, Field, LoadingState } from '../components/ui';
 import { api, apiAll, ApiError } from '../lib/api';
 import { useResource } from '../lib/hooks';
 import { signOut, useMe } from '../lib/session';
@@ -77,7 +77,6 @@ export default function WorkspacePicker() {
                     <Link to={`/w/${item.id}`} onClick={() => rememberWorkspace(item.id)}>
                       <PixelIcon name="desktop" size={24} />
                       <span>{item.name}</span>
-                      <Badge tone={item.plan === 'PRO' ? 'doing' : 'todo'}>{item.plan}</Badge>
                     </Link>
                   </li>
                 ))}

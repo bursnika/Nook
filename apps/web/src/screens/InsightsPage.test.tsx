@@ -1,21 +1,9 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import type { Plan } from '../lib/types';
 import InsightsPage from './InsightsPage';
 
-const workspace = vi.hoisted(() => ({
-  plan: 'FREE' as Plan,
-  isOwner: true,
-  changePlan: vi.fn(),
-}));
-
 vi.mock('../lib/workspace', () => ({
-  useWorkspace: () => ({
-    workspace: { id: 'ws-1', name: 'Test', slug: 'test', plan: workspace.plan },
-    isOwner: workspace.isOwner,
-    changePlan: workspace.changePlan,
-  }),
+  useWorkspace: () => ({ workspace: { id: 'ws-1', name: 'Test', slug: 'test' } }),
 }));
 // canvas drawing is not available in jsdom
 vi.mock('./insights/ChartCanvas', () => ({
@@ -37,12 +25,12 @@ vi.mock('./insights/ChartCanvas', () => ({
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
-const proOnly = () =>
+const switchedOff = () =>
   json(
     {
       statusCode: 403,
       code: 'FEATURE_NOT_AVAILABLE',
-      message: '"insights" requires the PRO plan',
+      message: '"insights" is switched off',
       feature: 'insights',
     },
     403,
@@ -66,37 +54,20 @@ function show() {
   );
 }
 
-beforeEach(() => {
-  workspace.plan = 'FREE';
-  workspace.isOwner = true;
-  workspace.changePlan.mockReset();
-});
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Insights', () => {
-  it('explains that it is a Pro feature and lets an owner switch the plan', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(proOnly()));
-    workspace.changePlan.mockResolvedValue(undefined);
+  it('says so when an administrator switched the feature off', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(switchedOff()));
     show();
     expect(
-      await screen.findByRole('heading', { name: 'Insights is a Pro feature' }),
+      await screen.findByRole('heading', { name: 'Insights is switched off' }),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Switch this workspace to Pro' }));
-    expect(workspace.changePlan).toHaveBeenCalledWith('PRO');
+    expect(screen.getByText('"insights" is switched off')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('only asks a member to talk to an owner', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(proOnly()));
-    workspace.isOwner = false;
-    show();
-    expect(
-      await screen.findByText('Ask a workspace owner to switch the plan.'),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Switch this workspace/ })).toBeNull();
-  });
-
-  it('shows the numbers and the charts on Pro', async () => {
-    workspace.plan = 'PRO';
+  it('shows the numbers and the charts', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(insights)));
     show();
     expect(await screen.findByText('Done in 7 days')).toBeInTheDocument();
@@ -110,7 +81,6 @@ describe('Insights', () => {
   });
 
   it('degrades gracefully while the server lacks the newer fields', async () => {
-    workspace.plan = 'PRO';
     vi.stubGlobal(
       'fetch',
       vi
@@ -130,7 +100,6 @@ describe('Insights', () => {
 
   it('reports other errors with a retry', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ message: 'Boom' }, 500)));
-    workspace.plan = 'PRO';
     show();
     expect(await screen.findByRole('alert')).toHaveTextContent('Boom');
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { PixelIcon } from '../components/PixelIcon';
 import { ErrorState, LoadingState, Window } from '../components/ui';
 import { api, ApiError } from '../lib/api';
@@ -16,57 +15,22 @@ import { ChartCanvas, palette } from './insights/ChartCanvas';
 import { Heatmap } from './insights/Heatmap';
 import '../styles/insights.css';
 
-/** Productivity statistics. Pro only: Free workspaces get an explanation and (for owners) a switch. */
+/** Productivity statistics, open to every workspace unless an administrator switched the feature off. */
 export default function InsightsPage() {
-  const { workspace, isOwner, changePlan } = useWorkspace();
+  const { workspace } = useWorkspace();
   const result = useResource(
     () => api<Insights>(`/workspaces/${workspace.id}/insights`),
-    `${workspace.id}:${workspace.plan}`,
+    workspace.id,
   );
-  const [switching, setSwitching] = useState(false);
-  const [problem, setProblem] = useState<string>();
 
   if (result.loading) return <LoadingState label="Counting" />;
 
   if (result.error instanceof ApiError && result.error.status === 403) {
-    const free = workspace.plan === 'FREE';
-    const upgrade = async () => {
-      setSwitching(true);
-      setProblem(undefined);
-      try {
-        await changePlan('PRO');
-      } catch (error) {
-        setProblem(error instanceof Error ? error.message : 'Could not switch the plan');
-        setSwitching(false);
-      }
-    };
     return (
       <div className="gate">
         <PixelIcon name="lock" size={44} />
-        <h2>{free ? 'Insights is a Pro feature' : 'Insights is switched off'}</h2>
-        <p className="muted">
-          {free
-            ? 'Charts of finished tasks, workload by status and priority, and a twelve-week activity map come with the Pro plan.'
-            : result.error.message}
-        </p>
-        {free &&
-          (isOwner ? (
-            <button
-              type="button"
-              className="btn btn--primary"
-              disabled={switching}
-              onClick={() => void upgrade()}
-            >
-              {switching ? 'Switching…' : 'Switch this workspace to Pro'}
-            </button>
-          ) : (
-            <p>Ask a workspace owner to switch the plan.</p>
-          ))}
-        {problem && (
-          <p className="form-error" role="alert">
-            {problem}
-          </p>
-        )}
+        <h2>Insights is switched off</h2>
+        <p className="muted">{result.error.message}</p>
       </div>
     );
   }

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, type ReactN
 import { api, apiAll } from './api';
 import { track } from './analytics';
 import { useResource } from './hooks';
-import type { Feature, PageSummary, Plan, Role, Workspace } from './types';
+import type { Feature, PageSummary, Role, Workspace } from './types';
 
 const LAST_KEY = 'nook.lastWorkspace';
 
@@ -44,7 +44,6 @@ interface WorkspaceState {
   /** Creates a page ("Untitled" unless titled), under `parentId` when given, and returns it. */
   createPage: (options?: { parentId?: string; title?: string }) => Promise<PageSummary>;
   deletePage: (id: string) => Promise<void>;
-  changePlan: (plan: Plan) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
@@ -68,11 +67,11 @@ export function WorkspaceProvider({
   const base = useResource<Loaded>(async () => {
     const [workspace, features, mine] = await Promise.all([
       api<Workspace>(`/workspaces/${workspaceId}`),
-      api<{ plan: Plan; features: Feature[] }>(`/workspaces/${workspaceId}/features`),
+      api<{ features: Feature[] }>(`/workspaces/${workspaceId}/features`),
       apiAll<Workspace>('/workspaces'),
     ]);
     const role = mine.find((item) => item.id === workspaceId)?.memberships?.[0]?.role;
-    return { workspace: { ...workspace, plan: features.plan }, features: features.features, role };
+    return { workspace, features: features.features, role };
   }, workspaceId);
 
   const pageList = useResource<PageSummary[]>(
@@ -80,7 +79,6 @@ export function WorkspaceProvider({
     workspaceId,
   );
   const { reload: reloadPages, setData: setPages } = pageList;
-  const { setData: setBase } = base;
 
   useEffect(() => {
     if (base.data) rememberWorkspace(workspaceId);
@@ -119,25 +117,6 @@ export function WorkspaceProvider({
     [workspaceId, reloadPages],
   );
 
-  const changePlan = useCallback(
-    async (plan: Plan) => {
-      await api(`/workspaces/${workspaceId}/plan`, { method: 'POST', json: { plan } });
-      const fresh = await api<{ plan: Plan; features: Feature[] }>(
-        `/workspaces/${workspaceId}/features`,
-      );
-      setBase((current) =>
-        current
-          ? {
-              ...current,
-              workspace: { ...current.workspace, plan: fresh.plan },
-              features: fresh.features,
-            }
-          : current,
-      );
-    },
-    [workspaceId, setBase],
-  );
-
   const value = useMemo<WorkspaceState | null>(
     () =>
       base.data
@@ -151,10 +130,9 @@ export function WorkspaceProvider({
             refreshPages: reloadPages,
             createPage,
             deletePage,
-            changePlan,
           }
         : null,
-    [base.data, pageList.data, pageList.loading, reloadPages, createPage, deletePage, changePlan],
+    [base.data, pageList.data, pageList.loading, reloadPages, createPage, deletePage],
   );
 
   if (!value) {

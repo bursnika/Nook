@@ -5,44 +5,27 @@ import { api } from '../lib/api';
 import { useResource } from '../lib/hooks';
 import { getTransport, setTransport, TRANSPORTS, type TransportKind } from '../lib/settings';
 import { signOut, useMe } from '../lib/session';
-import type { GoogleStatus, Plan } from '../lib/types';
+import type { GoogleStatus } from '../lib/types';
 import { useWorkspace } from '../lib/workspace';
 import '../styles/settings.css';
 import { LOCALE } from '../lib/locale';
 import { TelegramCard, WidgetCard } from './IntegrationCards';
 
 export default function SettingsPage() {
-  const { workspace, features, isOwner, role, changePlan } = useWorkspace();
+  const { workspace, features, role } = useWorkspace();
   const me = useMe();
   const [transport, setTransportState] = useState<TransportKind>(getTransport);
-  const [switching, setSwitching] = useState(false);
-  const [problem, setProblem] = useState<string>();
   const google = useResource(
     () => api<GoogleStatus>(`/workspaces/${workspace.id}/google-calendar`),
     workspace.id,
   );
 
-  const switchPlan = async (plan: Plan) => {
-    setSwitching(true);
-    setProblem(undefined);
-    try {
-      await changePlan(plan);
-    } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not switch the plan');
-    } finally {
-      setSwitching(false);
-    }
-  };
-
-  const other: Plan = workspace.plan === 'PRO' ? 'FREE' : 'PRO';
-
   return (
     <div className="settings">
-      <Window title="Plan" icon="sparkle" tone="pink" className="settings__card">
+      <Window title="Workspace" icon="sparkle" tone="pink" className="settings__card">
         <div className="window__content">
           <p>
-            <strong>{workspace.name}</strong> is on the{' '}
-            <Badge tone={workspace.plan === 'PRO' ? 'doing' : 'todo'}>{workspace.plan}</Badge> plan.
+            <strong>{workspace.name}</strong>
             {role && <span className="muted"> Your role: {role.toLowerCase()}.</span>}
           </p>
           <ul className="features">
@@ -61,23 +44,6 @@ export default function SettingsPage() {
               </li>
             ))}
           </ul>
-          {isOwner ? (
-            <button
-              type="button"
-              className="btn btn--primary"
-              disabled={switching}
-              onClick={() => void switchPlan(other)}
-            >
-              {switching ? 'Switching…' : `Switch to ${other === 'PRO' ? 'Pro' : 'Free'}`}
-            </button>
-          ) : (
-            <p className="muted">Only a workspace owner can change the plan.</p>
-          )}
-          {problem && (
-            <p className="form-error" role="alert">
-              {problem}
-            </p>
-          )}
         </div>
       </Window>
 

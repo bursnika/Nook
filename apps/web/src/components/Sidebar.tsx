@@ -108,9 +108,6 @@ export function Sidebar({ id, onNavigate }: { id: string; onNavigate: () => void
         <p className="sidebar__workspace" title={workspace.name}>
           <PixelIcon name="desktop" size={20} />
           <span>{workspace.name}</span>
-          <span className={`badge badge--${workspace.plan === 'PRO' ? 'doing' : 'todo'}`}>
-            {workspace.plan}
-          </span>
         </p>
         <nav aria-label="Sections">
           <ul className="sidenav">

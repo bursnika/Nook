@@ -156,7 +156,6 @@ export function AppShell() {
               </div>
               <div className="window__status">
                 <span>{workspace.name}</span>
-                <span>{workspace.plan} plan</span>
               </div>
             </Window>
           </div>
