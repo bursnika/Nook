@@ -25,7 +25,7 @@ export const dayBounds = (day: string) => ({
 
 /**
  * What is on a person's plate for one UTC day, across every workspace they belong to: open tasks due that
- * day or earlier (overdue ones keep showing) and the day's events. Shared by the Telegram bot and the widgets.
+ * day or earlier (overdue ones keep showing) and the day's events. Used by the widgets.
  * A platform administrator sees every workspace in the app without being a member, so `everywhere` gives the
  * same view here.
  */

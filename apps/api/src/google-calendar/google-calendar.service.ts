@@ -256,8 +256,6 @@ export class GoogleCalendarService {
             ...shared,
             status,
             completedAt: task.completed ? (task.completedAt ?? new Date()) : null,
-            // moved in Google: remind again
-            ...(local?.dueDate?.getTime() !== task.due?.getTime() ? { reminderSentAt: null } : {}),
           },
         });
       }),

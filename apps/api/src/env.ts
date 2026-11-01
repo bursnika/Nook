@@ -27,12 +27,6 @@ if (!jwtSecret || jwtSecret.length < 32) {
 
 const nodeEnv = process.env.NODE_ENV ?? 'development';
 
-/** A positive number from the environment, or the default for a missing or nonsensical value. */
-function positive(value: string | undefined, fallback: number): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
 export const env = {
   appRoot: findAppRoot(),
   databaseUrl,
@@ -69,12 +63,6 @@ export const env = {
   ).replace(/\/+$/, ''),
   /** GA4 measurement id (G-XXXX); the analytics snippet is only rendered when it is set. */
   gaMeasurementId: process.env.GA_MEASUREMENT_ID || undefined,
-  telegram: {
-    botToken: process.env.TELEGRAM_BOT_TOKEN || undefined,
-    botUsername: process.env.TELEGRAM_BOT_USERNAME || undefined,
-    /** The morning plan goes out at this hour (UTC). */
-    digestHourUtc: Number(process.env.TELEGRAM_DIGEST_HOUR_UTC ?? 6),
-  },
   /** The built SPA (apps/web/dist). Served under /app when the folder exists. */
   webDist: resolve(process.env.WEB_DIST ?? join(findAppRoot(), '..', 'web', 'dist')),
   uploadDir: resolve(process.env.UPLOAD_DIR ?? 'uploads'),
@@ -82,11 +70,6 @@ export const env = {
   redisUrl: process.env.REDIS_URL || undefined,
   /** Message queues (docs/b8-queues.md): RabbitMQ when AMQP_URL is set, otherwise an in-process queue. */
   amqpUrl: process.env.AMQP_URL || undefined,
-  /** Telegram reminders: how far ahead a due task is announced, and how often the scheduler looks. */
-  reminders: {
-    leadMinutes: positive(process.env.REMINDER_LEAD_MINUTES, 30),
-    checkEverySeconds: positive(process.env.REMINDER_CHECK_EVERY_SECONDS, 60),
-  },
   /** Background Google sync of every connected person; 0 switches it off. */
   googleSyncEveryMinutes: Number(process.env.GOOGLE_SYNC_EVERY_MINUTES ?? 30) || 0,
   /** Uploaded files go to this Azure Blob container when the connection string is set, otherwise to uploadDir. */

@@ -62,7 +62,6 @@ model User {
   importedEvents  CalendarEvent[]   @relation("EventImporter")
   importedTasks   Task[]            @relation("TaskImporter")
   googleCalendar  GoogleConnection?
-  telegram        TelegramLink?
   taskComments    TaskComment[]
 
   @@index([name])
@@ -156,18 +155,6 @@ model Block {
   @@index([pageId, position])
 }
 
-// A Telegram chat that gets this person's morning plan and answers /today.
-model TelegramLink {
-  id           String   @id @default(uuid(7))
-  userId       String   @unique
-  chatId       String   @unique
-  // The day (YYYY-MM-DD, UTC) the morning plan was last sent, so it goes out once a day.
-  lastDigestOn String?
-  createdAt    DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
 // One entry per batch of block operations applied to a page. `seq` orders the log, so a client that was
 // offline (or polling) asks for everything after the last `seq` it has seen.
 model PageOp {
@@ -197,8 +184,6 @@ model Task {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   completedAt    DateTime?
-  // When the "due soon" reminder went out; cleared when dueDate changes so a rescheduled task is reminded again.
-  reminderSentAt DateTime?
   workspaceId    String
   pageId         String?
   assigneeId     String?
@@ -219,8 +204,6 @@ model Task {
   @@index([workspaceId, status, position])
   @@index([workspaceId, dueDate])
   @@index([assigneeId])
-  // The reminder scheduler looks for open, not yet reminded tasks by due date.
-  @@index([dueDate, reminderSentAt])
 }
 
 /// A comment or note under a task. Only its author may edit it.
