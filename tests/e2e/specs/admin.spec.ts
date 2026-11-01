@@ -295,18 +295,14 @@ test.describe('classic admin (MVC)', () => {
     await root.api.remove(`/workspaces/${workspace.id}`);
   });
 
-  test('the plan can be switched and an invitation link is shown once', async ({ signIn }) => {
+  test('an invitation link is shown once', async ({ signIn }) => {
     const root = await signIn('root');
     const { page } = root;
     const workspace = await root.api.post<{ id: string }>('/workspaces', {
-      name: unique('Admin plan'),
-      slug: slugOf(unique('admin-plan')),
+      name: unique('Admin team'),
+      slug: slugOf(unique('admin-team')),
     });
     await page.goto(`/admin/workspaces/${workspace.id}/team`);
-    await expect(page.getByRole('heading', { name: 'Plan: FREE' })).toBeVisible();
-    await page.getByRole('button', { name: 'Switch to PRO' }).click();
-    await expect(page.getByRole('heading', { name: 'Plan: PRO' })).toBeVisible();
-
     await page.getByLabel('E-mail').fill('guest@e2e.test');
     await page.getByRole('button', { name: 'Create invitation' }).click();
     await expect(page.getByText('Invitation created for guest@e2e.test.')).toBeVisible();

@@ -32,17 +32,17 @@ const card = (page: Page, title: string): Locator =>
     .locator('xpath=ancestor::section[1]');
 
 test.describe('settings and integrations', () => {
-  test('the settings screen shows the plan, the live-update choice and the integration cards', async ({
+  test('the settings screen shows the workspace, the live-update choice and the integration cards', async ({
     ann,
   }) => {
     await ann.open('/settings');
     await expect(ann.page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
 
-    const plan = card(ann.page, 'Plan');
-    await expect(plan).toContainText('E2E Space is on the PRO plan.');
-    await expect(plan).toContainText('Your role: owner.');
-    await expect(plan.getByText('insights', { exact: true })).toBeVisible();
-    await expect(plan.getByRole('button', { name: 'Switch to Free' })).toBeVisible();
+    const workspace = card(ann.page, 'Workspace');
+    await expect(workspace).toContainText('E2E Space');
+    await expect(workspace).toContainText('Your role: owner.');
+    await expect(workspace.getByText('insights', { exact: true })).toBeVisible();
+    await expect(workspace.getByText('On').first()).toBeVisible();
 
     await expect(card(ann.page, 'Telegram')).toContainText('The bot is not set up on this server');
     await expect(card(ann.page, 'Widgets')).toContainText('No token');
@@ -56,10 +56,9 @@ test.describe('settings and integrations', () => {
     );
   });
 
-  test('only an owner can change the plan', async ({ bob }) => {
+  test('a member sees the same workspace card and no plan to buy', async ({ bob }) => {
     await bob.open('/settings');
-    await expect(card(bob.page, 'Plan')).toContainText('Your role: member.');
-    await expect(bob.page.getByText('Only a workspace owner can change the plan.')).toBeVisible();
+    await expect(card(bob.page, 'Workspace')).toContainText('Your role: member.');
     await expect(bob.page.getByRole('button', { name: /Switch to/ })).toHaveCount(0);
   });
 
@@ -121,7 +120,7 @@ test.describe('settings and integrations', () => {
     await bob.api.deleteTask(task.id);
   });
 
-  test('a Pro workspace shows the Insights charts', async ({ ann }) => {
+  test('Insights shows the charts to everyone', async ({ ann }) => {
     const done = await ann.api.createTask({ title: unique('Insight task'), status: 'DONE' });
     await ann.open('/insights');
     await expect(ann.page.getByRole('heading', { level: 1, name: 'Insights' })).toBeVisible();
@@ -156,56 +155,5 @@ test.describe('settings and integrations', () => {
       )
       .toEqual([true, true, true]);
     await ann.api.deleteTask(done.id);
-  });
-
-  test('a Free workspace shows the Pro gate, and the owner can upgrade it', async ({
-    ann,
-    seed,
-  }) => {
-    // the seeded Free workspace stays Free: the upgrade is tried on a throwaway one
-    await ann.page.goto(`/app/w/${seed.freeWorkspace.id}/insights`);
-    await expect(
-      ann.page.getByRole('heading', { name: 'Insights is a Pro feature' }),
-    ).toBeVisible();
-    await expect(
-      ann.page.getByRole('button', { name: 'Switch this workspace to Pro' }),
-    ).toBeVisible();
-    await expect(ann.page.locator('canvas')).toHaveCount(0);
-
-    const name = unique('Upgrade space');
-    const created = await ann.api.post<{ id: string }>('/workspaces', {
-      name,
-      slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-    });
-    await ann.page.goto(`/app/w/${created.id}/insights`);
-    await expect(
-      ann.page.getByRole('heading', { name: 'Insights is a Pro feature' }),
-    ).toBeVisible();
-    await ann.page.getByRole('button', { name: 'Switch this workspace to Pro' }).click();
-    await expect(ann.page.locator('canvas[role="img"]')).toHaveCount(3);
-    await expect(ann.page.getByText('PRO plan')).toBeVisible();
-    await ann.api.remove(`/workspaces/${created.id}`);
-  });
-
-  test('a member of a Free workspace is asked to contact an owner', async ({
-    bob,
-    signIn,
-    seed,
-  }) => {
-    // adding people is for platform admins: Root puts Bob into the Free workspace for this test only
-    const root = await signIn('root');
-    const member = await root.api.post<{ id: string }>(
-      `/workspaces/${seed.freeWorkspace.id}/members`,
-      {
-        userId: seed.users.bob.id,
-        role: 'MEMBER',
-      },
-    );
-    await bob.page.goto(`/app/w/${seed.freeWorkspace.id}/insights`);
-    await expect(bob.page.getByText('Ask a workspace owner to switch the plan.')).toBeVisible();
-    await expect(
-      bob.page.getByRole('button', { name: 'Switch this workspace to Pro' }),
-    ).toHaveCount(0);
-    await root.api.remove(`/workspaces/${seed.freeWorkspace.id}/members/${member.id}`);
   });
 });

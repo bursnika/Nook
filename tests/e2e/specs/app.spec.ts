@@ -51,8 +51,8 @@ test.describe('sign-in and navigation', () => {
     await ann.page.goto('/app/');
     await expect(ann.page.getByRole('heading', { name: 'Welcome, Ann' })).toBeVisible();
     const list = ann.page.getByRole('list', { name: 'Open a workspace' });
-    await expect(list.getByRole('link', { name: /E2E Space\s*PRO/ })).toBeVisible();
-    await expect(list.getByRole('link', { name: /E2E Free Space\s*FREE/ })).toBeVisible();
+    await expect(list.getByRole('link', { name: /^E2E Space/ })).toBeVisible();
+    await expect(list.getByRole('link', { name: /^E2E Other Space/ })).toBeVisible();
     await expect(ann.page.getByText('Signed in as ann@e2e.test.')).toBeVisible();
 
     await list.getByRole('link', { name: /^E2E Space/ }).click();
@@ -188,7 +188,7 @@ test.describe('sign-in and navigation', () => {
       seed,
     }) => {
       // Bob is not a member of the free workspace, and a random id does not exist: both answer 404
-      for (const id of [seed.freeWorkspace.id, '019a0000-0000-7000-8000-000000000000']) {
+      for (const id of [seed.otherWorkspace.id, '019a0000-0000-7000-8000-000000000000']) {
         await bob.page.goto(`/app/w/${id}`);
         await expect(bob.page.getByRole('heading', { name: 'Workspace not found' })).toBeVisible();
         await expect(bob.page.getByRole('alert')).toContainText('404: this workspace is not here');

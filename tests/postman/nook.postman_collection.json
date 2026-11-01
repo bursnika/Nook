@@ -296,10 +296,9 @@
                   "  pm.expect(body.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);",
                   "  pm.collectionVariables.set('workspaceId', body.id);",
                   "});",
-                  "pm.test('Workspace has the sent values and the FREE plan', () => {",
+                  "pm.test('Workspace has the sent values', () => {",
                   "  pm.expect(body.name).to.eql('Newman workspace');",
                   "  pm.expect(body.slug).to.eql(pm.collectionVariables.get('slug'));",
-                  "  pm.expect(body.plan).to.eql('FREE');",
                   "  pm.expect(body).to.include.keys('createdAt', 'updatedAt');",
                   "});"
                 ]
@@ -681,7 +680,6 @@
                   "pm.test('Returns the workspace', () => {",
                   "  pm.expect(body.id).to.eql(pm.collectionVariables.get('workspaceId'));",
                   "  pm.expect(body.slug).to.eql(pm.collectionVariables.get('slug'));",
-                  "  pm.expect(body.plan).to.eql('FREE');",
                   "});"
                 ]
               }
@@ -787,10 +785,9 @@
                 "exec": [
                   "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
-                  "pm.test('Name changed, slug and plan untouched', () => {",
+                  "pm.test('Name changed, slug untouched', () => {",
                   "  pm.expect(body.name).to.eql('Newman workspace (renamed)');",
                   "  pm.expect(body.slug).to.eql(pm.collectionVariables.get('slug'));",
-                  "  pm.expect(body.plan).to.eql('FREE');",
                   "});"
                 ]
               }
@@ -1596,10 +1593,10 @@
       ]
     },
     {
-      "name": "04 Features and plan",
+      "name": "04 Features",
       "item": [
         {
-          "name": "List features on the FREE plan",
+          "name": "List features: every flag is on for everyone",
           "request": {
             "method": "GET",
             "header": [],
@@ -1617,166 +1614,12 @@
                 "exec": [
                   "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
-                  "pm.test('Plan is FREE and \"insights\" is locked behind PRO', () => {",
-                  "  pm.expect(body.plan).to.eql('FREE');",
+                  "pm.test('There are no plans, only flags, and \"insights\" is available', () => {",
+                  "  pm.expect(body).to.not.have.property('plan');",
                   "  pm.expect(body.features).to.be.an('array').that.is.not.empty;",
                   "  const insights = body.features.find((f) => f.key === 'insights');",
                   "  pm.expect(insights).to.exist;",
-                  "  pm.expect(insights.minPlan).to.eql('PRO');",
-                  "  pm.expect(insights.available).to.be.false;",
-                  "  pm.expect(insights.reason).to.be.a('string');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Pro-only endpoint on FREE returns 403 FEATURE_NOT_AVAILABLE",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/insights",
-              "host": ["{{baseUrl}}"],
-              "path": ["workspaces", "{{workspaceId}}", "insights"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 403', () => pm.response.to.have.status(403));",
-                  "pm.test('Content-Type is JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/json/));",
-                  "const body = pm.response.json();",
-                  "pm.test('Error body has statusCode 403, error \"Forbidden\" and a message', () => {",
-                  "  pm.expect(body.statusCode).to.eql(403);",
-                  "  pm.expect(body.error).to.eql('Forbidden');",
-                  "  pm.expect(body.message).to.exist;",
-                  "});",
-                  "pm.test('Error names the missing feature and the required plan', () => {",
-                  "  pm.expect(body.code).to.eql('FEATURE_NOT_AVAILABLE');",
-                  "  pm.expect(body.feature).to.eql('insights');",
-                  "  pm.expect(body.requiredPlan).to.eql('PRO');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Change plan to an invalid value returns 400",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"plan\": \"GOLD\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/plan",
-              "host": ["{{baseUrl}}"],
-              "path": ["workspaces", "{{workspaceId}}", "plan"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 400', () => pm.response.to.have.status(400));",
-                  "pm.test('Content-Type is JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/json/));",
-                  "const body = pm.response.json();",
-                  "pm.test('Error body has statusCode 400, error \"Bad Request\" and a message', () => {",
-                  "  pm.expect(body.statusCode).to.eql(400);",
-                  "  pm.expect(body.error).to.eql('Bad Request');",
-                  "  pm.expect(body.message).to.exist;",
-                  "});",
-                  "pm.test('Error message matches /plan must be one of/', () => {",
-                  "  pm.expect([].concat(body.message).join(' ')).to.match(/plan must be one of/);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Change plan to PRO",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"plan\": \"PRO\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/plan",
-              "host": ["{{baseUrl}}"],
-              "path": ["workspaces", "{{workspaceId}}", "plan"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.test('Workspace is on PRO now', () => {",
-                  "  pm.expect(body.id).to.eql(pm.collectionVariables.get('workspaceId'));",
-                  "  pm.expect(body.plan).to.eql('PRO');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "List features on the PRO plan",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/features",
-              "host": ["{{baseUrl}}"],
-              "path": ["workspaces", "{{workspaceId}}", "features"]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.test('\"insights\" is available on PRO', () => {",
-                  "  pm.expect(body.plan).to.eql('PRO');",
-                  "  const insights = body.features.find((f) => f.key === 'insights');",
+                  "  pm.expect(insights).to.not.have.property('minPlan');",
                   "  pm.expect(insights.available).to.be.true;",
                   "  pm.expect(insights).to.not.have.property('reason');",
                   "});"
@@ -1786,7 +1629,7 @@
           ]
         },
         {
-          "name": "Pro-only endpoint on PRO returns statistics",
+          "name": "Insights returns statistics for any workspace member",
           "request": {
             "method": "GET",
             "header": [],
@@ -1816,7 +1659,7 @@
           ]
         },
         {
-          "name": "Change plan back to FREE",
+          "name": "The plan endpoint is gone and returns 404",
           "request": {
             "method": "POST",
             "header": [
@@ -1827,7 +1670,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"plan\": \"FREE\"\n}",
+              "raw": "{\n  \"plan\": \"PRO\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1845,11 +1688,7 @@
               "listen": "test",
               "script": {
                 "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.test('Workspace is on FREE again', () => pm.expect(body.plan).to.eql('FREE'));"
-                ]
+                "exec": ["pm.test('Status code is 404', () => pm.response.to.have.status(404));"]
               }
             }
           ]
@@ -5665,7 +5504,7 @@
                   "  pm.expect(task.title).to.eql('Newman task one (edited)');",
                   "});",
                   "pm.test('Google is not connected for the newman user', () => {",
-                  "  pm.expect(body.google).to.eql({ connected: false, editGranted: false, twoWay: false });",
+                  "  pm.expect(body.google).to.eql({ connected: false, editGranted: false, twoWay: true });",
                   "});"
                 ]
               }

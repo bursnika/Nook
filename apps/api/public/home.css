@@ -74,7 +74,6 @@ a {
 /* ---------- pixel frames and buttons ---------- */
 .framed,
 .card,
-.plan,
 .col,
 .win {
   box-shadow:
@@ -433,41 +432,6 @@ kbd {
   background: var(--blue-200);
 }
 
-/* ---------- plans ---------- */
-.plans {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 420px));
-  gap: 24px;
-  margin-top: 24px;
-}
-.plan {
-  background: var(--white);
-  padding: 22px;
-  margin: var(--px);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.plan--pro {
-  background: var(--pink-100);
-}
-.plan h3 {
-  font-size: 26px;
-}
-.plan__price {
-  font-family: 'Pixelify Sans', sans-serif;
-  font-size: 20px;
-  color: var(--lav-700);
-}
-.plan ul {
-  margin: 0 0 8px;
-  padding-left: 20px;
-  flex: 1;
-}
-.plan .btn {
-  align-self: flex-start;
-}
-
 /* ---------- final call ---------- */
 .final {
   padding-bottom: 72px;
@@ -531,8 +495,7 @@ kbd {
     justify-content: space-between;
   }
   .cards,
-  .board,
-  .plans {
+  .board {
     grid-template-columns: 1fr;
   }
   .hero__art .win--pink {

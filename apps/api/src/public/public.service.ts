@@ -16,7 +16,7 @@ export class PublicService {
   /** The product landing page at `/`, with its own SEO tags and structured data. */
   home() {
     const description =
-      'Nook is a pixel-cute planner: notes, a Jira-style Kanban board, a calendar with Google sync, live collaboration and an AI assistant, all in one retro desktop.';
+      'Nook is a pixel-cute planner: notes, a Jira-style Kanban board, a calendar with Google sync, live collaboration and productivity charts, all in one retro desktop.';
     const title = 'Nook, a pixel-cute planner for notes, tasks and your calendar';
     const jsonLd = {
       '@context': 'https://schema.org',
@@ -26,10 +26,7 @@ export class PublicService {
       description,
       applicationCategory: 'ProductivityApplication',
       operatingSystem: 'Any (web, installable as a PWA)',
-      offers: [
-        { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'USD' },
-        { '@type': 'Offer', name: 'Pro', priceCurrency: 'USD' },
-      ],
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     };
     return {
       layout: false,

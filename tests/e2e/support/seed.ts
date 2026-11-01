@@ -5,10 +5,10 @@ import { ANN_EMAIL, BOB_EMAIL, ROOT_EMAIL, e2eDatabaseUrl } from './env';
 /** Ids and names of everything the global setup creates; written to tests/e2e/.auth/seed.json for the specs. */
 export interface Seed {
   users: Record<'ann' | 'bob' | 'root', { id: string; email: string; name: string }>;
-  /** A PRO workspace: Ann owns it, Bob is a member. */
+  /** Ann owns it, Bob is a member. */
   workspace: { id: string; name: string; slug: string };
-  /** A FREE workspace owned by Ann (for the Pro gate). */
-  freeWorkspace: { id: string; name: string };
+  /** A second workspace owned by Ann alone: Bob is not a member (for the isolation checks). */
+  otherWorkspace: { id: string; name: string };
   welcomePage: { id: string; title: string };
   publicPage: { id: string; title: string; slug: string; description: string };
   tasks: { todo: string; inProgress: string; done: string };
@@ -16,13 +16,13 @@ export interface Seed {
 }
 
 export const WORKSPACE_NAME = 'E2E Space';
-export const FREE_WORKSPACE_NAME = 'E2E Free Space';
+export const OTHER_WORKSPACE_NAME = 'E2E Other Space';
 export const WELCOME_TITLE = 'Welcome';
 export const PUBLIC_SLUG = 'e2e-public';
 export const PUBLIC_TITLE = 'Hello from the public page';
 export const PUBLIC_INTRO = 'Nook pages can be published for everyone with the link.';
 
-/** The migration seeds these three flags; a truncate would remove them, so they are put back. */
+/** The migration seeds these flags; a truncate would remove them, so they are put back. */
 const FEATURE_FLAGS = [
   { key: 'insights', description: 'Insights page with productivity statistics' },
   { key: 'google-two-way-sync', description: 'Two-way Google Calendar synchronisation' },
@@ -43,7 +43,7 @@ export async function resetDatabase(prisma: PrismaClient) {
     await prisma.featureFlag.upsert({
       where: { key: flag.key },
       update: { enabled: true },
-      create: { ...flag, minPlan: 'PRO', enabled: true },
+      create: { ...flag, enabled: true },
     });
   }
 }
@@ -61,7 +61,6 @@ export async function seedDatabase(prisma: PrismaClient): Promise<Seed> {
     data: {
       name: WORKSPACE_NAME,
       slug: 'e2e-space',
-      plan: 'PRO',
       memberships: {
         create: [
           { userId: ann.id, role: 'OWNER' },
@@ -70,11 +69,10 @@ export async function seedDatabase(prisma: PrismaClient): Promise<Seed> {
       },
     },
   });
-  const freeWorkspace = await prisma.workspace.create({
+  const otherWorkspace = await prisma.workspace.create({
     data: {
-      name: FREE_WORKSPACE_NAME,
-      slug: 'e2e-free-space',
-      plan: 'FREE',
+      name: OTHER_WORKSPACE_NAME,
+      slug: 'e2e-other-space',
       memberships: { create: [{ userId: ann.id, role: 'OWNER' }] },
     },
   });
@@ -172,7 +170,7 @@ export async function seedDatabase(prisma: PrismaClient): Promise<Seed> {
   return {
     users: { ann: person(ann), bob: person(bob), root: person(root) },
     workspace: { id: workspace.id, name: workspace.name, slug: workspace.slug },
-    freeWorkspace: { id: freeWorkspace.id, name: freeWorkspace.name },
+    otherWorkspace: { id: otherWorkspace.id, name: otherWorkspace.name },
     welcomePage: { id: welcome.id, title: welcome.title },
     publicPage: {
       id: published.id,
