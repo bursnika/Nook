@@ -9,7 +9,7 @@ import type { GoogleStatus } from '../lib/types';
 import { useWorkspace } from '../lib/workspace';
 import '../styles/settings.css';
 import { LOCALE } from '../lib/locale';
-import { TelegramCard, WidgetCard } from './IntegrationCards';
+import { WidgetCard } from './IntegrationCards';
 
 export default function SettingsPage() {
   const { workspace, features, role } = useWorkspace();
@@ -126,7 +126,6 @@ export default function SettingsPage() {
         </div>
       </Window>
 
-      <TelegramCard />
       <WidgetCard />
 
       <Window title="Account" icon="heart" tone="gray" className="settings__card">
