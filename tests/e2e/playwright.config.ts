@@ -72,7 +72,6 @@ export default defineConfig({
           // never inherit optional services from the developer's shell
           REDIS_URL: '',
           AZURE_STORAGE_CONNECTION_STRING: '',
-          TELEGRAM_BOT_TOKEN: '',
           GA_MEASUREMENT_ID: '',
           // fake Google client: enough for the sign-in redirect, the tests never call Google
           GOOGLE_CLIENT_ID: 'e2e-client-id.apps.googleusercontent.com',

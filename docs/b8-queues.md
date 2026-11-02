@@ -1,6 +1,6 @@
 # B8. Черги повідомлень (RabbitMQ)
 
-Дві фонові задачі йдуть через чергу, а не виконуються в HTTP-запиті чи таймері напряму: **нагадування про задачі в Telegram** і **синхронізація Google Calendar**. Код працює з абстракцією `MessageQueue` (`apps/api/src/queue`), драйвер обирається змінною `AMQP_URL`.
+Фонова синхронізація Google Calendar іде через чергу, а не виконується в HTTP-запиті чи таймері напряму. Код працює з абстракцією `MessageQueue` (`apps/api/src/queue`), драйвер обирається змінною `AMQP_URL`.
 
 ## Драйвери
 
@@ -35,20 +35,7 @@ publish ──> exchange "nook" (direct, key = q) ──> q ──> consumer (pr
 - Після нового з'єднання драйвер заново оголошує топологію і підписує всіх споживачів. Канал споживача, що помер сам (брокер видалив чергу), підписується знову.
 - Зупинка (`onModuleDestroy`): `cancel` споживачів, очікування обробників, що ще працюють (до 10 с), закриття каналів і з'єднання. Повідомлення, яке не встигли підтвердити, брокер віддасть знову.
 
-## Потік 1. Нагадування про задачі
-
-Черга `reminders`, повідомлення `{ taskId, userId, dueAt }`.
-
-1. **Планувальник** (`RemindersService`, кожні `REMINDER_CHECK_EVERY_SECONDS` = 60 с; вмикається, лише коли налаштований Telegram-бот, і не в тестах) шукає задачі: не `DONE`, `reminderSentAt IS NULL`, `dueDate` між «зараз» і «зараз + `REMINDER_LEAD_MINUTES`» (30 хв).
-2. **Кому:** виконавцю; якщо виконавця немає, тому, хто імпортував задачу з Google; інакше найстаршому власнику воркспейсу. Людина має ще бути учасником воркспейсу і мати прив'язаний Telegram (`TelegramLink`). Якщо виконавця не можна сповістити, нагадування не йде нікому (на власника не перемикаємось). Це ж тримає повідомлення в межах свого воркспейсу.
-3. На кожну задачу одне повідомлення. Одну й ту саму пару `taskId + dueAt` планувальник не ставить у чергу вдруге протягом 15 хв.
-4. **Споживач** (`prefetch: 1`) перечитує задачу: якщо вона виконана, видалена, уже нагадана або `dueDate` змінився, просто підтверджує повідомлення. Інакше шле `⏰ <назва> is due at HH:MM (<воркспейс>)` (час UTC) і **лише після успішної відправки** ставить `reminderSentAt` (не чіпаючи `updatedAt`).
-5. Помилка Telegram: повтор із затримками 10, 20, 40, 80 с (5 спроб), далі `reminders.dead` і запис у лог.
-6. Зміна `dueDate` (`PATCH` задачі або синхронізація з Google Tasks) скидає `reminderSentAt`, тож перенесену задачу нагадають знову.
-
-**Ідемпотентність:** дублікат повідомлення не дає другого Telegram-повідомлення, бо споживач бачить `reminderSentAt`. Усередині одного процесу це гарантує `prefetch: 1`. Між кількома екземплярами API вікно гонки (два споживачі одночасно, ще до запису `reminderSentAt`) лишається: at-least-once.
-
-## Потік 2. Синхронізація Google
+## Синхронізація Google
 
 Черга `google-sync`, повідомлення `{ workspaceId, userId }`.
 
@@ -61,8 +48,6 @@ publish ──> exchange "nook" (direct, key = q) ──> q ──> consumer (pr
 | Змінна                          | Типово | Що робить                                                                        |
 | ------------------------------- | ------ | -------------------------------------------------------------------------------- |
 | `AMQP_URL`                      | пусто  | `amqp://user:pass@host:5672`; без неї працює `InMemoryQueue`                     |
-| `REMINDER_LEAD_MINUTES`         | `30`   | за скільки хвилин до дедлайну нагадувати                                         |
-| `REMINDER_CHECK_EVERY_SECONDS`  | `60`   | як часто планувальник шукає задачі                                               |
 | `GOOGLE_SYNC_EVERY_MINUTES`     | `30`   | періодична фонова синхронізація; `0` вимикає                                     |
 | `RABBITMQ_PASSWORD` (лише prod) | пусто  | пароль користувача `nook` у брокері; якщо порожній, береться `POSTGRES_PASSWORD` |
 
@@ -76,17 +61,17 @@ publish ──> exchange "nook" (direct, key = q) ──> q ──> consumer (pr
   {
     "driver": "rabbitmq",
     "connected": true,
-    "queues": [{ "name": "reminders", "messages": 0, "consumers": 1, "retrying": 2, "dead": 0 }]
+    "queues": [{ "name": "google-sync", "messages": 0, "consumers": 2, "retrying": 1, "dead": 0 }]
   }
   ```
 
 - У контейнері: `docker compose -f infra/docker-compose.yml exec rabbitmq rabbitmqctl list_queues name messages consumers`.
-- Подивитися dead-letter: у `rabbitmq:4-management-alpine` (локально) у Queues → `reminders.dead` → Get messages; заголовки `x-error` і `x-attempt` пояснюють, чому повідомлення там. Повернути в роботу можна shovel-ом або повторною публікацією тіла в основну чергу.
+- Подивитися dead-letter: у `rabbitmq:4-management-alpine` (локально) у Queues → `google-sync.dead` → Get messages; заголовки `x-error` і `x-attempt` пояснюють, чому повідомлення там. Повернути в роботу можна shovel-ом або повторною публікацією тіла в основну чергу.
 - У логах: `Message <id> of "<черга>" dead-lettered after N attempt(s): <причина>`.
 
 ## Тести
 
 - Юніт: `in-memory-queue.spec.ts` (ack, nack → retry → dead-letter, порядок, prefetch, віртуальний годинник), `rabbitmq-queue.spec.ts` (проти підробленого каналу `amqplib`: топологія з DLX і retry-чергами, ack/nack-гілки, перепідключення, перепідписка, graceful shutdown), `reminder.spec.ts`.
-- E2E: `apps/api/test/queue.e2e-spec.ts` (вибірка нагадувань, перенесена задача, ізоляція воркспейсів, ідемпотентність, retry і dead-letter, `sync-async`, періодичне складання завдань, доступ до `queue-status`).
+- E2E: `apps/api/test/queue.e2e-spec.ts` (`sync-async`, періодичне складання завдань, доступ до `queue-status`).
 - У тестах `InMemoryQueue` працює з ручним годинником: повтори не мають реальних таймерів, а тест керує часом через `flush()`, `advance(мс)` і `drain()`.
 - Драйвер RabbitMQ окремо перевірено вручну проти `rabbitmq:4-management-alpine`: публікація, споживання, повтор із затримкою, dead-letter і відновлення після `docker restart`.

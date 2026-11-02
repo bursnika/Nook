@@ -30,10 +30,6 @@ services:
         sync: false
       - key: GA_MEASUREMENT_ID
         sync: false
-      - key: TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: TELEGRAM_BOT_USERNAME
-        sync: false
       - key: AZURE_STORAGE_CONNECTION_STRING
         sync: false
 

@@ -8,7 +8,7 @@ Notion-подібний планер: блокові нотатки, задач�
 
 - **Backend:** NestJS 12, Prisma 7, PostgreSQL, REST, GraphQL (запити, мутації й підписки), WebSocket / Long Poll / Adaptive Polling, MVC-адмінка (Handlebars + Bootstrap), SSE
 - **Frontend:** React 19, Vite, TypeScript, dnd-kit, framer-motion, Chart.js, PWA
-- **Інтеграції:** Google OAuth2, Google Calendar і Tasks, Telegram-бот, Claude API (асистент), MCP-сервер
+- **Інтеграції:** Google OAuth2, Google Calendar і Tasks, MCP-сервер
 - **Інфраструктура:** Docker Compose, Redis, RabbitMQ, GitHub Actions, Azure (VM + Caddy + Blob Storage)
 - **Тести:** Vitest (unit, e2e), Postman + Newman, Playwright з покриттям
 
@@ -154,10 +154,6 @@ subscription {
 
 Сторінку можна опублікувати (slug у формі сторінки або через API). Вона відкривається без входу за адресою `/p/<slug>`: серверний Bootstrap-лендінг із обкладинкою, контентом і блоком контактів автора, що залипає. Для пошуковиків: `<title>`, `description`, canonical, Open Graph і Twitter-теги, JSON-LD `Article`, `/sitemap.xml`, `/robots.txt`. Аудит Seobility виконується після деплою (`docs/deploy.md`).
 
-### Telegram-бот
-
-Створіть бота в @BotFather, виставте `TELEGRAM_BOT_TOKEN` і `TELEGRAM_BOT_USERNAME`. У Settings → Telegram натисніть Connect: бот щоранку надсилає план дня, відповідає на `/today` і нагадує про задачі, які скоро спливають (через RabbitMQ, [`docs/b8-queues.md`](docs/b8-queues.md)).
-
 ### MCP-сервер
 
 [`packages/mcp`](packages/mcp/README.md): 5 інструментів читання (`list_pages`, `get_page`, `list_tasks`, `list_events`, `search`) і 2 запису (`create_task`, `append_block`). Підключається до Claude Desktop і Claude Code.
@@ -165,7 +161,7 @@ subscription {
 ### Кеш, черги, сховище
 
 - Redis-кеш GET-списків із інвалідацією по воркспейсу: [`docs/b9-caching.md`](docs/b9-caching.md).
-- RabbitMQ: нагадування й асинхронна синхронізація Google: [`docs/b8-queues.md`](docs/b8-queues.md).
+- RabbitMQ: асинхронна синхронізація Google: [`docs/b8-queues.md`](docs/b8-queues.md).
 - Файли можуть лежати в Azure Blob Storage: [`docs/c19-blob-storage.md`](docs/c19-blob-storage.md).
 
 ### Деплой і CI/CD
@@ -194,7 +190,7 @@ pnpm --filter @nook/api test:e2e    # e2e проти окремої БД nook_te
 - `workspace-home.e2e-spec.ts`: завдання й події на 24 години, пріоритетні, швидке додавання таски, діапазон календаря, швидкі нотатки.
 - `google-calendar.e2e-spec.ts`: підключення (згода, state, scope), синхронізація, відключення; Google підміняється фейком.
 - `realtime.e2e-spec.ts`: журнал операцій, три транспорти, присутність, GraphQL (запити й підписки), метрики.
-- `public.e2e-spec.ts`, `telegram.e2e-spec.ts`, `widget.e2e-spec.ts`, `queue.e2e-spec.ts`, `cache.e2e-spec.ts` та інші: публічні сторінки з SEO, бот, віджети, черги, кеш.
+- `public.e2e-spec.ts`, `widget.e2e-spec.ts`, `queue.e2e-spec.ts`, `cache.e2e-spec.ts` та інші: публічні сторінки з SEO, віджети, черги, кеш.
 - Решта специфікацій перевіряє бізнес-правила від імені платформенного адміна.
 
 Інші рівні тестів:

@@ -44,7 +44,7 @@ services:
       timeout: 3s
       retries: 10
 
-  # Message broker for reminders and Google sync jobs (see docs/b8-queues.md). The management UI is not
+  # Message broker for Google sync jobs (see docs/b8-queues.md). The management UI is not
   # part of this image; inspect with `docker compose exec rabbitmq rabbitmqctl list_queues` or GET /api/queue-status.
   rabbitmq:
     image: rabbitmq:4-alpine
@@ -104,15 +104,10 @@ services:
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
       # Optional Google Analytics 4 (G-XXXX) for published pages and the app
       GA_MEASUREMENT_ID: ${GA_MEASUREMENT_ID:-}
-      # Optional Telegram bot (morning plan, /today)
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
-      TELEGRAM_DIGEST_HOUR_UTC: ${TELEGRAM_DIGEST_HOUR_UTC:-6}
       # List cache; the API keeps working (without cache) when Redis is down
       REDIS_URL: redis://redis:6379
-      # Queues for reminders and Google sync jobs; the API starts even if the broker is away and keeps trying
+      # Queues for Google sync jobs; the API starts even if the broker is away and keeps trying
       AMQP_URL: amqp://nook:nook@rabbitmq:5672
-      REMINDER_LEAD_MINUTES: ${REMINDER_LEAD_MINUTES:-30}
       GOOGLE_SYNC_EVERY_MINUTES: ${GOOGLE_SYNC_EVERY_MINUTES:-30}
       # Optional: uploaded files in Azure Blob Storage instead of the uploads volume (docs/c19-blob-storage.md)
       AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-}

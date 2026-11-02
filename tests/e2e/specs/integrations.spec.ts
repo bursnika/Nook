@@ -44,7 +44,6 @@ test.describe('settings and integrations', () => {
     await expect(workspace.getByText('insights', { exact: true })).toBeVisible();
     await expect(workspace.getByText('On').first()).toBeVisible();
 
-    await expect(card(ann.page, 'Telegram')).toContainText('The bot is not set up on this server');
     await expect(card(ann.page, 'Widgets')).toContainText('No token');
     const google = card(ann.page, 'Google Calendar');
     await expect(google).toContainText('Server setup: Ready');
