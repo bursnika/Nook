@@ -1,4 +1,3 @@
-/* A Kanban card opened as an issue: content and activity on the left, details on the right. */
 .modal--issue {
   width: min(1040px, calc(100vw - 24px));
 }
@@ -139,7 +138,6 @@
   padding: 0 7px;
 }
 
-/* links that look like text, for small actions next to comments and files */
 .link-btn {
   border: 0;
   background: none;
@@ -161,7 +159,7 @@
   outline-offset: 2px;
 }
 
-/* ---------- avatars ---------- */
+/* avatars */
 
 .avatar {
   flex: none;
@@ -191,7 +189,7 @@
   font-size: 12px;
 }
 
-/* ---------- attachments ---------- */
+/* attachments */
 
 .files.is-over {
   outline: var(--px) dashed var(--pink-700);
@@ -264,7 +262,7 @@
   color: var(--gray-500);
 }
 
-/* ---------- comments ---------- */
+/* comments */
 
 .comment-new,
 .comment {

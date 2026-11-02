@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 export const LOOKUP_PAGE_SIZE = 20;
-/** Searching a table with millions of rows by one or two letters is pointless, so the server enforces it too. */
 export const LOOKUP_MIN_CHARS = 3;
 
 export interface LookupResult {
@@ -12,7 +11,6 @@ export interface LookupResult {
 
 const EMPTY: LookupResult = { results: [], more: false };
 
-/** Option lists for the Select2 autocompletes in the admin forms. */
 @Injectable()
 export class LookupService {
   constructor(private readonly prisma: PrismaService) {}
@@ -69,8 +67,6 @@ export class LookupService {
     );
   }
 
-  // ---- labels of already chosen values, used to re-render a form with its selection --------------
-
   async userOption(id?: unknown): Promise<LookupResult['results']> {
     if (typeof id !== 'string' || !id) return [];
     const user = await this.prisma.user.findUnique({
@@ -89,7 +85,7 @@ export class LookupService {
     return page ? [{ id: page.id, text: `${page.icon ? `${page.icon} ` : ''}${page.title}` }] : [];
   }
 
-  // One extra row tells Select2 whether another page exists.
+  // one extra row tells select2 there is a next page
   private window(page: number) {
     return { skip: (page - 1) * LOOKUP_PAGE_SIZE, take: LOOKUP_PAGE_SIZE + 1 };
   }

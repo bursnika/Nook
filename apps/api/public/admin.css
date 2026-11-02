@@ -1,4 +1,3 @@
-/* Nook admin: Bootstrap 5 re-themed with the Nook palette (see docs/design.md). */
 :root {
   --nook-pink-100: #fce1ee;
   --nook-pink-300: #f4a3c8;
@@ -222,7 +221,7 @@ h4,
   color: #a3262a;
 }
 
-/* workspace home: tabs on top, the calendar below it, edge to edge */
+/* workspace home */
 .quick-task {
   display: grid;
   grid-template-columns: 1fr 11rem 9rem auto;

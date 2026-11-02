@@ -2,10 +2,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { env } from '../src/env.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 
-/**
- * Bulk-generates users to demo autocomplete on a large table (task F2).
- * Usage: pnpm --filter @nook/api db:seed:users [count]   (default 1 000 000)
- */
+// usage: pnpm --filter @nook/api db:seed:users [count]
 const count = Number(process.argv[2] ?? 1_000_000);
 if (!Number.isInteger(count) || count < 1) throw new Error('count must be a positive integer');
 

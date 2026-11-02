@@ -1,8 +1,4 @@
-/* Nook service worker: lets the installed app open offline and load fast.
- * - built files (/app/assets/*, icons): cache first, they never change under the same name
- * - page navigations: network first, the cached app shell when offline
- * - everything else (API, WebSocket, GraphQL, uploads, admin, public pages): never touched
- */
+// built assets: cache first, pages: network first, everything else is left alone
 const VERSION = 'nook-v1';
 const SHELL = '/app/';
 

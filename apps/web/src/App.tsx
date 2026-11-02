@@ -7,7 +7,6 @@ import { WorkspaceProvider } from './lib/workspace';
 import HomePage from './screens/HomePage';
 import WorkspacePicker from './screens/WorkspacePicker';
 
-// the heavy screens (drag and drop, charts, the editor) load when first opened
 const TasksPage = lazy(() => import('./screens/TasksPage'));
 const CalendarPage = lazy(() => import('./screens/CalendarPage'));
 const InsightsPage = lazy(() => import('./screens/InsightsPage'));

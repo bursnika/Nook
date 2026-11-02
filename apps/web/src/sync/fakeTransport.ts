@@ -2,7 +2,6 @@ import type { TransportKind } from '../lib/settings';
 import { TransportError, type Transport, type TransportHandlers } from './transport';
 import type { BlockOp, ConnectionStatus, OpsMessage, PresenceMessage } from './types';
 
-/** A scriptable Transport for tests: the test plays the server. */
 export class FakeTransport implements Transport {
   readonly kind: TransportKind;
   handlers?: TransportHandlers;
@@ -10,9 +9,7 @@ export class FakeTransport implements Transport {
   closed = false;
   sent: BlockOp[][] = [];
   presenceSent: { blockId: string | null; caret: number | null }[] = [];
-  /** Set to make the next sendOps fail. */
   failNext: TransportError | null = null;
-  /** Hold the reply of sendOps until `release()` is called. */
   hold = false;
   private waiting: { resolve(): void; reject(e: Error): void }[] = [];
 
@@ -51,7 +48,6 @@ export class FakeTransport implements Transport {
     this.closed = true;
   }
 
-  // ---- server side
   status(status: ConnectionStatus) {
     this.handlers?.onStatus(status);
   }

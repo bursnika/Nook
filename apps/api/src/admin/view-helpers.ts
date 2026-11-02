@@ -3,7 +3,6 @@ import type hbs from 'hbs';
 const isoDate = (value: unknown) =>
   value ? new Date(value as string).toISOString().slice(0, 10) : '';
 
-/** Small, pure helpers for the Handlebars templates. */
 export function registerViewHelpers(engine: typeof hbs) {
   engine.registerHelper('add', (a: unknown, b: unknown) => Number(a ?? 0) + Number(b ?? 0));
   engine.registerHelper('eq', (a: unknown, b: unknown) => a === b);
@@ -25,7 +24,7 @@ export function registerViewHelpers(engine: typeof hbs) {
     if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
     return `${(n / 1024 / 1024).toFixed(1)} MB`;
   });
-  // concat "a" b "c": builds URLs for the lookup attributes (the last argument is Handlebars' options object)
+  // last arg is handlebars' options object
   engine.registerHelper('concat', (...parts: unknown[]) => parts.slice(0, -1).join(''));
   engine.registerHelper('coverLabel', (url: unknown) =>
     url ? 'Replace the cover' : 'Cover image',

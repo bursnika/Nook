@@ -5,7 +5,6 @@ import { BLOCK_TYPES, type NookClient } from './client.js';
 
 export interface ToolDeps {
   client: NookClient;
-  /** Injected so tests can pin the clock. */
   now?: () => Date;
 }
 
@@ -46,7 +45,6 @@ const fail = (err: unknown): CallToolResult => ({
   content: [{ type: 'text', text: err instanceof Error ? err.message : String(err) }],
 });
 
-/** Runs a tool body; any failure (HTTP, network, config) becomes an MCP tool error instead of a crash. */
 async function run(body: () => Promise<unknown>): Promise<CallToolResult> {
   try {
     return ok(await body());

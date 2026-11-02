@@ -38,7 +38,6 @@ function sectionOf(
   }
 }
 
-/** The retro desktop around a workspace: sidebar, one big window for the current screen, taskbar. */
 export function AppShell() {
   const { workspace, pages } = useWorkspace();
   const location = useLocation();
@@ -60,7 +59,6 @@ export function AppShell() {
   });
   const atHome = rest.length === 0;
 
-  // each navigation closes the drawer, restores a minimised window and moves focus to the new screen
   useEffect(() => {
     setDrawer(false);
     setMinimized(false);

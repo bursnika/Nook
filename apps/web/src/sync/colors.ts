@@ -1,4 +1,3 @@
-/** Participant colours: all keep white text above 4.5:1 and come from the Nook palette family. */
 export const PARTICIPANT_COLORS = [
   '#b8326f', // pink-700
   '#2f5aa6', // blue-700
@@ -8,7 +7,6 @@ export const PARTICIPANT_COLORS = [
   '#8f2253', // deep pink
 ] as const;
 
-/** The same person always gets the same colour, on every device. */
 export function colorFor(userId: string): string {
   let hash = 0;
   for (let i = 0; i < userId.length; i += 1) hash = (hash * 31 + userId.charCodeAt(i)) | 0;

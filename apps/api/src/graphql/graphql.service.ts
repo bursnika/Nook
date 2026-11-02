@@ -38,7 +38,6 @@ const date = (value: string, name: string) => {
   return parsed;
 };
 
-/** Resolvers. Every one checks that the caller belongs to the workspace it asks about. */
 @Injectable()
 export class GraphqlService {
   constructor(
@@ -55,11 +54,10 @@ export class GraphqlService {
         where: { userId_workspaceId: { userId: user.id, workspaceId } },
         select: { id: true },
       })
-      .catch(() => null); // a malformed id is the same as an unknown one
+      .catch(() => null);
     if (!membership) throw new ForbiddenException('Not a member of this workspace');
   }
 
-  /** The object GraphQL reads its fields from: one function per root field. */
   readonly root = {
     tasks: async (
       { workspaceId, status }: { workspaceId: string; status?: TaskStatus },
@@ -118,7 +116,6 @@ export class GraphqlService {
     },
   };
 
-  /** Turns bus events of one topic into the payloads GraphQL expects: `{ fieldName: value }`. */
   private async *stream(workspaceId: string, topic: 'task' | 'event') {
     for await (const event of this.bus.workspaceStream(workspaceId)) {
       if (event.topic !== topic) continue;

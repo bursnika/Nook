@@ -5,12 +5,10 @@ import { createTransport } from '../sync/createTransport';
 import { SyncClient } from '../sync/syncClient';
 import type { Snapshot } from '../sync/types';
 
-/** Where the editor gets its sync client from. Tests provide a client built on a fake transport. */
 export interface EditorEnv {
   createClient(workspaceId: string, pageId: string): SyncClient;
 }
 
-/** Fired after a title was saved, so the sidebar can refresh its page list. */
 export const PAGE_RENAMED = 'nook:page-renamed';
 
 export const defaultEnv: EditorEnv = {
@@ -31,7 +29,6 @@ export const defaultEnv: EditorEnv = {
         window.dispatchEvent(
           new CustomEvent(PAGE_RENAMED, { detail: { workspaceId, pageId, title } }),
         );
-        // the shell's sidebar listens for this one
         window.dispatchEvent(new Event('nook:pages-changed'));
       },
     });

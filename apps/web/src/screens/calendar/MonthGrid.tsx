@@ -4,7 +4,6 @@ import { LOCALE } from '../../lib/locale';
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MAX_PILLS = 3;
 
-/** Six weeks of days. Each day is a button that selects it; its items are pills that open details. */
 export function MonthGrid({
   month,
   days,

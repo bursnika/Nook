@@ -68,7 +68,6 @@ export class EventsService {
     this.bus.publishWorkspace(workspaceId, { topic: 'event', kind: 'deleted', id });
   }
 
-  /** Imported events belong to Google: changing only the local copy would be undone by the next sync. */
   private assertNotImported(event: { googleEventId: string | null }) {
     if (event.googleEventId !== null) {
       throw new ConflictException(

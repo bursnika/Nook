@@ -106,7 +106,6 @@ function CardBody({
   );
 }
 
-/** A card that can be dragged with the pointer from anywhere, or with the keyboard from its handle. */
 export function SortableCard({
   task,
   animate,
@@ -157,7 +156,6 @@ export function SortableCard({
   );
 }
 
-/** The copy that follows the pointer while dragging. */
 export function CardPreview({ task }: { task: Task }) {
   return (
     <div className={`card card--${task.status.toLowerCase()} card--overlay`}>

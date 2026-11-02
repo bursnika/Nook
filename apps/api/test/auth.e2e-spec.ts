@@ -41,7 +41,6 @@ describe('Authentication', () => {
       expect(res.headers.location).toBe(
         `/api/auth/google?returnTo=${encodeURIComponent('/admin/workspaces?page=2')}`,
       );
-      // a form post cannot be redirected: it simply fails
       await http()
         .post('/admin/workspaces')
         .type('form')
@@ -130,7 +129,6 @@ describe('Authentication', () => {
         expect(setCookieLine(res, name)).toMatch(/SameSite=Lax/);
         expect(setCookieLine(res, name)).toMatch(/Path=\/api\/auth/);
       }
-      // the verifier is a secret: it is in the cookie only and the challenge is its hash
       const verifier = cookieValue(res, 'nook_oauth_verifier')!;
       expect(location.searchParams.get('code_challenge')).toBe(
         createHash('sha256').update(verifier).digest('base64url'),
@@ -153,8 +151,8 @@ describe('Authentication', () => {
 
       expect(setCookieLine(callback, 'nook_at')).toMatch(/HttpOnly/);
       expect(setCookieLine(callback, 'nook_rt')).toMatch(/HttpOnly/);
-      expect(setCookieLine(callback, 'nook_rt')).toMatch(/Path=\/api\/auth/); // never sent to ordinary routes
-      expect(setCookieLine(callback, 'nook_oauth_state')).toMatch(/Expires=Thu, 01 Jan 1970/); // one-time cookies are cleared
+      expect(setCookieLine(callback, 'nook_rt')).toMatch(/Path=\/api\/auth/);
+      expect(setCookieLine(callback, 'nook_oauth_state')).toMatch(/Expires=Thu, 01 Jan 1970/);
 
       const me = await agent.get('/api/auth/me').expect(200);
       expect(me.body).toMatchObject({
@@ -272,7 +270,7 @@ describe('Authentication', () => {
       await http().get('/api/auth/google/callback').expect(400);
 
       const { agent, state } = await signIn(ctx, { email: 'replay@example.com' });
-      await agent.get(`/api/auth/google/callback?code=c1&state=${state}`).expect(400); // state cookie was cleared
+      await agent.get(`/api/auth/google/callback?code=c1&state=${state}`).expect(400);
       const cancelled = request.agent(app.getHttpServer());
       await cancelled.get('/api/auth/google');
       await cancelled.get('/api/auth/google/callback?error=access_denied').expect(400);
@@ -328,8 +326,8 @@ describe('Authentication', () => {
       const stolen = cookieValue(callback, 'nook_rt')!;
       const legit = cookieValue(await refreshWith(stolen).expect(200), 'nook_rt')!;
 
-      await refreshWith(stolen).expect(401); // the thief replays the old token ...
-      await refreshWith(legit).expect(401); // ... and the victim's newer token is revoked too
+      await refreshWith(stolen).expect(401); // replaying the old token...
+      await refreshWith(legit).expect(401); // ...revokes the newer one too
       expect(await ctx.prisma.refreshToken.count({ where: { revokedAt: null } })).toBe(0);
     });
 
@@ -362,7 +360,7 @@ describe('Authentication', () => {
           .getCookies({ domain: '127.0.0.1', path, secure: false, script: false } as never)
           .map((c) => c.name);
 
-      // positive control: the jar does hand out cookies for these requests, so the check below is not vacuous
+      // sanity check: the jar does send cookies here
       expect(sentTo('/api/workspaces')).toContain('nook_at');
       expect(sentTo('/api/workspaces')).not.toContain('nook_rt');
       expect(sentTo('/api/auth/refresh')).toContain('nook_rt');
@@ -398,8 +396,8 @@ describe('Authentication', () => {
       await post('https://evil.example').expect(403);
       await post('null').expect(403);
       await post('http://nook.test').expect(201);
-      await post().expect(201); // no Origin: not a browser cross-site request
-      expect(await ctx.prisma.workspace.count()).toBe(3); // the personal one + two allowed posts
+      await post().expect(201);
+      expect(await ctx.prisma.workspace.count()).toBe(3); // personal one + two allowed posts
     });
 
     it('does not apply the origin check to Bearer tokens, which a browser never attaches by itself', async () => {

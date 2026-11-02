@@ -27,15 +27,10 @@ export interface TasksApi {
   patch: (id: string, patch: TaskPatch) => Promise<void>;
   remove: (id: string) => Promise<void>;
   place: (changes: readonly Placement[]) => Promise<void>;
-  /** Reads one task again, e.g. after its comments or files changed. */
   refresh: (id: string) => Promise<void>;
 }
 
-/**
- * The tasks of a workspace, kept in sync with the server: writes are applied at once and confirmed or rolled
- * back, and live changes from other people are merged in. While one of our own writes to a task is in flight,
- * live echoes of that task are ignored so a card never jumps back and forth.
- */
+// ignore live echoes of our own in-flight writes so cards don't jump
 export function useTasks(workspaceId: string): TasksApi {
   const list = useResource<Task[]>(
     () => apiAll<Task>(`/workspaces/${workspaceId}/tasks`),

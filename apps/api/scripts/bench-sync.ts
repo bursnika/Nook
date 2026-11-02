@@ -5,17 +5,8 @@ import WebSocket from 'ws';
 import { env } from '../src/env.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 
-/**
- * C10 benchmark: the same stream of block operations over WebSocket, long poll and adaptive polling.
- *
- *   BENCH_ADMIN=bench@nook.local ... the API must run with ADMIN_EMAILS=bench@nook.local (for /api/sync-metrics)
- *   pnpm --filter @nook/api bench:sync -- --url http://localhost:3100 --listeners 10 --writes 60 --rate 4 --idle 10
- *
- * One writer posts `writes` operations at `rate` per second; `listeners` readers (other tabs) receive them
- * over the transport under test. Latency is measured from "just before the write" to "arrived at the reader"
- * on the same machine clock. After the writes the readers sit idle for `idle` seconds, which is where polling
- * pays for requests that bring nothing. The server counts requests, bytes and CPU per transport.
- */
+// websocket vs long poll vs adaptive polling, run: pnpm --filter @nook/api bench:sync
+// the api needs ADMIN_EMAILS=bench@nook.local for /api/sync-metrics
 const argv = process.argv.slice(2);
 const arg = (name: string, fallback: string) => {
   const i = argv.indexOf(`--${name}`);
@@ -77,7 +68,6 @@ async function main() {
     .setExpirationTime('30m')
     .sign(new TextEncoder().encode(env.jwtSecret));
   const auth = { Authorization: `Bearer ${token}` };
-  // every transport gets a fresh page, so the log of the previous run does not replay into the next
   let page = { id: '' };
   let root = '';
 
@@ -136,7 +126,7 @@ async function main() {
             const reply = await call<Reply>(`${root}/changes?since=${since}&clientId=${id}`);
             record(reply.messages);
             since = reply.seq ?? since;
-            // adaptive: fast right after activity, then slower and slower while it is quiet (capped at 10 s)
+            // back off while quiet, max 10 s
             wait = reply.more
               ? 0
               : reply.messages.length > 0
@@ -162,7 +152,7 @@ async function main() {
       reset();
       await call(`${BASE}/api/sync-metrics`, { method: 'DELETE' });
       const group = Array.from({ length: LISTENERS }, (_, i) => readers[kind](`${kind}-${i}`));
-      await sleep(1500); // let every reader connect and settle
+      await sleep(1500); // let readers connect
 
       const started = Date.now();
       for (let i = 0; i < WRITES; i++) {

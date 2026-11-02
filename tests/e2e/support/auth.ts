@@ -6,14 +6,13 @@ import type { Seed } from './seed';
 
 export type Person = 'ann' | 'bob' | 'root';
 
-/** The session cookie the API reads (see ACCESS_COOKIE in apps/api/src/auth/cookies.ts). */
 export const ACCESS_COOKIE = 'nook_at';
 
 export const storageStatePath = (person: Person) => join(AUTH_DIR, `${person}.json`);
 
 const TOKEN_HOURS = 12;
 
-/** The same claims as TokenService.signAccessToken: HS256, sub = user id, issuer, audience, e-mail. */
+// same claims as TokenService.signAccessToken
 export function mintAccessToken(user: { id: string; email: string }): Promise<string> {
   return new SignJWT({ email: user.email })
     .setProtectedHeader({ alg: 'HS256' })
@@ -25,7 +24,6 @@ export function mintAccessToken(user: { id: string; email: string }): Promise<st
     .sign(new TextEncoder().encode(JWT_SECRET));
 }
 
-/** Playwright storage state holding only the session cookie of one person. */
 export async function writeStorageStates(seed: Seed) {
   mkdirSync(AUTH_DIR, { recursive: true });
   const { hostname } = new URL(BASE_URL);

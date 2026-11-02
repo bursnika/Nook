@@ -1,7 +1,6 @@
 import { expect, test } from '../support/fixtures';
 import { unique, type Api } from '../support/api';
 
-/** Today in the browser's time zone, which the config pins to UTC. */
 const today = () => new Date().toISOString().slice(0, 10);
 const todayLabel = () =>
   new Date().toLocaleDateString('en-GB', { dateStyle: 'full', timeZone: 'UTC' });
@@ -23,7 +22,7 @@ test.describe('calendar', () => {
     await expect(ann.page.locator('.cal__cell.is-today')).toHaveCount(1);
     await expect(ann.page.getByRole('heading', { level: 3, name: todayLabel() })).toBeVisible();
 
-    // the seeded event is tomorrow at noon; the six-week grid always shows the next day
+    // seeded event is tomorrow at noon
     const tomorrow = new Date(Date.now() + 86_400_000);
     const tomorrowLabel = tomorrow.toLocaleDateString('en-GB', {
       dateStyle: 'full',
@@ -63,7 +62,7 @@ test.describe('calendar', () => {
     const title = unique('Quick event');
     await ann.open('/calendar');
 
-    // create: the form under the day list adds it to the selected day (today)
+    // create
     await ann.page.getByLabel('New event on this day').fill(title);
     await ann.page.getByRole('button', { name: 'Add event' }).click();
     const agenda = ann.page.getByRole('region', { name: todayLabel() });
@@ -88,7 +87,7 @@ test.describe('calendar', () => {
     await expect(agenda.getByRole('button', { name: renamed })).toBeVisible();
     await expect(agenda.getByText('09:00–11:30')).toBeVisible();
 
-    // delete, with the confirmation
+    // delete
     await agenda.getByRole('button', { name: renamed }).click();
     await expect(ann.page.getByText('Moved by the e2e test')).toBeVisible();
     await ann.page

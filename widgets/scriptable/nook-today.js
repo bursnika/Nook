@@ -1,8 +1,6 @@
-// Nook "Today" widget for iOS, made for the free Scriptable app (https://scriptable.app).
-// 1. In Scriptable press +, paste this file, set BASE and TOKEN below.
-// 2. Add a Scriptable widget (small, medium or large) to the home screen and choose this script.
-const BASE = 'https://YOUR-DOMAIN'; // for example https://nook-vero.westeurope.cloudapp.azure.com
-const TOKEN = 'nkw_...'; // Nook -> Settings -> Widgets -> Create token
+// nook today widget for scriptable (ios)
+const BASE = 'https://YOUR-DOMAIN';
+const TOKEN = 'nkw_...'; // settings -> widgets -> create token
 
 const PINK = new Color('#b8326f');
 const INK = new Color('#2b1e33');

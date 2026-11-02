@@ -8,7 +8,6 @@ import { CreateWorkspaceDto, ListWorkspacesQuery, UpdateWorkspaceDto } from './w
 export class WorkspacesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** People only see the workspaces they belong to; platform admins see all of them. */
   async list({ q, skip, limit }: ListWorkspacesQuery, user: AuthUser) {
     const where: Prisma.WorkspaceWhereInput = {
       ...(user.isPlatformAdmin ? {} : { memberships: { some: { userId: user.id } } }),
@@ -38,7 +37,6 @@ export class WorkspacesService {
     return this.prisma.workspace.findUniqueOrThrow({ where: { id } });
   }
 
-  /** The creator becomes the first (and, until someone else is promoted, only) owner. */
   create(dto: CreateWorkspaceDto, ownerId: string) {
     return this.prisma.workspace.create({
       data: { ...dto, memberships: { create: { userId: ownerId, role: 'OWNER' } } },

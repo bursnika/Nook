@@ -8,7 +8,6 @@ import { SessionProvider } from './lib/session';
 
 initAnalytics();
 
-// installable app: the service worker caches the built files and the app shell
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' }).catch(() => undefined);

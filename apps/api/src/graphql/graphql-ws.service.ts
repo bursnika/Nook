@@ -10,7 +10,6 @@ import { TransportMetrics } from '../realtime/transport-metrics.js';
 import { GraphqlService, type GraphqlContext } from './graphql.service.js';
 import { schema } from './schema.js';
 
-/** GraphQL subscriptions over WebSocket (graphql-ws protocol). Who may connect is decided in `onConnect`. */
 @Injectable()
 export class GraphqlWsService {
   private readonly sockets = new WebSocketServer({ noServer: true });
@@ -24,7 +23,7 @@ export class GraphqlWsService {
     this.disposable = useServer<Record<string, unknown>, { user?: AuthUser }>(
       {
         schema,
-        // run everything with the library copy this code imports: graphql refuses a schema built by another copy
+        // use our graphql copy, it rejects schemas built by another one
         parse,
         validate,
         execute,
@@ -34,7 +33,7 @@ export class GraphqlWsService {
           mutation: graphql.root,
           subscription: graphql.root,
         },
-        // browsers send the cookie with the upgrade request; other clients pass { token } in connectionParams
+        // cookie for browsers, connectionParams.token for others
         onConnect: async (ctx) => {
           const params = ctx.connectionParams as { token?: unknown } | undefined;
           const request = ctx.extra.request as IncomingMessage;

@@ -1,15 +1,12 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-/** Helpers for the block editor screen (apps/web/src/editor). */
 export class EditorScreen {
   constructor(readonly page: Page) {}
 
-  /** The text areas of all text blocks, top to bottom. */
   get fields(): Locator {
     return this.page.getByRole('group', { name: 'Page content' }).getByRole('textbox');
   }
 
-  /** The text of the block with this aria-label, e.g. `paragraph block`. */
   field(kind: string, index = 0): Locator {
     return this.page.getByLabel(`${kind} block`).nth(index);
   }
@@ -26,7 +23,6 @@ export class EditorScreen {
     return this.page.getByRole('button', { name: /^Drag to reorder/ });
   }
 
-  /** Waits until the editor shows the page and the server has confirmed everything (no unsent edits). */
   async ready() {
     await expect(this.page.getByLabel('Page title')).toBeVisible();
     await this.saved();
@@ -42,16 +38,12 @@ export class EditorScreen {
     );
   }
 
-  /** Picks a transport in the status bar and waits until the page is connected through it. */
   async useTransport(kind: 'websocket' | 'longpoll' | 'polling', label: string) {
     await this.page.getByLabel('Connection type').selectOption(kind);
     await expect(this.connection).toContainText(`${label} · online`, { timeout: 20_000 });
   }
 
-  /**
-   * Drags the grip of block `from` onto block `to` with the mouse (dnd-kit needs a few real pointer moves
-   * before it starts a drag, and more while it is over the target).
-   */
+  // dnd-kit needs several real mouse moves to start a drag
   async dragBlock(from: number, to: number) {
     const source = await this.handles.nth(from).boundingBox();
     const target = await this.handles.nth(to).boundingBox();
@@ -67,11 +59,6 @@ export class EditorScreen {
     await page.mouse.up();
   }
 
-  /**
-   * Moves a block with the keyboard through its grip (Space picks up, arrows move, Space drops). dnd-kit
-   * measures the list after every key, so each step waits for its screen-reader announcement.
-   * `ids` are the block ids in their current order.
-   */
   async moveBlockWithKeys(ids: string[], from: number, to: number) {
     const { page } = this;
     const announcement = page.locator('[id^="DndLiveRegion"]');
@@ -82,7 +69,7 @@ export class EditorScreen {
     const step = to > from ? 1 : -1;
     for (let index = from + step; index !== to + step; index += step) {
       const arrived = `over droppable area ${ids[index]}`;
-      // the first key can arrive before dnd-kit listens for it: press again only while nothing moved
+      // first key press can get lost, so retry
       await expect(async () => {
         if (!(await announcement.innerText()).includes(arrived)) await page.keyboard.press(key);
         await expect(announcement).toContainText(arrived, { timeout: 1500 });

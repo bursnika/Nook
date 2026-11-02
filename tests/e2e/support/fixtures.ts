@@ -12,25 +12,21 @@ import { BASE_URL } from './env';
 import { trackCoverage } from './coverage';
 import type { Seed } from './seed';
 
-/** One signed-in person in their own browser: a context, a page and the REST API with their session. */
 export interface Actor {
   person: Person;
   context: BrowserContext;
   page: Page;
   api: Api;
-  /** The seeded workspace, opened on `path` (for example `/tasks`). */
   open(path?: string): Promise<void>;
 }
 
 type Fixtures = {
   seed: Seed;
-  /** Opens a signed-in browser for a person; everything is closed after the test. */
   signIn: (person: Person) => Promise<Actor>;
-  /** Ann, the owner of the seeded workspace, already signed in. */
+  // owner
   ann: Actor;
-  /** Bob, a member of the seeded workspace, in a second browser. */
+  // member
   bob: Actor;
-  /** Saves the code coverage of every page opened by the test (automatic). */
   coverage: void;
 };
 
@@ -88,7 +84,7 @@ export const test = base.extend<Fixtures>({
       actors.push(actor);
       return actor;
     });
-    // collect coverage first: closing the context would lose the pages that are still open
+    // flush coverage before closing
     for (const flush of flushers) await flush();
     for (const actor of actors) {
       await actor.api.dispose();

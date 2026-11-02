@@ -7,11 +7,6 @@ import {
   type FileStorage,
 } from './file-storage.js';
 
-/**
- * Serves files of a storage that has no folder to hand to express.static (blobs): the API reads the file
- * and streams it with the same headers local files get. Names that are not ours answer 404 without
- * touching the storage.
- */
 export function serveUploadsFromStorage(server: Express, storage: FileStorage) {
   server.get(`${UPLOAD_PREFIX}:name`, async (req, res) => {
     const name = req.params.name;

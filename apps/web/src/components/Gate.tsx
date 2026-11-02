@@ -6,7 +6,6 @@ import { PixelIcon } from './PixelIcon';
 import { ErrorState, LoadingState, Window } from './ui';
 import '../styles/picker.css';
 
-/** A single window on the empty desktop: used before a workspace is open and for dead ends. */
 export function CenteredWindow({
   title,
   children,
@@ -46,7 +45,6 @@ export function NotFound({ what = 'page', home = '/' }: { what?: string; home?: 
   );
 }
 
-/** Shown by the workspace layout while the workspace loads, or when it cannot be opened. */
 export function WorkspaceGate({
   loading,
   error,
@@ -57,7 +55,7 @@ export function WorkspaceGate({
   retry: () => void;
 }) {
   const missing = error instanceof ApiError && [400, 403, 404].includes(error.status);
-  // a workspace that cannot be opened must not be the one the picker jumps to next time
+  // so the picker doesn't jump back to it next time
   useEffect(() => {
     if (missing) forgetWorkspace();
   }, [missing]);

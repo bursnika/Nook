@@ -1,6 +1,5 @@
 import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
-/** Size of the Markdown text itself, in bytes; the JSON body may be somewhat bigger because of escaping. */
 export const MAX_MARKDOWN_BYTES = 1_000_000;
 
 export class ImportMarkdownDto {

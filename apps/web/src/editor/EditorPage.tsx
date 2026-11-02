@@ -29,7 +29,6 @@ import './editor.css';
 
 const NO_PEERS: readonly RemotePresence[] = [];
 
-/** The block editor of one page: title, blocks (drag to reorder), people on the page and the sync status. */
 export default function EditorPage() {
   const { workspaceId, pageId } = useParams<{ workspaceId: string; pageId: string }>();
   if (!workspaceId || !pageId) return <p className="boot">No page selected.</p>;
@@ -41,7 +40,6 @@ function EditorSession({ workspaceId, pageId }: { workspaceId: string; pageId: s
   const [client] = useState<SyncClient>(() => env.createClient(workspaceId, pageId));
   const state = useSyncState(client);
 
-  // ---- lifecycle: network, tab visibility, the transport setting changing under us
   useEffect(() => {
     client.start();
     const online = () => client.setBrowserOnline(true);
@@ -65,7 +63,6 @@ function EditorSession({ workspaceId, pageId }: { workspaceId: string; pageId: s
     };
   }, [client]);
 
-  // ---- focus requests from actions
   const [focus, setFocus] = useState<FocusRequest | null>(null);
   const nonce = useRef(0);
   const requestFocus = useCallback((id: string, caret: CaretTarget) => {
@@ -73,7 +70,6 @@ function EditorSession({ workspaceId, pageId }: { workspaceId: string; pageId: s
   }, []);
   const actions = useMemo(() => createActions(client, requestFocus), [client, requestFocus]);
 
-  // ---- cursor presence: the caret of the focused block, cleared when focus leaves the editor
   const onCaret = useCallback(
     (id: string, caret: number | null) => client.setCursor(id, caret),
     [client],
@@ -84,7 +80,6 @@ function EditorSession({ workspaceId, pageId }: { workspaceId: string; pageId: s
       client.setCursor(null, null);
   };
 
-  // ---- derived per-block data (stable identities so memoised rows skip work)
   const peersByBlock = useMemo(() => {
     const map = new Map<string, RemotePresence[]>();
     for (const p of state.presence) {
@@ -106,7 +101,6 @@ function EditorSession({ workspaceId, pageId }: { workspaceId: string; pageId: s
   }, [state.blocks]);
   const ids = useMemo(() => state.blocks.map((b) => b.id), [state.blocks]);
 
-  // ---- drag and drop
   const [dragging, setDragging] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -121,7 +115,6 @@ function EditorSession({ workspaceId, pageId }: { workspaceId: string; pageId: s
     actions.dropAt(String(active.id), arrayMove(ids, from, to).indexOf(String(active.id)));
   };
 
-  // announce other people's edits to screen readers
   const lastChange = useMemo(() => {
     const entries = Object.values(state.recent);
     return entries.sort((a, b) => b.nonce - a.nonce)[0];

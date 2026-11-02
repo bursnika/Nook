@@ -2,7 +2,6 @@ import { api, ApiError } from '../lib/api';
 import { pagePath, TransportError, type ChangesReply, type TransportContext } from './transport';
 import type { BlockOp } from './types';
 
-/** Shared HTTP calls of the polling transports (and of the WebSocket catch-up). */
 export function toTransportError(error: unknown): TransportError {
   if (error instanceof TransportError) return error;
   if (error instanceof ApiError) return new TransportError(error.message, error.status);

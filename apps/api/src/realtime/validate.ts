@@ -1,7 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 
-/** Same rules as the HTTP ValidationPipe, for messages that do not arrive through a controller. */
 export async function validateOrReject<T extends object>(
   cls: new () => T,
   plain: unknown,

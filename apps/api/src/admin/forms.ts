@@ -9,15 +9,12 @@ export const PAGE_SIZE = 10;
 export type FormErrors = Record<string, string>;
 
 interface CleanOptions {
-  /** Empty input becomes `null` (clears the column) instead of being dropped. */
   nullable?: string[];
-  /** Fields that always arrive as arrays, even when a single value is selected. */
   arrays?: string[];
-  /** Checkboxes: absent means false. */
   booleans?: string[];
 }
 
-/** Browser forms send '' for empty inputs, a bare string for one selected option and nothing for unchecked boxes. */
+// browser forms send '' for empty inputs and nothing for unchecked boxes
 export function cleanForm(body: Record<string, unknown>, opts: CleanOptions = {}) {
   const data: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(body ?? {})) {
@@ -50,7 +47,6 @@ export async function parseForm<T extends object>(
   return { value, errors, ok: Object.keys(errors).length === 0 };
 }
 
-/** Turns an expected business error into a message for the form banner; anything else is rethrown by the caller. */
 export function toFormMessage(error: unknown): string | null {
   if (error instanceof HttpException && error.getStatus() < 500) {
     const response = error.getResponse();
@@ -81,7 +77,6 @@ const PROBLEM_MESSAGES: Record<string, string> = {
   'calendar-sync': 'Google Calendar could not be synced. Connect it again or try later.',
 };
 
-/** The text after a Google sync: only numbers and known keys go in, so nothing in the URL can inject content. */
 export function syncMessage(counts: { events?: number; tasks?: number; tasksNote?: string }) {
   const parts = [`${counts.events ?? 0} events`];
   if (counts.tasks !== undefined) parts.push(`${counts.tasks} tasks`);
@@ -94,10 +89,8 @@ export function syncMessage(counts: { events?: number; tasks?: number; tasksNote
   return text;
 }
 
-/** Same idea for errors shown in the red banner. */
 export const problemMessage = (key?: string) => (key ? PROBLEM_MESSAGES[key] : undefined);
 
-/** Only known keys map to text, so a crafted `?flash=` can never inject content. */
 export const flashMessage = (key?: string) => (key ? FLASH_MESSAGES[key] : undefined);
 
 export function pager(req: Request, total: number, page: number) {
@@ -121,7 +114,6 @@ export function pager(req: Request, total: number, page: number) {
   };
 }
 
-/** `<option>` models for an enum select. */
 export function enumOptions(values: readonly string[], current?: string | null) {
   return values.map((value) => ({
     value,

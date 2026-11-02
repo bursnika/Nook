@@ -18,7 +18,7 @@ export function rememberWorkspace(id: string) {
   try {
     localStorage.setItem(LAST_KEY, id);
   } catch {
-    // storage can be blocked; the picker then simply shows the list
+    // storage can be blocked
   }
 }
 
@@ -30,7 +30,6 @@ export function forgetWorkspace() {
   }
 }
 
-/** Other parts of the app (the editor when a title changes) can announce that the page tree is stale. */
 export const PAGES_CHANGED = 'nook:pages-changed';
 
 interface WorkspaceState {
@@ -41,7 +40,6 @@ interface WorkspaceState {
   pages: PageSummary[];
   pagesLoading: boolean;
   refreshPages: () => Promise<void>;
-  /** Creates a page ("Untitled" unless titled), under `parentId` when given, and returns it. */
   createPage: (options?: { parentId?: string; title?: string }) => Promise<PageSummary>;
   deletePage: (id: string) => Promise<void>;
 }
@@ -61,7 +59,6 @@ export function WorkspaceProvider({
 }: {
   workspaceId: string;
   children: ReactNode;
-  /** What to show while loading or when the workspace cannot be opened. */
   fallback: (state: { loading: boolean; error?: Error; retry: () => void }) => ReactNode;
 }) {
   const base = useResource<Loaded>(async () => {
@@ -84,7 +81,6 @@ export function WorkspaceProvider({
     if (base.data) rememberWorkspace(workspaceId);
   }, [base.data, workspaceId]);
 
-  // the page tree follows edits made elsewhere (another tab, the editor renaming a page)
   useEffect(() => {
     const refresh = () => void reloadPages();
     window.addEventListener(PAGES_CHANGED, refresh);
@@ -152,7 +148,6 @@ export interface PageNode {
   children: PageNode[];
 }
 
-/** Builds the sidebar tree: oldest first inside each level (the API lists newest first). */
 export function buildPageTree(pages: readonly PageSummary[]): PageNode[] {
   const nodes = new Map<string, PageNode>(pages.map((page) => [page.id, { page, children: [] }]));
   const roots: PageNode[] = [];

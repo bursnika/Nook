@@ -9,7 +9,6 @@ import { CreateTaskDto, ListTasksQuery, UpdateTaskDto } from './task.dto.js';
 
 const POSITION_STEP = 1024;
 
-/** Every task leaves the service with how many comments and files it has, for the badges on a card. */
 const WITH_COUNTS = { _count: { select: { comments: true, attachments: true } } } as const;
 
 type TaskWithCounts = Prisma.TaskGetPayload<{ include: typeof WITH_COUNTS }>;
@@ -103,7 +102,6 @@ export class TasksService {
     return task;
   }
 
-  /** After a comment or a file was added or removed: the counts on the card change for everyone. */
   async touch(workspaceId: string, id: string) {
     const task = await this.get(workspaceId, id);
     await this.cache.invalidateWorkspace(workspaceId);
@@ -115,14 +113,13 @@ export class TasksService {
       where: { taskId: id, workspaceId },
       select: { url: true },
     });
-    // the attachment records go with the task (cascade); the stored files are removed here
+    // rows cascade, the files have to be removed here
     await this.prisma.task.delete({ where: { id, workspaceId } });
     await Promise.all(files.map((file) => this.uploads.remove(file.url)));
     await this.cache.invalidateWorkspace(workspaceId);
     this.bus.publishWorkspace(workspaceId, { topic: 'task', kind: 'deleted', id });
   }
 
-  /** Everything a task points at must live in the same workspace, otherwise tenants could leak. */
   private async assertRefs(workspaceId: string, dto: UpdateTaskDto) {
     if (dto.pageId) {
       const page = await this.prisma.page.findFirst({

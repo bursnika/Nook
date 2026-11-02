@@ -10,7 +10,6 @@ function fakeClient() {
       store.set(key, value);
       return 'OK';
     }),
-    // two keys per call; the cursor says "more" until the matching keys run out
     scan: vi.fn(async (_cursor: string, _match: 'MATCH', pattern: string) => {
       const prefix = pattern.slice(0, -1).replace(/\\(.)/g, '$1');
       const keys = [...store.keys()].filter((key) => key.startsWith(prefix));

@@ -52,7 +52,6 @@ function pickStrings<K extends string>(query: Request['query'], keys: K[]) {
   return result;
 }
 
-/** `/admin/workspaces/x` + flash=connected -> `/admin/workspaces/x?flash=connected` */
 function withParam(path: string, key: string, value: string) {
   const url = new URL(path, 'http://nook.local');
   url.searchParams.set(key, value);
@@ -90,8 +89,7 @@ export class AuthController {
   @Public()
   @Get('google/callback')
   async callback(@Req() req: Request, @Res() res: Response) {
-    // Read straight from the request: Google decides which parameters it appends (iss, scope,
-    // authuser, prompt, hd, ...), so the global whitelist validation must not apply here.
+    // google appends its own params, so skip the global validation
     const { code, state, error } = pickStrings(req.query, ['code', 'state', 'error']);
     const expectedState = req.cookies?.[OAUTH_STATE_COOKIE] as string | undefined;
     const verifier = req.cookies?.[OAUTH_VERIFIER_COOKIE] as string | undefined;
@@ -124,11 +122,6 @@ export class AuthController {
     res.redirect(returnTo);
   }
 
-  /**
-   * The state cookie is missing or different: the attempt is older than 10 minutes, was already used
-   * (reloaded callback, two tabs) or the browser dropped the cookie. API clients get JSON; a person in
-   * a browser gets a page that explains it and offers a fresh start instead of raw JSON.
-   */
   private expired(req: Request, res: Response, message: string) {
     if (req.accepts(['json', 'html']) !== 'html') throw new BadRequestException(message);
     return res.status(400).render('admin/error', {
@@ -140,7 +133,6 @@ export class AuthController {
     });
   }
 
-  /** The second kind of flow ending here: a signed-in person granting access to their Google Calendar. */
   private async finishCalendar(
     req: Request,
     res: Response,
@@ -154,7 +146,6 @@ export class AuthController {
     },
   ) {
     const { code, state, error, expectedState, verifier, returnTo } = flow;
-    // Who is connecting comes from the session, never from anything the callback URL says.
     const user = await this.tokens.verifyAccessToken(req.cookies?.[ACCESS_COOKIE] ?? '');
     if (!user) throw new UnauthorizedException('Sign in before connecting Google Calendar');
     if (!state || !expectedState || !verifier || state !== expectedState) {

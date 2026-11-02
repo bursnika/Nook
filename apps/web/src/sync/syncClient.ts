@@ -29,7 +29,6 @@ export interface RemotePresence {
   caret: number | null;
 }
 
-/** Who changed a block last (somebody else), for the flash and its tooltip. `nonce` restarts the animation. */
 export interface RecentChange {
   userId: string;
   name: string;
@@ -40,22 +39,18 @@ export interface RecentChange {
 export type SaveState = 'saved' | 'saving' | 'offline';
 
 export interface SyncState {
-  /** Blocks are on screen: from the local copy, from the server, or both. */
   loaded: boolean;
-  /** The server snapshot has been received and reconciled. */
   synced: boolean;
   blocks: Block[];
   title: string;
   icon: string | null;
   status: ConnectionStatus;
   transport: TransportKind;
-  /** Unsent operations plus an unsent title. */
   pending: number;
   saveState: SaveState;
   presence: RemotePresence[];
   recent: Record<string, RecentChange>;
   notice: string | null;
-  /** The server says there is no such page for this person (deleted, or never theirs): nothing will load. */
   missing: boolean;
 }
 
@@ -66,13 +61,10 @@ export interface SyncClientOptions {
   createTransport(kind: TransportKind): Transport;
   transportKind: TransportKind;
   saveTitle?(title: string): Promise<void>;
-  /** `null` disables persistence. Defaults to localStorage. */
   store?: KeyValueStore | null;
   scheduler?: Scheduler;
   now?: () => number;
-  /** Typing is batched into one `update` this long after the last keystroke (default 300 ms). */
   debounceMs?: number;
-  /** ...but never held back longer than this (default 1500 ms). */
   maxWaitMs?: number;
   uuid?: () => string;
 }
@@ -85,11 +77,6 @@ const TITLE_DEBOUNCE_MS = 600;
 
 type Listener = () => void;
 
-/**
- * The framework-free heart of the editor. It applies local edits at once (optimistic), keeps unsent
- * operations in an outbox that survives a closed browser, sends them in batches through whichever Transport
- * is selected, and applies other people's operations with last-writer-wins per block.
- */
 export class SyncClient {
   private readonly o: Required<
     Pick<SyncClientOptions, 'debounceMs' | 'maxWaitMs' | 'scheduler' | 'now' | 'uuid'>
@@ -150,7 +137,6 @@ export class SyncClient {
     };
     this.store = options.store === undefined ? defaultStore() : options.store;
     this.state = this.build();
-    // the local copy is available straight away, before anything touches the network
     const cached = loadDoc(this.store, options.pageId);
     if (cached) {
       this.blocks = sortBlocks(cached.blocks);
@@ -164,16 +150,12 @@ export class SyncClient {
     this.state = this.build();
   }
 
-  // ---------------------------------------------------------------- subscription
-
   subscribe = (listener: Listener): (() => void) => {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   };
 
   getState = (): SyncState => this.state;
-
-  // ---------------------------------------------------------------- lifecycle
 
   start() {
     if (this.started) return;
@@ -204,7 +186,6 @@ export class SyncClient {
     this.sweepTimer = this.presenceTimer = this.keepAliveTimer = undefined;
   }
 
-  /** Switch the transport while the editor is open; the log position carries over. */
   setTransportKind(kind: TransportKind) {
     if (kind === this.o.transportKind && (this.transport || !this.synced)) return;
     this.o.transportKind = kind;
@@ -216,7 +197,6 @@ export class SyncClient {
     this.connectTransport();
   }
 
-  /** The browser's online/offline events: show it immediately, reconnect as soon as the network is back. */
   setBrowserOnline(online: boolean) {
     if (this.browserOnline === online) return;
     this.browserOnline = online;
@@ -236,8 +216,6 @@ export class SyncClient {
     this.notice = null;
     this.emit();
   }
-
-  // ---------------------------------------------------------------- local edits
 
   getBlock(id: string): Block | undefined {
     return this.blocks.find((block) => block.id === id);
@@ -274,7 +252,6 @@ export class SyncClient {
     this.enqueue({ type: 'move', id, position }, true);
   }
 
-  /** Several moves as one batch (used when positions are renormalised). */
   moveBlocks(moves: { id: string; position: number }[]) {
     for (const move of moves)
       this.enqueue({ type: 'move', id: move.id, position: move.position }, true);
@@ -294,7 +271,6 @@ export class SyncClient {
     this.titleTimer = this.o.scheduler.setTimeout(() => void this.flushTitle(), TITLE_DEBOUNCE_MS);
   }
 
-  /** The caret moved (blockId null: the editor lost focus). Sent throttled; refreshed while focused. */
   setCursor(blockId: string | null, caret: number | null) {
     this.cursor = { blockId, caret };
     if (this.presenceTimer !== undefined) return;
@@ -304,17 +280,13 @@ export class SyncClient {
     }, PRESENCE_THROTTLE_MS);
   }
 
-  /** Try to send now (used by tests and the "retry" affordance). */
   flush(): Promise<void> {
     return this.flushNow();
   }
 
-  // ---------------------------------------------------------------- outbox
-
   private enqueue(op: BlockOp, immediate: boolean) {
     const before = this.blocks;
     this.blocks = applyOp(this.blocks, op);
-    // nothing changed locally (e.g. an update to the same text): nothing to send either
     if (this.blocks === before && (op.type === 'update' || op.type === 'move')) return;
     this.pushOp(op);
     this.persist();
@@ -322,7 +294,6 @@ export class SyncClient {
     this.scheduleFlush(immediate);
   }
 
-  /** Adds to the outbox, folding into not-yet-sent operations on the same block. */
   private pushOp(op: BlockOp) {
     const first = this.inflight;
     const mine: number[] = [];
@@ -361,7 +332,7 @@ export class SyncClient {
   private scheduleFlush(immediate: boolean) {
     const { scheduler, now, debounceMs, maxWaitMs } = this.o;
     if (this.flushTimer === undefined) this.burstStart = now();
-    else if (this.flushUrgent && !immediate) return; // an urgent send is already about to go out
+    else if (this.flushUrgent && !immediate) return; // urgent send already scheduled
     this.flushUrgent = immediate;
     scheduler.clearTimeout(this.flushTimer);
     const delay = immediate
@@ -427,8 +398,6 @@ export class SyncClient {
     }
   }
 
-  // ---------------------------------------------------------------- snapshot & transport
-
   private async loadSnapshot() {
     if (this.stopped) return;
     try {
@@ -439,7 +408,6 @@ export class SyncClient {
       this.connectTransport();
     } catch (error) {
       if (this.stopped) return;
-      // a page that does not exist will not appear by asking again: say so instead of loading forever
       if (isMissing(error)) {
         this.missing = true;
         this.transportStatus = 'offline';
@@ -456,7 +424,6 @@ export class SyncClient {
     }
   }
 
-  /** Server state is the truth; what we have not sent yet is laid on top of it. */
   private reconcile(snapshot: Snapshot) {
     const server: Block[] = snapshot.blocks.map((b) => ({
       id: b.id,
@@ -520,10 +487,8 @@ export class SyncClient {
     return this.browserOnline ? this.transportStatus : 'offline';
   }
 
-  // ---------------------------------------------------------------- remote events
-
   private onOps(message: OpsMessage) {
-    if (message.seq <= this.lastSeq) return; // seen already (catch-up overlap, resent frame)
+    if (message.seq <= this.lastSeq) return;
     this.lastSeq = message.seq;
     const mine = message.clientId === this.o.clientId;
     let blocks = this.blocks;
@@ -543,7 +508,7 @@ export class SyncClient {
         const deletedLocally = this.outbox.some((q) => q.id === op.id && q.type === 'delete');
         if (deletedLocally) continue;
       } else if (pending) {
-        // our own newer change to this block is still on its way; it will win on the server anyway
+        // our newer change is still in flight and will win anyway
         continue;
       }
       const next = applyOp(blocks, op);
@@ -624,8 +589,6 @@ export class SyncClient {
     }
   }
 
-  // ---------------------------------------------------------------- state
-
   private persist() {
     saveDoc(this.store, this.o.pageId, {
       v: 1,
@@ -675,7 +638,6 @@ export class SyncClient {
   }
 }
 
-/** An API error that says the page is not there (bad id, not found, not allowed), whatever the transport. */
 function isMissing(error: unknown): boolean {
   const status = (error as { status?: unknown } | null)?.status;
   return status === 400 || status === 403 || status === 404;

@@ -2,10 +2,6 @@ import type { Request } from 'express';
 import type { StorageEngine } from 'multer';
 import type { FileStorage } from './file-storage.js';
 
-/**
- * Lets multer hand every accepted file straight to the configured `FileStorage` (no temp file, no
- * buffering of the whole upload), and take it back when the request is rejected afterwards.
- */
 export class FileStorageEngine implements StorageEngine {
   constructor(
     private readonly storage: FileStorage,

@@ -9,7 +9,7 @@ describe('Tenants, roles, invitations and feature flags', () => {
   let ctx: TestApp;
   let app: INestApplication;
 
-  // wsA: owner (OWNER), admin (ADMIN), member (MEMBER).  wsB: outsider (OWNER).  platform: listed in ADMIN_EMAILS.
+  // wsA: owner, admin, member; wsB: outsider (owner); platform admin via ADMIN_EMAILS
   let owner: User, admin: User, member: User, outsider: User, platform: User;
   let wsA: { id: string; name: string }, wsB: { id: string; name: string };
   let tok: Record<'owner' | 'admin' | 'member' | 'outsider' | 'platform', string>;
@@ -296,7 +296,7 @@ describe('Tenants, roles, invitations and feature flags', () => {
     it('validates the invitation request', async () => {
       await invite('not-an-email').expect(400);
       await invite('x@example.com', tok.owner, 'OWNER').expect(400); // owners are promoted, not invited
-      await invite(member.email).expect(409); // already a member
+      await invite(member.email).expect(409);
     });
 
     it('adds the invited person with the invited role, once, and only for the right e-mail', async () => {
@@ -327,7 +327,7 @@ describe('Tenants, roles, invitations and feature flags', () => {
 
       await accept(friend).expect(410); // single use
       await http().post('/api/invitations/accept').send({ token }).expect(401);
-      await as(friendTok).get(A()).expect(200); // and the new member can now work in the workspace
+      await as(friendTok).get(A()).expect(200);
     });
 
     it('rejects expired, revoked and unknown invitations', async () => {
@@ -423,7 +423,7 @@ describe('Tenants, roles, invitations and feature flags', () => {
         overdue: 1,
         pages: 1,
       });
-      // the task finished 30 days ago is still inside the 8-week chart, the other workspace's is not
+      // done 30 days ago, still inside the 8-week chart
       expect(
         res.body.weeklyCompleted.reduce(
           (sum: number, w: { completed: number }) => sum + w.completed,
@@ -483,7 +483,7 @@ describe('Tenants, roles, invitations and feature flags', () => {
       expect(asMember.text).not.toContain('Switch to');
       const asOwner = await page(tok.owner, `/admin/workspaces/${wsA.id}/team`).expect(200);
       expect(asOwner.text).toContain('Create invitation');
-      expect(asOwner.text).not.toContain('Add any user'); // support tool for platform admins
+      expect(asOwner.text).not.toContain('Add any user');
     });
 
     it('offers the role selector only to owners, and never on their own row', async () => {
@@ -531,7 +531,6 @@ describe('Tenants, roles, invitations and feature flags', () => {
       expect(link).not.toBeNull();
       const [, , token] = link!;
 
-      // the link is not repeated anywhere else, and not in a redirect URL
       expect(created.headers.location).toBeUndefined();
       expect(
         (await page(tok.owner, `/admin/workspaces/${wsA.id}/team`).expect(200)).text,
@@ -584,7 +583,7 @@ describe('Tenants, roles, invitations and feature flags', () => {
       const out = await agent.post('/api/auth/logout?returnTo=/admin/signed-out').expect(302);
       expect(out.headers.location).toBe('/admin/signed-out');
       await http().post('/api/auth/refresh').set('Cookie', `nook_rt=${refresh}`).expect(401);
-      await http().get('/admin/signed-out').expect(200); // public page
+      await http().get('/admin/signed-out').expect(200);
     });
 
     it('rejects admin form posts that come from another site', async () => {

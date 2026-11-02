@@ -103,7 +103,7 @@ describe('List caching', () => {
       );
 
       const all = await http().get(url).expect(200);
-      expect(cacheHeader(all)).toBe('MISS'); // a different query is not served the filtered list
+      expect(cacheHeader(all)).toBe('MISS'); // different query, own entry
       expect(titles(all)).toHaveLength(2);
       expect(titles(high)).toEqual(['Alpha']);
     });
@@ -161,7 +161,7 @@ describe('List caching', () => {
         .send({ content: { text: 'hi' } })
         .expect(201);
       const withBlock = await fresh();
-      expect(withBlock.body.items[0]._count.blocks).toBe(1); // the count shown in the list is current
+      expect(withBlock.body.items[0]._count.blocks).toBe(1);
 
       await http().patch(`${url}/${page.id}`).send({ title: 'Plan v2' }).expect(200);
       expect(titles(await fresh())).toEqual(['Plan v2']);
@@ -374,18 +374,17 @@ describe('List caching across tenants and viewers', () => {
     }
 
     for (const kind of ['tasks', 'pages', 'events', 'overview']) {
-      // same path shape and query, different tenants
       const mineA1 = await get(`/api/workspaces/${a.workspace.id}/${kind}`, tokenA).expect(200);
       const mineA2 = await get(`/api/workspaces/${a.workspace.id}/${kind}`, tokenA).expect(200);
       expect(mineA1.headers['x-cache']).toBe('MISS');
       expect(mineA2.headers['x-cache']).toBe('HIT');
       const mineB = await get(`/api/workspaces/${b.workspace.id}/${kind}`, tokenB).expect(200);
-      expect(mineB.headers['x-cache']).toBe('MISS'); // B starts with its own empty entry
+      expect(mineB.headers['x-cache']).toBe('MISS');
       expect(JSON.stringify(mineB.body)).not.toContain('A secret');
       expect(JSON.stringify(mineB.body)).not.toContain(a.workspace.slug);
       expect(JSON.stringify(mineA2.body)).not.toContain('B secret');
 
-      // A's entry is warm, yet B's token cannot read it through A's url: the guard answers first
+      // the guard runs before the cache
       const stolen = await get(`/api/workspaces/${a.workspace.id}/${kind}`, tokenB).expect(404);
       expect(stolen.headers['x-cache']).toBeUndefined();
       expect(JSON.stringify(stolen.body)).not.toContain('A secret');
@@ -431,7 +430,7 @@ describe('List caching across tenants and viewers', () => {
     expect(ownerView.headers['x-cache']).toBeUndefined();
     expect(colleagueView.headers['x-cache']).toBeUndefined();
 
-    // the lists, which are the same for every member, are shared between them
+    // task lists are shared between members
     const list = `/api/workspaces/${workspace.id}/tasks`;
     expect((await get(list, await bearer(app, owner)).expect(200)).headers['x-cache']).toBe('MISS');
     expect((await get(list, await bearer(app, colleague)).expect(200)).headers['x-cache']).toBe(

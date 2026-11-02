@@ -14,7 +14,6 @@ export interface EventChange {
   event: (Omit<CalendarEvent, 'description'> & { description: string | null }) | null;
 }
 
-/** Folds one live task change into the local list. Replays and echoes of known state change nothing. */
 export function applyTaskChange(tasks: readonly Task[], change: TaskChange): Task[] {
   if (change.kind === 'deleted') {
     return tasks.some((task) => task.id === change.taskId)
@@ -26,7 +25,7 @@ export function applyTaskChange(tasks: readonly Task[], change: TaskChange): Tas
   const index = tasks.findIndex((task) => task.id === incoming.id);
   if (index < 0) return [...tasks, incoming];
   if (sameTask(tasks[index]!, incoming)) return tasks as Task[];
-  // a live update has no timestamps, so the ones loaded over REST are kept
+  // live updates have no timestamps, keep the ones from rest
   return tasks.map((task, i) => (i === index ? { ...task, ...incoming } : task));
 }
 
@@ -45,7 +44,6 @@ function sameTask(a: Task, b: Task): boolean {
   );
 }
 
-/** The GraphQL event has no Google fields, so a live update keeps the ones the calendar already knows. */
 export function applyEventChange<E extends CalendarEvent>(
   events: readonly E[],
   change: EventChange,

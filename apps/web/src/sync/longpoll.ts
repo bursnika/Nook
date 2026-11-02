@@ -9,10 +9,7 @@ import {
 } from './transport';
 import type { BlockOp } from './types';
 
-/**
- * Long poll: after an immediate catch-up, GET .../poll is held by the server until something happens (or 25 s pass); the reply is
- * delivered and the next request goes out at once. Errors back off exponentially.
- */
+// the server holds /poll until something happens (or 25 s)
 export class LongPollTransport implements Transport {
   readonly kind = 'longpoll' as const;
   private handlers?: TransportHandlers;
@@ -57,7 +54,6 @@ export class LongPollTransport implements Transport {
     while (!this.closed) {
       const controller = (this.abort = new AbortController());
       try {
-        // the very first request returns at once (catch-up + "we are online"); later ones are held
         const reply = await getChanges(
           this.ctx,
           this.since,

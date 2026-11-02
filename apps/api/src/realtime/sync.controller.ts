@@ -18,17 +18,11 @@ class PageParams extends WorkspaceParams {
 const LONG_POLL_MAX_SECONDS = 55;
 const LONG_POLL_DEFAULT_SECONDS = 25;
 
-/** Interval hints for adaptive polling: fast while people are typing, slower and slower while nothing happens. */
 export function nextPollMs(opsInReply: number, previousSilenceMs: number) {
   if (opsInReply > 0) return 400;
   return Math.min(10_000, Math.max(1_000, Math.round(previousSilenceMs * 1.5)));
 }
 
-/**
- * The same stream of block operations over plain HTTP, for places where WebSockets are blocked or unwanted.
- * `changes` is a normal poll (the client decides when to ask again, `nextPollMs` helps it adapt);
- * `poll` is a long poll that answers as soon as there is something new.
- */
 @ApiTags('sync')
 @Controller('workspaces/:workspaceId/pages/:pageId/sync')
 export class SyncController {
@@ -80,11 +74,10 @@ export class SyncController {
   ) {
     await this.assertPage(workspaceId, pageId);
     const holdMs = Math.min(Math.max(timeout, 1), LONG_POLL_MAX_SECONDS) * 1000;
-    // subscribe before looking at the log, so nothing can slip in between the two
+    // subscribe before reading the log so nothing is missed
     let wake: (() => void) | undefined;
     const woken = new Promise<void>((resolve) => (wake = resolve));
     const off = this.bus.onPage(pageId, (message) => {
-      // your own cursor moving is not news to you
       if (!(message.type === 'presence' && message.clientId === clientId)) wake?.();
     });
     const closed = new Promise<void>((resolve) => req.once('close', resolve));
@@ -93,7 +86,7 @@ export class SyncController {
       if (messages.length === 0) {
         const timer = new Promise<void>((resolve) => setTimeout(resolve, holdMs).unref());
         await Promise.race([woken, timer, closed]);
-        // a short pause lets a burst of operations arrive as one reply
+        // small delay to batch a burst of ops
         await new Promise((resolve) => setTimeout(resolve, 20));
         ({ messages, more } = await this.sync.changes(pageId, since));
       }

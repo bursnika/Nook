@@ -4,8 +4,7 @@ import { defineConfig } from 'vitest/config';
 import { testDatabaseUrl } from './test/test-db.js';
 
 export default defineConfig({
-  // graphql ships a CJS and an ESM build; Node picks the ESM one (module-sync), so Vite must too, or the
-  // schema built in our code and the one graphql-ws uses come from two copies of the library
+  // otherwise graphql gets loaded twice (cjs + esm)
   resolve: { tsconfigPaths: true, conditions: ['module-sync'] },
   test: {
     globals: true,
@@ -22,10 +21,9 @@ export default defineConfig({
       ADMIN_EMAILS: 'platform-admin@example.com',
       GOOGLE_CLIENT_ID: 'test-client-id',
       GOOGLE_CLIENT_SECRET: 'test-client-secret',
-      // the specs always run on the in-memory cache and local-disk storage, whatever the developer's .env says
+      // in-memory cache, queue and local disk storage, ignore .env
       REDIS_URL: '',
       AZURE_STORAGE_CONNECTION_STRING: '',
-      // always the in-memory queue, whatever the developer's .env says
       AMQP_URL: '',
     },
   },

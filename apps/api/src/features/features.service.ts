@@ -5,11 +5,9 @@ export interface FeatureStatus {
   key: string;
   description: string;
   available: boolean;
-  /** Why the feature is unavailable; undefined when it is available. */
   reason?: string;
 }
 
-/** Feature flags: a feature is available to everyone while its flag is on, and to nobody once it is switched off. */
 @Injectable()
 export class FeaturesService {
   constructor(private readonly prisma: PrismaService) {}

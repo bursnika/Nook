@@ -28,7 +28,6 @@ import { TASK_STATUSES, STATUS_LABEL, type Task, type TaskStatus } from '../../l
 import { CardPreview } from './Card';
 import { Column } from './Column';
 
-/** Three columns of cards. Dropping or moving a card reports the new places to save through `onPlace`. */
 export function Board({
   tasks,
   onPlace,
@@ -49,11 +48,10 @@ export function Board({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const byId = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
-  // while a card is in the air its column changes are only local; they are saved on drop
+  // only local while dragging, saved on drop
   const [dragging, setDragging] = useState<{ id: string; columns: Columns }>();
   const columns = dragging?.columns ?? columnsOf(tasks);
   const active = dragging ? byId.get(dragging.id) : undefined;
-  /** Names for the screen-reader announcements: a card by its title, a column by its label. */
   const label = (id: string | number) =>
     byId.get(String(id))?.title ?? STATUS_LABEL[String(id) as TaskStatus] ?? 'the board';
 

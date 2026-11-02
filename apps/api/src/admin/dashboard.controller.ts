@@ -18,7 +18,6 @@ export class DashboardController {
   @Get()
   @Render('admin/dashboard')
   async dashboard(@CurrentUser() user: AuthUser) {
-    // Everyone sees numbers for their own workspaces; only platform admins see the whole system.
     const mine = { memberships: { some: { userId: user.id } } };
     const workspaceWhere = user.isPlatformAdmin ? {} : mine;
     const inWorkspace = user.isPlatformAdmin ? {} : { workspace: mine };
@@ -37,7 +36,6 @@ export class DashboardController {
     };
   }
 
-  /** Read-only view over the whole user table (millions of rows), with search and paging. */
   @Get('users')
   @PlatformAdminOnly()
   @Render('admin/users')

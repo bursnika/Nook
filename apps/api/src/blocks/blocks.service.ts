@@ -53,7 +53,6 @@ export class BlocksService {
     await this.invalidate(workspaceId);
   }
 
-  /** The pages list shows each page's block count, so a block change makes it stale. */
   private invalidate(workspaceId: string) {
     return this.cache.invalidateWorkspace(workspaceId);
   }

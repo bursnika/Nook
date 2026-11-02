@@ -3,7 +3,6 @@ import { ApiTags } from '@nestjs/swagger';
 import { PlatformAdminOnly } from '../auth/decorators.js';
 import { TransportMetrics } from './transport-metrics.js';
 
-/** What each transport costs the server; the C10 benchmark reads it. */
 @ApiTags('sync')
 @PlatformAdminOnly()
 @Controller('sync-metrics')

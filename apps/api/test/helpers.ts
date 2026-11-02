@@ -32,10 +32,7 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
 
 export const PLATFORM_ADMIN_EMAIL = 'platform-admin@example.com';
 
-/**
- * Most e2e specs test business rules, not sign-in, so they run as a platform admin.
- * Specs that test authentication use `createTestApp({ auth: 'real' })` instead.
- */
+// default for specs that don't test auth: everyone is a platform admin
 @Injectable()
 class PlatformAdminGuard implements CanActivate {
   constructor(private readonly prisma: PrismaService) {}
@@ -55,10 +52,8 @@ class PlatformAdminGuard implements CanActivate {
   }
 }
 
-/** A stand-in for Google: the "code" of the authorization flow is simply the e-mail to sign in as. */
 export class FakeOAuthProvider implements OAuthProvider {
   configured = true;
-  /** Profiles by code, so a spec can describe exactly who signs in. */
   profiles = new Map<string, OAuthProfile>();
   lastAuthorizationUrl?: URL;
 
@@ -88,30 +83,20 @@ export class FakeOAuthProvider implements OAuthProvider {
   }
 }
 
-/** A stand-in for Google Calendar and Tasks: the spec describes what each refresh token can see. */
 export class FakeGoogleCalendarProvider implements GoogleCalendarProvider {
   configured = true;
-  /** Authorization code -> what Google would hand back. */
   codes = new Map<string, { refreshToken: string; scope: string }>();
-  /** Refresh token -> events across all of that person's calendars. */
   calendars = new Map<string, GoogleEvent[]>();
-  /** Refresh token -> calendar ids Google refuses to read this time. */
   failedCalendars = new Map<string, string[]>();
-  /** Refresh token -> that person's Google Tasks (list id is the part of the id before "/"). */
+  // keyed by refresh token, task id is "<list id>/<task id>"
   tasks = new Map<string, GoogleTask[]>();
   failedLists = new Map<string, string[]>();
-  /** Refresh tokens for which the Tasks API is off or not granted. */
   tasksUnavailable = new Set<string>();
-  /** Refresh tokens Google no longer accepts. */
   revokedByUser = new Set<string>();
-  /** Refresh tokens Nook asked Google to forget. */
   forgotten: string[] = [];
-  /** Events Nook created in Google. */
   creations: EventChanges[] = [];
-  /** Changes and deletions Nook sent to Google. */
   updates: { calendarId: string; eventId: string; changes: EventChanges }[] = [];
   deletions: { calendarId: string; eventId: string }[] = [];
-  /** When set, the next writes fail with it (for example GoogleForbiddenError). */
   writeError: Error | null = null;
   lastAuthorizationUrl?: URL;
 
@@ -178,7 +163,6 @@ export class FakeGoogleCalendarProvider implements GoogleCalendarProvider {
     if (this.writeError) throw this.writeError;
     this.creations.push(changes);
     const created: GoogleEvent = {
-      // the real id of the main calendar, as a later sync labels it (never the "primary" alias)
       id: `main@example.com/created-${this.creations.length}`,
       calendarId: 'main@example.com',
       calendarName: 'Main calendar',
@@ -191,7 +175,7 @@ export class FakeGoogleCalendarProvider implements GoogleCalendarProvider {
       recurring: false,
       url: 'https://calendar.google.com/calendar/event?eid=created',
     };
-    // Google now has it, so the next sync sees it too
+    // so the next sync sees it
     this.calendars.set(refreshToken, [...(this.calendars.get(refreshToken) ?? []), created]);
     return created;
   }
@@ -254,7 +238,6 @@ export interface TestApp {
 export async function createTestApp(
   options: {
     auth?: 'bypass' | 'real';
-    /** Swap providers (storage, cache driver, ...) before the module is compiled. */
     customize?: (builder: TestingModuleBuilder) => TestingModuleBuilder;
   } = {},
 ): Promise<TestApp> {
@@ -280,10 +263,7 @@ const FEATURE_FLAGS = [
   { key: 'google-two-way-sync', description: 'Two-way Google Calendar synchronisation' },
 ];
 
-/**
- * Empties every table between tests, except Prisma's bookkeeping. The feature flags are seeded by a
- * migration, so they are put back to their defaults instead of being deleted.
- */
+// feature flags come from a migration, so reset them instead of truncating
 export async function resetDb(prisma: PrismaService) {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
     SELECT tablename FROM pg_tables
@@ -301,7 +281,6 @@ export async function resetDb(prisma: PrismaService) {
 
 let counter = 0;
 
-/** A workspace with one OWNER member, enough to create pages, tasks and so on. */
 export async function seedWorkspace(prisma: PrismaService, label = 'ws') {
   const n = ++counter;
   const user = await prisma.user.create({

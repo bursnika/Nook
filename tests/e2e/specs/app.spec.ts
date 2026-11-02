@@ -1,7 +1,6 @@
 import { expect, test } from '../support/fixtures';
 import { unique } from '../support/api';
 
-/** A stand-in for Google's sign-in page: the tests never leave for the real one. */
 const GOOGLE = 'https://accounts.google.com/**';
 
 test.describe('sign-in and navigation', () => {
@@ -20,11 +19,9 @@ test.describe('sign-in and navigation', () => {
 
     await page.goto('/app/w/some-workspace/tasks');
 
-    // our API starts the flow and remembers where to return to...
     const start = new URL((await apiRequest).url());
     expect(start.pathname).toBe('/api/auth/google');
     expect(start.searchParams.get('returnTo')).toBe('/app/w/some-workspace/tasks');
-    // ...and sends the browser on to Google with PKCE and a state
     const google = new URL((await googleRequest).url());
     expect(google.searchParams.get('client_id')).toBe('e2e-client-id.apps.googleusercontent.com');
     expect(google.searchParams.get('redirect_uri')).toMatch(/\/api\/auth\/google\/callback$/);
@@ -67,7 +64,7 @@ test.describe('sign-in and navigation', () => {
     await expect(sidebar.getByText('E2E Space')).toBeVisible();
     await expect(sidebar.getByRole('link', { name: 'Welcome' })).toBeVisible();
 
-    // the workspace is remembered: the picker is skipped next time, unless asked for with ?pick=1
+    // picker is skipped unless ?pick=1
     await ann.page.goto('/app/');
     await expect(ann.page).toHaveURL(new RegExp(`/app/w/${seed.workspace.id}$`));
     await ann.page.getByRole('link', { name: 'E2E Space', exact: true }).last().click();
@@ -157,7 +154,6 @@ test.describe('sign-in and navigation', () => {
     );
     await bob.page.getByRole('menuitem', { name: 'Sign out' }).click();
     await googleRequest;
-    // the session cookie is gone: the API no longer knows this browser
     const response = await bob.page.request.get('/api/auth/me');
     expect(response.status()).toBe(401);
   });
@@ -187,7 +183,6 @@ test.describe('sign-in and navigation', () => {
       bob,
       seed,
     }) => {
-      // Bob is not a member of the free workspace, and a random id does not exist: both answer 404
       for (const id of [seed.otherWorkspace.id, '019a0000-0000-7000-8000-000000000000']) {
         await bob.page.goto(`/app/w/${id}`);
         await expect(bob.page.getByRole('heading', { name: 'Workspace not found' })).toBeVisible();

@@ -61,10 +61,8 @@ interface RawTask {
   deleted?: boolean;
 }
 
-/** One calendar or task list answered 403/404/410: skip it, keep everything else. */
 class Unreadable extends Error {}
 
-/** Google Calendar and Google Tasks over their REST APIs, using the same OAuth client as sign-in. */
 @Injectable()
 export class GoogleCalendarGoogle implements GoogleCalendarProvider {
   get configured() {
@@ -92,10 +90,9 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
       state,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
-      // offline + consent: Google then always returns a refresh token
+      // offline + consent so google always returns a refresh token
       access_type: 'offline',
       prompt: 'consent',
-      // incremental authorization: keep what sign-in already granted
       include_granted_scopes: 'true',
     }).toString();
     return url.toString();
@@ -136,7 +133,7 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
         for (const raw of await this.calendarEvents(accessToken, calendar.id, from, to)) {
           const event = toEvent(raw, calendar);
           if (!event) continue;
-          // An event you were invited to can sit in several calendars; show it once.
+          // an invited event can show up in several calendars
           const key = raw.iCalUID
             ? `${raw.iCalUID}|${raw.start?.dateTime ?? raw.start?.date}`
             : null;
@@ -170,7 +167,6 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
         ...(pageToken ? { pageToken } : {}),
       });
       if (response.status === 401) throw new GoogleAccessRevokedError('Google answered 401');
-      // 403/404 here means the Tasks API is off for the project or its scope was not granted
       if (response.status === 403 || response.status === 404) {
         throw new GoogleTasksUnavailableError(`Google answered ${response.status}`);
       }
@@ -220,7 +216,6 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
     this.assertConfigured();
     const accessToken = await this.accessToken(refreshToken);
 
-    // "primary" is only an alias. The real id and name are what a sync stores for this calendar.
     const entry = await this.get(`${CALENDAR_API}/users/me/calendarList/primary`, accessToken, {});
     if (entry.status === 401) throw new GoogleAccessRevokedError('Google answered 401');
     if (!entry.ok) throw new BadGatewayException('Google Calendar is not available');
@@ -237,7 +232,6 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
       body: JSON.stringify(this.eventBody(changes)),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    // a 404/410 here would mean the calendar vanished, not an event: that is Google's problem, not "gone"
     if (response.status === 404 || response.status === 410) {
       throw new BadGatewayException('Google Calendar is not available');
     }
@@ -288,7 +282,6 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
       headers: { authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    // already gone in Google is the outcome we wanted
     if (response.status === 404 || response.status === 410) return;
     await this.assertWritten(response);
   }
@@ -302,22 +295,21 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch {
-      // The connection is deleted locally either way.
+      // deleted locally either way
     }
   }
 
-  /** The calendars the person has switched on in Google Calendar, their own first. */
   private async calendars(accessToken: string) {
     const found: { id: string; name: string; primary: boolean; editable: boolean }[] = [];
     let pageToken: string | undefined;
     for (let page = 0; page < MAX_PAGES; page++) {
       const response = await this.get(`${CALENDAR_API}/users/me/calendarList`, accessToken, {
-        minAccessRole: 'reader', // calendars shared as "free/busy only" have no event details to import
+        minAccessRole: 'reader',
         maxResults: '250',
         ...(pageToken ? { pageToken } : {}),
       });
       if (response.status === 401) throw new GoogleAccessRevokedError('Google answered 401');
-      // 403 is not "revoked": most often the Calendar API is not enabled for the project
+      // 403 usually means the calendar api is off, not revoked
       if (response.status === 403) {
         throw new BadGatewayException(
           'Google refused to list calendars. Check that the Google Calendar API is enabled for the project.',
@@ -326,7 +318,7 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
       if (!response.ok) throw new BadGatewayException('Google Calendar is not available');
       const data = (await response.json()) as { items?: RawCalendar[]; nextPageToken?: string };
       for (const calendar of data.items ?? []) {
-        if (calendar.selected !== true && calendar.primary !== true) continue; // hidden in Google Calendar
+        if (calendar.selected !== true && calendar.primary !== true) continue;
         found.push({
           id: calendar.id,
           name: calendar.summaryOverride || calendar.summary || calendar.id,
@@ -367,10 +359,6 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
     return raws;
   }
 
-  /**
-   * The whole event as Google wants it. For a PATCH, objects are merged, so the unused one of
-   * date / dateTime is cleared explicitly (harmless for a create).
-   */
   private eventBody(changes: EventChanges) {
     const day = (date: Date) => date.toISOString().slice(0, 10);
     const when = (date: Date) =>
@@ -386,16 +374,13 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
   }
 
   private eventsUrl(calendarId: string) {
-    // sendUpdates=none: nobody is e-mailed because of something done in Nook
     return `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=none`;
   }
 
   private eventUrl(calendarId: string, eventId: string) {
-    // sendUpdates=none: changing an event here must not e-mail its guests
     return `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=none`;
   }
 
-  /** Maps Google's answer to a write: success passes, everything else becomes a typed error. */
   private async assertWritten(response: Response) {
     if (response.ok) return;
     if (response.status === 401) throw new GoogleAccessRevokedError('Google answered 401');
@@ -457,7 +442,6 @@ export class GoogleCalendarGoogle implements GoogleCalendarProvider {
   }
 }
 
-/** All-day events carry plain dates (the end is exclusive), timed ones carry instants. */
 export function toEvent(
   raw: RawEvent,
   calendar: { id: string; name: string; editable?: boolean },
@@ -474,10 +458,8 @@ export function toEvent(
     title: (raw.summary ?? '').trim().slice(0, 200) || '(no title)',
     description: raw.description?.slice(0, 5000),
     startsAt,
-    // the model requires an end after the start; an instant event gets one minute
     endsAt: endsAt > startsAt ? endsAt : new Date(startsAt.getTime() + 60_000),
     allDay,
-    // birthdays and events made from Gmail cannot be changed through the API, nor can locked ones
     editable:
       calendar.editable === true &&
       raw.locked !== true &&
@@ -488,10 +470,6 @@ export function toEvent(
   };
 }
 
-/**
- * Open tasks always; completed ones only if finished recently. Google stores just the date of a due
- * time, so a due date becomes noon UTC: that is the same calendar day in almost every time zone.
- */
 export function toTask(raw: RawTask, listId: string, completedSince: Date): GoogleTask | null {
   if (raw.deleted || !raw.id) return null;
   const completed = raw.status === 'completed';

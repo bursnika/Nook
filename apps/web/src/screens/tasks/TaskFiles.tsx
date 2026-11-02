@@ -4,7 +4,7 @@ import { useResource } from '../../lib/hooks';
 import type { Attachment } from '../../lib/types';
 import { fileSize, stamp } from './when';
 
-/** What the server accepts (see upload.config.ts on the API): no SVG or HTML, at most 10 MB. */
+// same limits as the api: no svg/html, max 10 MB
 const TYPES = [
   'image/png',
   'image/jpeg',
@@ -17,7 +17,6 @@ const TYPES = [
 const MAX_BYTES = 10 * 1024 * 1024;
 const ACCEPT = [...TYPES, '.md'].join(',');
 
-/** Why a file cannot go up, or nothing when it can. Markdown often comes without a type, so .md passes. */
 export function rejectReason(file: File): string | undefined {
   if (!TYPES.includes(file.type) && !file.name.toLowerCase().endsWith('.md'))
     return `${file.name}: only images, PDF, text and Markdown files can be attached`;
@@ -27,7 +26,6 @@ export function rejectReason(file: File): string | undefined {
 
 const extension = (name: string) => name.split('.').pop()?.slice(0, 4).toUpperCase() ?? 'FILE';
 
-/** Files attached to a card: pick them or drop them on the section. */
 export function TaskFiles({
   workspaceId,
   taskId,
@@ -35,7 +33,6 @@ export function TaskFiles({
 }: {
   workspaceId: string;
   taskId: string;
-  /** The number of files on the card changed. */
   onChanged: () => void;
 }) {
   const base = `/workspaces/${workspaceId}/attachments`;
@@ -62,7 +59,7 @@ export function TaskFiles({
       accepted.map(async (file) => {
         const form = new FormData();
         form.append('taskId', taskId);
-        // a .md file without a type would be refused, so it is sent as Markdown
+        // .md files often come without a type
         form.append(
           'file',
           file.type ? file : new Blob([file], { type: 'text/markdown' }),

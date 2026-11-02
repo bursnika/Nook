@@ -5,7 +5,6 @@ import { describe, safeJson, toViewNodes } from './blocks-view.js';
 
 const SITE_NAME = 'Nook';
 
-/** Absolute URL for a link stored as `/uploads/...` or as a full address. */
 const absolute = (link: string | null) =>
   link ? (link.startsWith('/') ? `${env.publicUrl}${link}` : link) : undefined;
 
@@ -13,7 +12,6 @@ const absolute = (link: string | null) =>
 export class PublicService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** The product landing page at `/`, with its own SEO tags and structured data. */
   home() {
     const description =
       'Nook is a pixel-cute planner: notes, a Jira-style Kanban board, a calendar with Google sync, live collaboration and productivity charts, all in one retro desktop.';
@@ -40,7 +38,6 @@ export class PublicService {
     };
   }
 
-  /** Everything the landing page needs, SEO tags included. Unpublished pages do not exist for the public. */
   async landing(slug: string) {
     const page = await this.prisma.page.findFirst({
       where: { slug, isPublished: true },

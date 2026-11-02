@@ -42,7 +42,7 @@ export default function CalendarPage() {
   );
   const { reload: reloadGoogle } = google;
 
-  // coming back from Google's consent screen
+  // coming back from google's consent screen
   useEffect(() => {
     const flash = params.get('flash');
     const problem = params.get('problem');

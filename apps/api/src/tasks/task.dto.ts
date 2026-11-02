@@ -51,7 +51,7 @@ export class CreateTaskDto {
   position?: number;
 }
 
-/** Sending `null` for pageId, assigneeId or dueDate clears the field. */
+// null clears pageId, assigneeId or dueDate
 export class UpdateTaskDto extends PartialType(CreateTaskDto) {}
 
 export class ListTasksQuery extends PaginationQuery {

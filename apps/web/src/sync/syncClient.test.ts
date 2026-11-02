@@ -153,7 +153,6 @@ describe('SyncClient', () => {
     const first = setup({}, store);
     first.client.start();
     await tick();
-    // still offline: the transport never became online
     first.client.updateBlock('a', { content: { text: 'edited offline' } });
     first.client.insertBlock({ position: 3072, content: { text: 'new offline' } });
     expect(first.client.getState().saveState).toBe('offline');
@@ -168,7 +167,6 @@ describe('SyncClient', () => {
       },
       store,
     );
-    // before start(): everything is already there
     expect(second.client.getState().loaded).toBe(true);
     expect(second.client.getState().blocks.map((b) => b.content.text)).toEqual([
       'edited offline',
@@ -335,7 +333,6 @@ describe('SyncClient', () => {
     const state = ctx.client.getState();
     expect(state.blocks.map((b) => b.id)).toEqual(['b']);
     expect(state.notice).toMatch(/Ann deleted a block you were editing/);
-    // further local edits of the vanished block are ignored locally, the flush does not throw
     ctx.client.updateBlock('a', { content: { text: 'more' } });
     await tick(500);
     ctx.client.stop();

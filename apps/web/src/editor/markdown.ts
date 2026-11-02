@@ -2,16 +2,11 @@ import type { BlockType } from '../sync/types';
 
 export interface Shortcut {
   type: BlockType;
-  /** What is left of the text once the marker is removed. */
   text: string;
   checked?: boolean;
 }
 
-/**
- * Markdown typed at the start of a paragraph turns it into a block:
- * `# `, `## `, `### `, `- `/`* `, `1. `, `[] `/`[ ] `/`[x] `, `> `, three backticks, `---`.
- * Returns null when the text is not a shortcut.
- */
+// markdown shortcuts typed at the start of a paragraph
 export function parseShortcut(text: string): Shortcut | null {
   if (text === '---') return { type: 'DIVIDER', text: '' };
   if (text === '```') return { type: 'CODE', text: '' };

@@ -1,7 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
-/** `?page=` and `?q=` shared by every list screen. */
 export class AdminListQuery {
   @IsOptional()
   @Type(() => Number)
@@ -13,17 +12,14 @@ export class AdminListQuery {
   @IsString()
   q?: string;
 
-  /** Which tab of the page view to open (note, checklist, tasks, files). */
   @IsOptional()
   @IsIn(['note', 'checklist', 'tasks', 'files'])
   tab?: string;
 
-  /** Set by the redirect after a create/update/delete. */
   @IsOptional()
   @IsString()
   flash?: string;
 
-  /** How much the last Google sync brought in; shown in the flash message. */
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -42,7 +38,6 @@ export class AdminListQuery {
   @IsIn(['not-granted', 'unavailable'])
   tasksNote?: string;
 
-  /** Set by a redirect after something went wrong (shown as a red banner). */
   @IsOptional()
   @IsString()
   problem?: string;

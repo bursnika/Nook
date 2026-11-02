@@ -84,7 +84,6 @@ describe('AdaptivePollingTransport', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(2);
     expect(calls(fetchMock)[1]).toContain('since=12');
-    // quiet now: the next ask is 2.5 s away
     await vi.advanceTimersByTimeAsync(2400);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(200);
@@ -124,9 +123,9 @@ describe('AdaptivePollingTransport', () => {
     expect(log).toContain('status:offline');
     await vi.advanceTimersByTimeAsync(999);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    await vi.advanceTimersByTimeAsync(2); // 1 s backoff
+    await vi.advanceTimersByTimeAsync(2);
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    await vi.advanceTimersByTimeAsync(2001); // 2 s backoff
+    await vi.advanceTimersByTimeAsync(2001);
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(log.at(-2)).toBe('status:online');
     transport.close();
@@ -214,13 +213,12 @@ describe('LongPollTransport', () => {
     fetchMock
       .mockResolvedValueOnce(json({ messages: [ops(11)], more: false, presence: [person] }))
       .mockResolvedValueOnce(json({ messages: [], more: false, presence: [person] }))
-      .mockImplementation(() => new Promise(() => undefined)); // held open
+      .mockImplementation(() => new Promise(() => undefined));
     const { log, handlers } = recorder();
     const transport = new LongPollTransport(ctx);
     transport.connect(10, handlers);
     await vi.advanceTimersByTimeAsync(0);
     const urls = calls(fetchMock);
-    // the first request is an immediate catch-up, the following ones are held by the server
     expect(urls[0]).toBe('GET /api/workspaces/w1/pages/p1/sync/changes?since=10&clientId=tab-1');
     expect(urls[1]).toBe(
       'GET /api/workspaces/w1/pages/p1/sync/poll?since=11&clientId=tab-1&timeout=25',
@@ -288,7 +286,6 @@ class FakeSocket implements SocketLike {
   close() {
     this.readyState = 3;
   }
-  // server side
   open() {
     this.readyState = 1;
     this.onopen?.({});
@@ -329,7 +326,6 @@ describe('WebSocketTransport', () => {
     const socket = FakeSocket.instances[0]!;
     expect(socket.url).toBe('ws://nook.test/ws?workspaceId=w1&pageId=p1&clientId=tab-1');
     socket.open();
-    // a push that arrives while the catch-up is still running is held back, and de-duplicated
     socket.push({ type: 'hello', seq: 12, presence: [person] });
     socket.push({ ...ops(12) });
     socket.push({ ...ops(13) });

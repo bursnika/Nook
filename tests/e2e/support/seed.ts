@@ -2,12 +2,10 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../../../apps/api/src/generated/prisma/client';
 import { ANN_EMAIL, BOB_EMAIL, ROOT_EMAIL, e2eDatabaseUrl } from './env';
 
-/** Ids and names of everything the global setup creates; written to tests/e2e/.auth/seed.json for the specs. */
 export interface Seed {
   users: Record<'ann' | 'bob' | 'root', { id: string; email: string; name: string }>;
-  /** Ann owns it, Bob is a member. */
   workspace: { id: string; name: string; slug: string };
-  /** A second workspace owned by Ann alone: Bob is not a member (for the isolation checks). */
+  // bob is not a member here
   otherWorkspace: { id: string; name: string };
   welcomePage: { id: string; title: string };
   publicPage: { id: string; title: string; slug: string; description: string };
@@ -22,7 +20,7 @@ export const PUBLIC_SLUG = 'e2e-public';
 export const PUBLIC_TITLE = 'Hello from the public page';
 export const PUBLIC_INTRO = 'Nook pages can be published for everyone with the link.';
 
-/** The migration seeds these flags; a truncate would remove them, so they are put back. */
+// seeded by a migration, restored after truncate
 const FEATURE_FLAGS = [
   { key: 'insights', description: 'Insights page with productivity statistics' },
   { key: 'google-two-way-sync', description: 'Two-way Google Calendar synchronisation' },
@@ -32,7 +30,6 @@ export function connect(): PrismaClient {
   return new PrismaClient({ adapter: new PrismaPg({ connectionString: e2eDatabaseUrl() }) });
 }
 
-/** Empties every table except Prisma's bookkeeping and the flags (same recipe as resetDb in apps/api/test). */
 export async function resetDatabase(prisma: PrismaClient) {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
     SELECT tablename FROM pg_tables
@@ -149,7 +146,7 @@ export async function seedDatabase(prisma: PrismaClient): Promise<Seed> {
     }),
   ]);
 
-  // tomorrow at noon (UTC), so it never collides with the "today" the calendar specs look at
+  // tomorrow at noon utc
   const startsAt = new Date();
   startsAt.setUTCDate(startsAt.getUTCDate() + 1);
   startsAt.setUTCHours(12, 0, 0, 0);

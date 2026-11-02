@@ -471,7 +471,6 @@ describe('Workspace home: overview, calendar and notes', () => {
           tok.outsider,
         ).expect(404);
         expect(await ctx.prisma.block.count({ where: { type: 'TODO' } })).toBe(1);
-        // a paragraph is not a checklist item
         const paragraph = await ctx.prisma.block.findFirstOrThrow({ where: { type: 'PARAGRAPH' } });
         await post(
           `/admin/workspaces/${wsId}/pages/${page.id}/checklist/${paragraph.id}/toggle`,

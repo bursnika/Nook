@@ -5,7 +5,6 @@ import { useWorkspace } from '../lib/workspace';
 import { NAV } from './Sidebar';
 import { PixelIcon } from './PixelIcon';
 
-/** The Start button and its menu: navigation, switching workspace, the old admin and sign out. */
 export function StartMenu() {
   const { workspace } = useWorkspace();
   const [open, setOpen] = useState(false);
@@ -17,7 +16,6 @@ export function StartMenu() {
   const items = () =>
     Array.from(rootRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
 
-  // opening moves focus into the menu
   useEffect(() => {
     if (open) items()[0]?.focus();
   }, [open]);

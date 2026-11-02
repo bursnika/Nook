@@ -1,6 +1,5 @@
 import { buildSchema } from 'graphql';
 
-/** The GraphQL face of Nook: reading and moving tasks and events, plus live updates of both. */
 export const typeDefs = /* GraphQL */ `
   type Task {
     id: ID!

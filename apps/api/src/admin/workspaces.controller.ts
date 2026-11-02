@@ -113,7 +113,6 @@ export class WorkspacesAdminController {
     });
   }
 
-  /** Members and invitations: the part of a workspace people rarely need. */
   @Get(':workspaceId/team')
   @Render('admin/workspaces/team')
   async team(
@@ -171,9 +170,6 @@ export class WorkspacesAdminController {
     return res.redirect('/admin/workspaces?flash=deleted');
   }
 
-  // ---- members -------------------------------------------------------------------------------
-
-  /** Support tool: add any existing user by id. Everyone else invites people by e-mail. */
   @Post(':workspaceId/members')
   @PlatformAdminOnly()
   async addMember(
@@ -222,9 +218,6 @@ export class WorkspacesAdminController {
     return res.redirect(`/admin/workspaces/${workspaceId}/team?flash=deleted`);
   }
 
-  // ---- invitations ---------------------------------------------------------------------------
-
-  /** Shows the invite link once, on the response itself, so the secret never travels through a URL. */
   @Post(':workspaceId/invitations')
   @Roles(Role.OWNER, Role.ADMIN)
   async invite(
@@ -273,8 +266,6 @@ export class WorkspacesAdminController {
     return res.redirect(`/admin/workspaces/${workspaceId}/team?flash=deleted`);
   }
 
-  // ---- views ---------------------------------------------------------------------------------
-
   private async homeView(workspaceId: string, userId: string, extra: Record<string, unknown> = {}) {
     const [ws, summary, google] = await Promise.all([
       this.workspaces.get(workspaceId),
@@ -303,7 +294,6 @@ export class WorkspacesAdminController {
         ...m,
         roles: enumOptions(Object.values(Role), m.role),
         isSelf: m.userId === req.user?.id,
-        // roles are handed out by owners only, and never to oneself
         canChangeRole: role === Role.OWNER && m.userId !== req.user?.id,
       })),
       newRoles: enumOptions(Object.values(Role), Role.MEMBER),

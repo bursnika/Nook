@@ -1,5 +1,4 @@
-# Production stack on one VM: Caddy (HTTPS) in front of the API, Postgres behind it.
-# Copied to the server by the deploy job; secrets live in a .env file next to it (see docs/deploy.md).
+# prod stack, secrets in .env next to this file
 name: nook
 
 services:
@@ -34,7 +33,6 @@ services:
       timeout: 3s
       retries: 10
 
-  # Cache for GET lists (see docs/b9-caching.md). Nothing here must survive a restart.
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -56,8 +54,6 @@ services:
       timeout: 3s
       retries: 10
 
-  # Message broker for Google sync jobs (docs/b8-queues.md). Reachable only inside the compose
-  # network: no published ports, no management UI. Queues live in the volume.
   rabbitmq:
     image: rabbitmq:4-alpine
     restart: unless-stopped

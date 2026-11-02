@@ -30,10 +30,6 @@ export class PageResult<T> {
   nextLink!: string | null;
 }
 
-/**
- * Wraps a slice of a collection into the `{ items, total, skip, limit, nextLink }` envelope.
- * `nextLink` keeps every query parameter of the current request (filters, search) and only moves `skip`.
- */
 export function toPage<T>(
   req: Request,
   items: T[],
@@ -50,7 +46,6 @@ export function toPage<T>(
   return { items, total, skip, limit, nextLink };
 }
 
-/** Swagger helper: documents a paginated list of `model`. */
 export function ApiPaginatedResponse(model?: ClassType<unknown>) {
   return applyDecorators(
     ...(model ? [ApiExtraModels(model)] : []),

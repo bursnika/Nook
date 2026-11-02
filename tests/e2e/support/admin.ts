@@ -1,10 +1,9 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-/** A Select2 field of the classic admin: a select that loads its options from the server as you type. */
 export class Select2 {
   constructor(
     private readonly page: Page,
-    /** The id of the underlying <select>, for example `f-userId`. */
+    // id of the <select>, e.g. f-userId
     private readonly id: string,
   ) {}
 
@@ -16,7 +15,6 @@ export class Select2 {
     return this.page.getByRole('option');
   }
 
-  /** Opens the dropdown and types into its search box. The server is asked after a pause in typing. */
   async search(text: string) {
     await this.container.click();
     await this.page.getByRole('searchbox').fill('');
@@ -30,7 +28,6 @@ export class Select2 {
   }
 }
 
-/** Waits for the "flash" banner an admin form redirects with. */
 export async function expectFlash(page: Page, text: string) {
   await expect(page.getByRole('status').filter({ hasText: text })).toBeVisible();
 }

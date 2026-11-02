@@ -12,7 +12,6 @@ export const NAV: { to: string; label: string; icon: IconName; end?: boolean }[]
   { to: 'settings', label: 'Settings', icon: 'gear' },
 ];
 
-/** The ids of the pages above `pageId`, root first, so the sidebar can keep its branch open. */
 function ancestorsOf(pageId: string | undefined, nodes: PageNode[]): string[] {
   if (!pageId) return [];
   const walk = (list: PageNode[]): string[] | null => {

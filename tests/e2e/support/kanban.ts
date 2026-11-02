@@ -2,7 +2,6 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 export type ColumnName = 'Backlog' | 'In progress' | 'On hold' | 'Complete';
 
-/** Helpers for the Kanban board (apps/web/src/screens/tasks). */
 export class BoardScreen {
   constructor(readonly page: Page) {}
 
@@ -10,20 +9,17 @@ export class BoardScreen {
     return this.page.getByRole('region', { name, exact: true });
   }
 
-  /** The card with this title, wherever it is. */
   card(title: string): Locator {
     return this.page
       .getByRole('listitem')
       .filter({ has: this.page.getByRole('button', { name: title, exact: true }) });
   }
 
-  /** Waits for the board (and its live connection) to be ready. */
   async ready() {
     await expect(this.page.getByRole('heading', { name: 'Board' })).toBeVisible();
     await expect(this.page.getByRole('status').filter({ hasText: /^Live$/ })).toBeVisible();
   }
 
-  /** Drags a card onto a column with the mouse: dnd-kit starts after a few pixels and tracks real moves. */
   async dragCard(title: string, to: ColumnName) {
     const { page } = this;
     const from = await this.card(title).boundingBox();
@@ -40,11 +36,7 @@ export class BoardScreen {
     await page.mouse.up();
   }
 
-  /**
-   * Moves a card to the next column with the keyboard, from its grip: Space picks it up, an arrow key
-   * carries it over (the card jumps into the column it hovers), Space drops it. dnd-kit may not listen yet
-   * for the first key, so the key is pressed again only while the card has not changed column.
-   */
+  // first key press can get lost, so retry until the card moves
   async moveCardWithKeys(title: string, key: 'ArrowRight' | 'ArrowLeft', to: ColumnName) {
     const { page } = this;
     const announcement = page.locator('[id^="DndLiveRegion"]');

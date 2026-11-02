@@ -22,7 +22,6 @@ interface Props {
   onTransport(kind: TransportKind): void;
 }
 
-/** Bottom bar of the editor: whether everything is saved, and how (and whether) we are connected. */
 export function StatusBar({ state, onTransport }: Props) {
   const text = saveText(state);
   return (

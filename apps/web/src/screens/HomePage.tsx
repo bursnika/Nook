@@ -27,7 +27,6 @@ function dueLabel(task: TaskCard): string {
     : due.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' }) + ' ' + formatTime(due);
 }
 
-/** The "desktop": what needs attention now, a quick note and a glance at the month. */
 export default function HomePage() {
   const { workspace } = useWorkspace();
   const me = useMe();
@@ -45,7 +44,6 @@ export default function HomePage() {
   }
 
   const complete = async (task: TaskCard) => {
-    // optimistic: the item leaves the lists at once; a failure brings the real state back
     const without = (list: TaskCard[]) => list.filter((item) => item.id !== task.id);
     setData({
       ...data,
@@ -61,7 +59,7 @@ export default function HomePage() {
       });
       track('task_completed', { source: 'home' });
     } catch {
-      /* reload below restores the truth */
+      /* reload below restores the state */
     }
     void reload();
   };
@@ -176,7 +174,6 @@ export default function HomePage() {
   );
 }
 
-/** One line per paragraph; the first line becomes the title. Saved as a regular page. */
 function QuickNote({ onSaved }: { onSaved: () => void }) {
   const { workspace, createPage } = useWorkspace();
   const [text, setText] = useState('');
@@ -249,7 +246,6 @@ function QuickNote({ onSaved }: { onSaved: () => void }) {
 
 const DOW = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
-/** A small month that links to the full calendar; days with something on them are tinted. */
 function MiniCalendar() {
   const { workspace } = useWorkspace();
   const month = monthStart(new Date());

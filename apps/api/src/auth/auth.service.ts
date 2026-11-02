@@ -31,10 +31,6 @@ export class AuthService {
     private readonly tokens: TokenService,
   ) {}
 
-  /**
-   * Signs a person in from a verified provider profile. A known Google account signs straight in; an existing user
-   * with the same (verified) e-mail gets the Google account linked; anyone else is registered with a personal workspace.
-   */
   async loginWithProfile(profile: OAuthProfile, userAgent?: string) {
     if (!profile.emailVerified) {
       throw new UnauthorizedException('The e-mail address of this Google account is not verified');
@@ -62,7 +58,6 @@ export class AuthService {
     return { user, tokens: await this.issueTokens(user, userAgent) };
   }
 
-  /** Exchanges a refresh token for a new pair. The old token dies; presenting it again revokes every session. */
   async refresh(rawToken: string | undefined, userAgent?: string): Promise<SessionTokens> {
     if (!rawToken) throw new UnauthorizedException('No refresh token');
     const stored = await this.prisma.refreshToken.findUnique({
@@ -71,7 +66,7 @@ export class AuthService {
     });
     if (!stored) throw new UnauthorizedException('Invalid refresh token');
 
-    // Atomically claim the token; only one caller can win, so a stolen copy cannot be replayed in parallel.
+    // only one caller can claim the token
     const claimed = await this.prisma.refreshToken.updateMany({
       where: { id: stored.id, revokedAt: null, expiresAt: { gt: new Date() } },
       data: { revokedAt: new Date() },
@@ -139,7 +134,6 @@ export class AuthService {
     };
   }
 
-  /** First sign-in: create the account together with a personal workspace the user owns. */
   private register(profile: OAuthProfile) {
     const firstName = profile.name.split(' ')[0] || 'My';
     return this.prisma.user.create({

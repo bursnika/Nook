@@ -12,7 +12,6 @@ export async function bearer(app: INestApplication, user: { id: string; email: s
   return `Bearer ${await app.get(TokenService).signAccessToken(user)}`;
 }
 
-/** A hand-made access token, for testing how the guard treats tokens it should reject. */
 export function forgeToken(
   overrides: {
     exp?: number | string;
@@ -55,7 +54,6 @@ export function setCookieLine(
 
 let counter = 0;
 
-/** Runs the whole Google flow against the fake provider and returns the browser session (cookie jar). */
 export async function signIn(
   ctx: TestApp,
   profile: Partial<OAuthProfile> & { email: string },

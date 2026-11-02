@@ -4,13 +4,11 @@ export interface Resource<T> {
   data: T | undefined;
   error: Error | undefined;
   loading: boolean;
-  /** Fetches again without blanking what is on screen. */
   reload: () => Promise<void>;
-  /** Replaces the data locally (optimistic updates, live changes). */
   setData: (update: T | ((current: T | undefined) => T | undefined)) => void;
 }
 
-/** Loads something when `key` changes; a slower, older answer never overwrites a newer one. */
+// an older, slower response never overwrites a newer one
 export function useResource<T>(load: () => Promise<T>, key: string): Resource<T> {
   const [data, setData] = useState<T>();
   const [error, setError] = useState<Error>();
@@ -48,7 +46,6 @@ export function useResource<T>(load: () => Promise<T>, key: string): Resource<T>
   return { data, error, loading, reload, setData };
 }
 
-/** `prefers-reduced-motion: reduce`, kept up to date. */
 export function useReducedMotion(): boolean {
   return useSyncExternalStore(
     (notify) => {
@@ -61,7 +58,6 @@ export function useReducedMotion(): boolean {
   );
 }
 
-/** True below the width where the sidebar turns into a drawer. */
 export function useIsNarrow(query = '(max-width: 860px)'): boolean {
   return useSyncExternalStore(
     (notify) => {
@@ -74,7 +70,6 @@ export function useIsNarrow(query = '(max-width: 860px)'): boolean {
   );
 }
 
-/** A value that follows the clock, refreshed every `ms`. */
 export function useNow(ms = 10_000): Date {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {

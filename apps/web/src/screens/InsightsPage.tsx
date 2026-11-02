@@ -15,7 +15,6 @@ import { ChartCanvas, palette } from './insights/ChartCanvas';
 import { Heatmap } from './insights/Heatmap';
 import '../styles/insights.css';
 
-/** Productivity statistics, open to every workspace unless an administrator switched the feature off. */
 export default function InsightsPage() {
   const { workspace } = useWorkspace();
   const result = useResource(

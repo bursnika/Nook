@@ -22,7 +22,6 @@ import { validateOrReject } from './validate.js';
 
 const HEARTBEAT_MS = 30_000;
 
-/** Pulls the access token out of a Bearer header, a `?token=` parameter (non-browser clients) or the cookie. */
 export function tokenFrom(req: IncomingMessage, url: URL): string | undefined {
   const bearer = req.headers.authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (bearer) return bearer;
@@ -35,12 +34,6 @@ export function tokenFrom(req: IncomingMessage, url: URL): string | undefined {
   return cookie ? decodeURIComponent(cookie.slice(ACCESS_COOKIE.length + 1)) : undefined;
 }
 
-/**
- * WebSocket endpoints on the same port as the REST API:
- *   /ws?workspaceId=&pageId=&clientId=   block operations and presence of one page
- *   /graphql                             GraphQL subscriptions (graphql-ws protocol)
- * Sign-in is checked before the connection is upgraded, so an anonymous socket never exists.
- */
 @Injectable()
 export class RealtimeGateway implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly log = new Logger('Realtime');
@@ -75,7 +68,7 @@ export class RealtimeGateway implements OnApplicationBootstrap, OnApplicationShu
   private readonly onUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (url.pathname === '/graphql') return this.graphql.handleUpgrade(req, socket, head);
-    if (url.pathname !== '/ws') return; // not ours: leave it to whoever else listens
+    if (url.pathname !== '/ws') return;
     void this.accept(req, socket, head, url);
   };
 
@@ -130,9 +123,9 @@ export class RealtimeGateway implements OnApplicationBootstrap, OnApplicationShu
       this.metrics.add('websocket', { messages: 1, bytesOut: Buffer.byteLength(text) });
       ws.send(text);
     };
-    // subscribe first, then read the log: nothing can fall between the two
+    // subscribe before reading the log so nothing is missed
     const off = this.bus.onPage(pageId, (message) => {
-      // the sender hears about its own changes from the ack, not from an echo
+      // the sender gets its own changes via the ack
       if (message.clientId === clientId) return;
       send(message);
     });

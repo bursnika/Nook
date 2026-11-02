@@ -12,7 +12,6 @@ class TokenParams {
   token!: string;
 }
 
-/** The page an invited person lands on. Signing in first is enforced by the global AuthGuard. */
 @AdminController('admin/invite')
 export class InviteAdminController {
   constructor(private readonly invitations: InvitationsService) {}

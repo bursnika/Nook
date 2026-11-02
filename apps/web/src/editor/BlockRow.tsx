@@ -29,13 +29,11 @@ export interface FocusRequest {
 
 interface Props {
   block: Block;
-  /** 1-based number inside a run of numbered items. */
   number: number;
   peers: readonly RemotePresence[];
   recent: RecentChange | undefined;
   focus: FocusRequest | null;
   actions: EditorActions;
-  /** True while any block is being dragged: pauses the layout animation so it cannot fight the drag. */
   dragging: boolean;
   onCaret(id: string, caret: number | null): void;
 }
@@ -71,7 +69,6 @@ function BlockRowImpl({ block, number, peers, recent, focus, actions, dragging, 
   const isText = type !== 'DIVIDER';
   const menuId = useId();
 
-  // ---- slash menu
   const query = isText && type !== 'CODE' ? slashQuery(text) : null;
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
   const [active, setActive] = useState(0);
@@ -80,7 +77,6 @@ function BlockRowImpl({ block, number, peers, recent, focus, actions, dragging, 
   const activeIndex = Math.min(active, Math.max(0, commands.length - 1));
   useEffect(() => setActive(0), [query]);
 
-  // ---- focus requested by an action (new block, merge, arrows...)
   useLayoutEffect(() => {
     const el = fieldRef.current;
     if (!focus || !el) return;
@@ -91,7 +87,6 @@ function BlockRowImpl({ block, number, peers, recent, focus, actions, dragging, 
     }
   }, [focus]);
 
-  // ---- auto-grow
   const area = fieldRef.current instanceof HTMLTextAreaElement ? fieldRef.current : null;
   useLayoutEffect(() => {
     const el = fieldRef.current;
@@ -113,7 +108,7 @@ function BlockRowImpl({ block, number, peers, recent, focus, actions, dragging, 
     return () => observer.disconnect();
   }, [type]);
 
-  // ---- a remote edit must not throw the caret to the end while we type in the same block
+  // remote edit: keep the caret where it was
   const selection = useRef<[number, number]>([0, 0]);
   useLayoutEffect(() => {
     const el = fieldRef.current;
@@ -184,7 +179,7 @@ function BlockRowImpl({ block, number, peers, recent, focus, actions, dragging, 
           event.preventDefault();
           actions.leaveCode(id);
         }
-        return; // otherwise: a newline inside the code block
+        return;
       }
       event.preventDefault();
       actions.enter(id, el.selectionStart, el.selectionEnd);
@@ -205,7 +200,7 @@ function BlockRowImpl({ block, number, peers, recent, focus, actions, dragging, 
     }
   };
 
-  /** Moving a node in the DOM drops focus in some browsers: take it back after the reorder. */
+  // moving the node drops focus in some browsers
   const focusSoon = () => {
     const el = fieldRef.current;
     requestAnimationFrame(() => el?.focus());
@@ -223,7 +218,6 @@ function BlockRowImpl({ block, number, peers, recent, focus, actions, dragging, 
     }
   };
 
-  // ---- presence of other people in this block
   const peer = peers[0];
   const rowStyle = {
     ...style,
@@ -388,7 +382,6 @@ function BlockRowImpl({ block, number, peers, recent, focus, actions, dragging, 
   );
 }
 
-/** A coloured caret with the person's name, placed with the same text metrics as the textarea. */
 function RemoteCaret({
   peer,
   area,

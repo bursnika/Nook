@@ -36,13 +36,11 @@ export interface ApiEvent {
 }
 
 let counter = 0;
-/** A name no other test (and no earlier run) used, so tests never trip over each other's data. */
 export function unique(label: string): string {
   counter += 1;
   return `${label} ${Date.now().toString(36)}${counter}`;
 }
 
-/** The REST API as one person (the request context carries that person's session cookie). */
 export class Api {
   constructor(
     private readonly request: APIRequestContext,
@@ -83,9 +81,8 @@ export class Api {
     expect([200, 204, 404], `DELETE ${path} -> ${response.status()}`).toContain(response.status());
   }
 
-  // ---- pages and blocks
+  // pages
 
-  /** A page with paragraphs (or other blocks) in the given order. */
   async createPage(
     title: string,
     blocks: { type?: BlockType; text: string; checked?: boolean }[] = [],
@@ -119,7 +116,7 @@ export class Api {
     return this.remove(`/workspaces/${this.workspaceId}/pages/${pageId}`);
   }
 
-  // ---- tasks and events
+  // tasks and events
 
   createTask(task: {
     title: string;

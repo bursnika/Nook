@@ -1,6 +1,5 @@
 import { heatmapCells } from '../../lib/insights';
 
-/** The last twelve weeks as a grid of days, darker meaning more activity. */
 export function Heatmap({ activity }: { activity: { date: string; count: number }[] }) {
   const cells = heatmapCells(activity);
   const total = activity.reduce((sum, day) => sum + day.count, 0);

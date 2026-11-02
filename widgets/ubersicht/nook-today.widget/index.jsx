@@ -1,5 +1,4 @@
-// Nook "Today" widget for macOS, made for Übersicht (https://tracesof.net/uebersicht/).
-// Copy this folder to ~/Library/Application Support/Übersicht/widgets/ and set BASE and TOKEN.
+// nook today widget for übersicht (macos)
 const BASE = 'https://YOUR-DOMAIN';
 const TOKEN = 'nkw_...';
 

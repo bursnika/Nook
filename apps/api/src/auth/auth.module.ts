@@ -18,7 +18,6 @@ import { WorkspaceGuard } from './workspace.guard.js';
     TokenService,
     GoogleProvider,
     { provide: OAUTH_PROVIDER, useExisting: GoogleProvider },
-    // Registered via useExisting so tests can swap the guard classes with overrideProvider().
     AuthGuard,
     WorkspaceGuard,
     { provide: APP_GUARD, useExisting: AuthGuard },

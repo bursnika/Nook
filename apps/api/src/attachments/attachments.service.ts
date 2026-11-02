@@ -59,12 +59,11 @@ export class AttachmentsService {
       if (attachment.taskId) await this.tasks.touch(workspaceId, attachment.taskId);
       return attachment;
     } catch (error) {
-      await this.uploads.remove(file.filename); // do not leave orphans when the record was rejected
+      await this.uploads.remove(file.filename);
       throw error;
     }
   }
 
-  /** For callers that reject an upload before creating a record (e.g. form validation failed). */
   async discardUpload(file: Express.Multer.File) {
     await this.uploads.remove(file.filename);
   }
@@ -87,7 +86,6 @@ export class AttachmentsService {
     await this.touchTasks(workspaceId, attachment.taskId);
   }
 
-  /** A file may only point at a page or a task of its own workspace. */
   private async assertRefs(
     workspaceId: string,
     { pageId, taskId }: { pageId?: string | null; taskId?: string | null },
@@ -108,7 +106,6 @@ export class AttachmentsService {
     }
   }
 
-  /** The file count on a task card changed. */
   private async touchTasks(workspaceId: string, ...taskIds: (string | null)[]) {
     const ids = new Set(taskIds.filter((taskId): taskId is string => !!taskId));
     for (const taskId of ids) await this.tasks.touch(workspaceId, taskId);

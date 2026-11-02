@@ -30,7 +30,6 @@ export class PagesService {
     return { items, total };
   }
 
-  /** A single page comes with its blocks in order, so the editor can load it in one request. */
   get(workspaceId: string, id: string) {
     return this.prisma.page.findFirstOrThrow({
       where: { id, workspaceId },
@@ -43,7 +42,6 @@ export class PagesService {
     });
   }
 
-  /** The author is the signed-in user; the WorkspaceGuard already proved they may write here. */
   async create(workspaceId: string, dto: CreatePageDto, authorId: string) {
     if (dto.parentId) await this.assertPageInWorkspace(workspaceId, dto.parentId);
     this.assertPublishable(dto.isPublished, dto.slug);
@@ -78,7 +76,6 @@ export class PagesService {
     if (!page) throw new BadRequestException('parentId does not belong to this workspace');
   }
 
-  /** Walks up from the new parent; meeting the page itself means the move would create a loop. */
   private async assertNoCycle(pageId: string, newParentId: string) {
     let cursor: string | null = newParentId;
     while (cursor) {

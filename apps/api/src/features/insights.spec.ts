@@ -12,7 +12,7 @@ describe('weekStart', () => {
 });
 
 describe('weeklyCompleted', () => {
-  const now = at('2026-11-01'); // the week of 26 Oct is the last one
+  const now = at('2026-11-01');
 
   it('has one bucket per week, oldest first, with empty weeks as zero', () => {
     const weeks = weeklyCompleted([], now);

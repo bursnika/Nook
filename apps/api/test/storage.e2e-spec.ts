@@ -163,7 +163,7 @@ describe('File storage: a driver without a local folder (as Azure Blob Storage)'
         contentType: 'image/png',
       })
       .expect(413);
-    expect(storage.files.size).toBe(0); // a truncated upload is taken back
+    expect(storage.files.size).toBe(0);
   });
 
   it('deletes the stored file together with its attachment', async () => {

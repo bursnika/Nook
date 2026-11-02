@@ -72,12 +72,10 @@ describe('dragOver / dragEnd', () => {
 describe('placements', () => {
   it('gives a card dropped between two others a position between them', () => {
     const tasks = board();
-    // b (2048) dropped after c (3072): below the last card
     const last = { ...columnsOf(tasks), TODO: ['a', 'c', 'b'] };
     expect(placements(last, tasks, 'b')).toEqual([
       { id: 'b', status: 'TODO', position: 3072 + STEP },
     ]);
-    // c (3072) dropped between a (1024) and b (2048)
     const middle = { ...columnsOf(tasks), TODO: ['a', 'c', 'b'] };
     expect(placements(middle, tasks, 'c')).toEqual([{ id: 'c', status: 'TODO', position: 1536 }]);
   });

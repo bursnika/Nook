@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 
-// jsdom has no modal <dialog> support: a small stand-in so components that call showModal() work in tests
+// jsdom has no showModal()
 if (typeof HTMLDialogElement !== 'undefined' && !HTMLDialogElement.prototype.showModal) {
   HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
     this.setAttribute('open', '');

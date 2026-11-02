@@ -94,7 +94,6 @@ class FakeChannel implements AmqpConfirmChannelLike {
   emit(event: string, error?: Error) {
     for (const listener of this.listeners.get(event) ?? []) listener(error);
   }
-  /** What a broker would push to the consumer. */
   deliver(payload: unknown, properties: AmqpMessage['properties'] = {}) {
     const message: AmqpMessage = {
       content: Buffer.from(typeof payload === 'string' ? payload : JSON.stringify(payload)),
@@ -139,13 +138,11 @@ class FakeConnection implements AmqpConnectionLike {
   on(event: string, listener: Listener) {
     this.listeners.set(event, [...(this.listeners.get(event) ?? []), listener]);
   }
-  /** The broker went away. */
   drop() {
     for (const listener of this.listeners.get('close') ?? []) listener();
   }
 }
 
-/** Gives the background reconnect loop and fire-and-forget handlers time to run. */
 const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 describe('RabbitMqQueue (mocked amqplib)', () => {
@@ -204,7 +201,7 @@ describe('RabbitMqQueue (mocked amqplib)', () => {
         { queue: 'jobs.dead', exchange: DEAD_LETTER_EXCHANGE, key: 'jobs' },
       ]),
     );
-    // one TTL queue per delay (1s, 2s, 4s), each dead-lettering back into the work queue
+    // one ttl queue per delay (1s, 2s, 4s)
     for (const delay of [1_000, 2_000, 4_000]) {
       expect(consumerChannel().queues.get(`jobs.retry.${delay}`)).toEqual({
         durable: true,
@@ -236,7 +233,6 @@ describe('RabbitMqQueue (mocked amqplib)', () => {
       headers: { 'x-attempt': 1 },
     });
     expect(JSON.parse(publisher().published[0].content.toString())).toEqual({ n: 1 });
-    // the queue exists before the first message goes in
     expect(publisher().queues.has('jobs')).toBe(true);
 
     publisher().failPublish = new Error('nack from broker');
@@ -279,7 +275,6 @@ describe('RabbitMqQueue (mocked amqplib)', () => {
     });
     expect(consumerChannel().acked).toEqual([message]);
 
-    // the second failure waits twice as long
     consumerChannel().deliver({ n: 1 }, { messageId: 'm-1', headers: { 'x-attempt': 2 } });
     await settle();
     expect(publisher().published[1]).toMatchObject({ key: 'jobs.retry.2000' });

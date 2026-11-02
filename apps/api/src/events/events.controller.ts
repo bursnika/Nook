@@ -35,7 +35,7 @@ export class EventsController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    // only { items, total } is cached: nextLink is built per request from its own host
+    // nextLink depends on the request host, so only items/total are cached
     const { value, hit } = await this.cache.remember(
       this.cache.listKey(workspaceId, 'events', query),
       CACHE_TTL_SECONDS.events,

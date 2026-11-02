@@ -10,7 +10,6 @@ interface Props {
 
 export const optionId = (menuId: string, command: SlashCommand) => `${menuId}-${command.type}`;
 
-/** The `/` command list: an ARIA listbox the textarea (a combobox) points at with aria-activedescendant. */
 export function SlashMenu({ id, commands, active, onPick, onHover }: Props) {
   return (
     <ul id={id} role="listbox" aria-label="Block types" className="slash pixel-border">

@@ -133,7 +133,7 @@ describe('Admin (MVC) pages', () => {
         .send({ name: 'B', slug: 'dup' })
         .expect(400);
       expect(dup.text).toContain('already exists');
-      expect(dup.text).toContain('value="dup"'); // what the user typed is kept
+      expect(dup.text).toContain('value="dup"');
     });
 
     it('adds, re-roles and removes members, and protects the last owner', async () => {
@@ -204,7 +204,6 @@ describe('Admin (MVC) pages', () => {
       expect(replaced.coverUrl).not.toBe(page.coverUrl);
       expect(storedFiles()).toHaveLength(1);
 
-      // removing it empties the column and the folder
       await http()
         .post(`${base}/${id}`)
         .type('form')

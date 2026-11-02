@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # every job that touches the API needs a database url and a secret; these are throwaway CI values
+  # ci-only values
   DATABASE_URL: postgresql://nook:nook@localhost:5432/nook?schema=public
   JWT_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
 
@@ -137,8 +137,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @nook/api db:generate
       - run: npx playwright install --with-deps chromium
-      # builds the API and the coverage-instrumented web app; the tests start the API on port 3300 themselves
-      # and use their own database (nook_e2e) on the Postgres service above
       - run: pnpm e2e:build
       - run: pnpm e2e:coverage
       - uses: actions/upload-artifact@v4
@@ -171,8 +169,6 @@ jobs:
 
   deploy:
     name: Publish images and deploy
-    # Runs only after a push to main, and only once the repository variable DEPLOY_ENABLED is set to "true"
-    # (see docs/deploy.md for the secrets this needs).
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
     needs: [check, api-tests, web-tests, newman, e2e, images]
     runs-on: ubuntu-latest

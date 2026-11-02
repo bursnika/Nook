@@ -5,7 +5,6 @@ import { TasksService } from './tasks.service.js';
 
 const AUTHOR = { author: { select: { id: true, name: true, avatarUrl: true } } } as const;
 
-/** Comments and notes under a task, oldest first like a conversation. */
 @Injectable()
 export class TaskCommentsService {
   constructor(
@@ -32,7 +31,6 @@ export class TaskCommentsService {
     return comment;
   }
 
-  /** Only the author may reword a comment. */
   async update(workspaceId: string, taskId: string, id: string, userId: string, body: string) {
     const comment = await this.find(workspaceId, taskId, id);
     if (comment.authorId !== userId) throw new ForbiddenException('Only the author can edit it');
@@ -43,7 +41,6 @@ export class TaskCommentsService {
     });
   }
 
-  /** The author, or an owner or admin of the workspace, may delete a comment. */
   async remove(
     workspaceId: string,
     taskId: string,

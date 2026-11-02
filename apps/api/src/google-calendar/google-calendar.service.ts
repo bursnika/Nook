@@ -30,11 +30,9 @@ import { UpdateGoogleEventDto } from './google-event.dto.js';
 import { decryptToken, encryptToken } from './token-crypto.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-/** How far around "now" events are imported. */
 const PAST_DAYS = 30;
 const FUTURE_DAYS = 180;
 
-/** What the event window sent, cleaned up for Google. */
 const toChanges = (dto: UpdateGoogleEventDto): EventChanges => ({
   title: dto.title.trim(),
   description: dto.description?.trim() || null,
@@ -43,18 +41,14 @@ const toChanges = (dto: UpdateGoogleEventDto): EventChanges => ({
   allDay: dto.allDay,
 });
 
-/** `<calendar id>/<event id>` back to the event id Google knows. */
 const rawEventId = (row: CalendarEvent) =>
   row.googleEventId!.slice(row.googleCalendarId!.length + 1);
 
-/** The granted scope string is space-separated; the person may have unticked a box on the consent screen. */
 const grants = (scope: string, wanted: string) => scope.split(' ').includes(wanted);
 
 export type TasksOutcome =
   | { status: 'synced'; created: number; updated: number; removed: number }
-  /** The person did not tick Google Tasks on the consent screen (or connected before it was offered). */
   | { status: 'not-granted' }
-  /** Google refused: usually the Google Tasks API is not enabled for the project. */
   | { status: 'unavailable' };
 
 @Injectable()
@@ -66,7 +60,6 @@ export class GoogleCalendarService {
     private readonly cache: CacheService,
   ) {}
 
-  /** `workspaceId` adds whether that workspace's plan allows changing Google events from Nook. */
   async status(userId: string, workspaceId?: string) {
     const connection = await this.prisma.googleConnection.findUnique({
       where: { userId },
@@ -82,7 +75,6 @@ export class GoogleCalendarService {
     };
   }
 
-  /** Stores the refresh token (encrypted) once Google confirms the calendar scope was granted. */
   async connect(
     userId: string,
     params: { code: string; codeVerifier: string; redirectUri: string },
@@ -98,10 +90,6 @@ export class GoogleCalendarService {
     return { granted: true as const };
   }
 
-  /**
-   * Imports the person's Google events (every calendar they have switched on) and, when allowed, their
-   * Google Tasks into the workspace, and mirrors deletions made in Google.
-   */
   async sync(workspaceId: string, userId: string, now = new Date()) {
     const connection = await this.prisma.googleConnection.findUnique({ where: { userId } });
     if (!connection) throw new ConflictException('Connect Google Calendar first');
@@ -176,8 +164,7 @@ export class GoogleCalendarService {
         });
       }),
     );
-    // Gone from Google (inside the window we looked at) means gone here, but only for this person's
-    // events, and never for a calendar we could not read this time.
+    // mirror deletions, but skip calendars we couldn't read
     const removed = await this.prisma.calendarEvent.deleteMany({
       where: {
         workspaceId,
@@ -244,7 +231,7 @@ export class GoogleCalendarService {
             },
           });
         }
-        // Keep a local "in progress" or "on hold"; only a change of done / not done in Google moves the status.
+        // only done/not done comes from google, keep local in-progress/on-hold
         const status = task.completed
           ? TaskStatus.DONE
           : localStatus === TaskStatus.DONE
@@ -266,7 +253,6 @@ export class GoogleCalendarService {
         workspaceId,
         importedById: userId,
         googleTaskId: { notIn: ids },
-        // a task list we could not read keeps what it had
         NOT: failedListIds.map((id) => ({ googleTaskId: { startsWith: `${id}/` } })),
       },
     });
@@ -275,10 +261,6 @@ export class GoogleCalendarService {
     return { status: 'synced', created, updated: tasks.length - created, removed: removed.count };
   }
 
-  /**
-   * Changes an imported event in Google first and mirrors Google's answer here, so the two never differ.
-   * Repeating events: only this occurrence changes (Google makes it an exception of the series).
-   */
   async updateEvent(workspaceId: string, userId: string, id: string, dto: UpdateGoogleEventDto) {
     const { row, refreshToken } = await this.writable(workspaceId, userId, id);
     const minimum = dto.allDay ? DAY_MS : 1;
@@ -331,7 +313,6 @@ export class GoogleCalendarService {
     await this.cache.invalidateWorkspace(workspaceId);
   }
 
-  /** Creates an event in the person's Google Calendar, then keeps the same event here. */
   async createEvent(workspaceId: string, userId: string, dto: UpdateGoogleEventDto) {
     const refreshToken = await this.writeAccess(userId);
     this.assertRange(dto);
@@ -354,7 +335,7 @@ export class GoogleCalendarService {
       endsAt: created.endsAt,
       allDay: created.allDay,
     };
-    // upsert: a sync that ran in the meantime may already have picked the new event up
+    // a sync may have already imported it
     const event = await this.prisma.calendarEvent.upsert({
       where: { workspaceId_googleEventId: { workspaceId, googleEventId: created.id } },
       create: { workspaceId, googleEventId: created.id, ...fields },
@@ -364,7 +345,6 @@ export class GoogleCalendarService {
     return event;
   }
 
-  /** Signed in to Google with permission to change events: the decrypted token, or why not. */
   private async writeAccess(userId: string) {
     const connection = await this.prisma.googleConnection.findUnique({ where: { userId } });
     if (!connection) throw new ConflictException('Connect Google Calendar first');
@@ -391,7 +371,6 @@ export class GoogleCalendarService {
     }
   }
 
-  /** The event, its owner's decrypted token, and every reason the change might not be allowed. */
   private async writable(workspaceId: string, userId: string, id: string) {
     const row = await this.prisma.calendarEvent.findFirst({
       where: { id, workspaceId, googleEventId: { not: null } },
@@ -414,7 +393,6 @@ export class GoogleCalendarService {
   private async explainWriteFailure(
     error: unknown,
     userId: string,
-    /** The event being changed; a brand-new event has none. */
     row?: CalendarEvent,
   ): Promise<never> {
     if (error instanceof GoogleAccessRevokedError) {
@@ -438,7 +416,6 @@ export class GoogleCalendarService {
     throw error;
   }
 
-  /** Forgets the connection and removes everything it imported, in every workspace. */
   async disconnect(userId: string) {
     const connection = await this.prisma.googleConnection.findUnique({ where: { userId } });
     if (!connection) return;
@@ -452,7 +429,6 @@ export class GoogleCalendarService {
     await this.provider.revoke(decryptToken(connection.refreshTokenEnc));
   }
 
-  /** The workspaces whose cached lists contain something this person imported. */
   private async importedWorkspaces(userId: string) {
     const [events, tasks] = await Promise.all([
       this.prisma.calendarEvent.findMany({

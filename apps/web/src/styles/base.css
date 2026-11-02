@@ -1,4 +1,3 @@
-/* Nook design tokens and pixel primitives (docs/design.md, docs/design/preview.html). */
 :root {
   --pink-100: #fce1ee;
   --pink-200: #f9c6de;
@@ -66,7 +65,7 @@ a {
   font-family: var(--font-display);
 }
 
-/* pixel border without a CSS border: four hard shadows, so corners look cut */
+/* pixel border: four hard shadows instead of a border */
 .pixel-border {
   box-shadow:
     0 calc(-1 * var(--px)) 0 0 var(--ink),

@@ -8,11 +8,6 @@ export type WorkspaceEvent =
 
 type Listener<T> = (message: T) => void;
 
-/**
- * In-process publish/subscribe. Every transport (WebSocket, long poll, polling, GraphQL subscriptions) reads
- * from here, so they all see exactly the same stream. For several API instances this is the piece to swap
- * for Redis pub/sub; nothing else needs to change.
- */
 @Injectable()
 export class RealtimeBus {
   private readonly emitter = new EventEmitter().setMaxListeners(0);
@@ -35,7 +30,6 @@ export class RealtimeBus {
     return () => this.emitter.off(`workspace:${workspaceId}`, listener);
   }
 
-  /** An async iterator over workspace events, the shape GraphQL subscriptions want. */
   workspaceStream(workspaceId: string, signal?: AbortSignal): AsyncGenerator<WorkspaceEvent> {
     const queue: WorkspaceEvent[] = [];
     let wake: (() => void) | undefined;

@@ -22,7 +22,6 @@ class LookupQuery {
 export class LookupController {
   constructor(private readonly lookup: LookupService) {}
 
-  /** Searching every user would expose other tenants' people, so it is for platform admins only. */
   @Get('lookup/users')
   @PlatformAdminOnly()
   users(@Query() { q, page }: LookupQuery) {

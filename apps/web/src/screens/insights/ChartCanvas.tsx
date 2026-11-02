@@ -1,7 +1,7 @@
 import { Chart, type ChartConfiguration } from 'chart.js/auto';
 import { useEffect, useRef } from 'react';
 
-/** CSS colour tokens as Chart.js needs them (it cannot read `var(--x)`). */
+// chart.js can't read var(--x)
 export function palette() {
   const style = getComputedStyle(document.documentElement);
   const get = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
@@ -19,14 +19,12 @@ export function palette() {
   };
 }
 
-/** One Chart.js chart on a canvas. It is rebuilt when the configuration changes and destroyed on unmount. */
 export function ChartCanvas({
   config,
   label,
   height = 220,
 }: {
   config: ChartConfiguration;
-  /** Spoken description of what the chart shows. */
   label: string;
   height?: number;
 }) {

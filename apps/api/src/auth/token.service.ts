@@ -20,13 +20,12 @@ export class TokenService {
       .sign(key);
   }
 
-  /** Returns the user for a valid, unexpired token, or null for anything else (bad signature, wrong alg, expired ...). */
   async verifyAccessToken(token: string): Promise<AuthUser | null> {
     try {
       const { payload } = await jwtVerify(token, key, {
         issuer: ISSUER,
         audience: AUDIENCE,
-        algorithms: ['HS256'], // never accept `none` or an algorithm the client picked
+        algorithms: ['HS256'],
       });
       if (!payload.sub || typeof payload.email !== 'string') return null;
       return {

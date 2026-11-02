@@ -28,7 +28,7 @@ describe('Workspaces API', () => {
       .expect(400);
     await request(app.getHttpServer())
       .post('/api/workspaces')
-      .send({ name: 'Bad', slug: 'ok', plan: 'PRO' }) // there are no plans any more
+      .send({ name: 'Bad', slug: 'ok', plan: 'PRO' })
       .expect(400);
   });
 

@@ -8,7 +8,6 @@ import { SyncController } from './sync.controller.js';
 import { SyncService } from './sync.service.js';
 import { TransportMetrics } from './transport-metrics.js';
 
-/** Live updates: block operations of a page over WebSocket, long poll or polling, and GraphQL subscriptions. */
 @Global()
 @Module({
   imports: [GraphqlModule],

@@ -20,9 +20,7 @@ import {
 } from './uploads/file-storage.js';
 import { serveUploadsFromStorage } from './uploads/serve-uploads.js';
 
-/** Shared by main.ts and the e2e tests so both run the app exactly the same way. */
 export function configureApp(app: INestApplication) {
-  // The REST API lives under /api; the server-rendered admin (MVC) is mounted at /admin.
   app.setGlobalPrefix('api', {
     exclude: [
       { path: 'admin', method: RequestMethod.ALL },
@@ -48,10 +46,6 @@ export function configureApp(app: INestApplication) {
   setupUploads(app as NestExpressApplication);
 }
 
-/**
- * Uploaded files are user content: never let the browser sniff or run them in our origin. Local files
- * are plain static assets; blob storage has no folder, so the API streams them (same headers).
- */
 function setupUploads(app: NestExpressApplication) {
   const storage = app.get<FileStorage>(FILE_STORAGE);
   if (!storage.staticRoot) {
@@ -77,7 +71,7 @@ export function setupSwagger(app: INestApplication) {
   SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, config));
 }
 
-/** @types/hbs predates the `rename` option of registerPartials. */
+// @types/hbs doesn't know the rename option
 interface HbsWithPartialOptions {
   registerPartials(dir: string, options: { rename: (name: string) => string }): void;
 }
@@ -85,13 +79,12 @@ interface HbsWithPartialOptions {
 const require = createRequire(import.meta.url);
 const packageDir = (name: string) => dirname(require.resolve(`${name}/package.json`));
 
-/** Handlebars views plus the static assets they need (own css/js and vendored Bootstrap, jQuery, Select2). */
 function setupViews(app: NestExpressApplication) {
   const views = join(env.appRoot, 'views');
   app.setBaseViewsDir(views);
   app.setViewEngine('hbs');
   app.set('view options', { layout: 'admin/layout' });
-  // keep file names as partial names (hbs would otherwise turn field-text into field_text)
+  // otherwise hbs turns field-text into field_text
   (hbs as unknown as HbsWithPartialOptions).registerPartials(join(views, 'partials'), {
     rename: (name) => name,
   });
@@ -109,14 +102,10 @@ function setupViews(app: NestExpressApplication) {
   }
 }
 
-/**
- * The React app (apps/web) is built to static files; the API serves them under /app. Any /app/... address
- * that is not a file gets index.html, so the app's own router can open it (a reload on /app/w/1/tasks works).
- */
+// unknown /app/* paths get index.html for the client router
 function setupSpa(app: NestExpressApplication) {
   const server = app.getHttpAdapter().getInstance() as Express;
   const index = join(env.webDist, 'index.html');
-  // the bare address is the landing page (PublicController); it links to /app/
   if (!existsSync(index)) return;
   app.useStaticAssets(env.webDist, { prefix: '/app/', index: false, maxAge: '1h' });
   server.get(['/app', '/app/*path'], (_req, res) => {

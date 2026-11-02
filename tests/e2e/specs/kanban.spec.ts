@@ -155,7 +155,6 @@ test.describe('kanban board', () => {
     await expect(card).toContainText('Attachments: 1');
     await expect(card.getByText(/Assigned to/)).toHaveCount(1);
 
-    // another member sees the comment and the file
     const comments = await bob.api.get<{ body: string }[]>(
       `/workspaces/${bob.api.workspaceId}/tasks/${task.id}/comments`,
     );
@@ -194,7 +193,6 @@ test.describe('kanban board', () => {
     const task = await bob.api.createTask({ title, status: 'IN_PROGRESS' });
     await expect(board.column('In progress').getByText(title)).toBeVisible();
 
-    // and the change of another person moves it too
     await bob.api.patch(`/workspaces/${bob.api.workspaceId}/tasks/${task.id}`, { status: 'DONE' });
     await expect(board.column('Complete').getByText(title)).toBeVisible();
     await expect(board.column('In progress').getByText(title)).toHaveCount(0);

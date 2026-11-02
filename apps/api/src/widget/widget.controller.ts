@@ -14,10 +14,6 @@ import type { AuthUser } from '../auth/auth.types.js';
 import { CurrentUser, Public } from '../auth/decorators.js';
 import { WidgetService } from './widget.service.js';
 
-/**
- * Data for home-screen widgets (iOS Scriptable, Android KWGT, a Mac widget). They cannot sign in with Google,
- * so a person creates a personal token in the app and the widget sends it. The token can only read today's plan.
- */
 @ApiTags('widget')
 @Controller('widget')
 export class WidgetController {

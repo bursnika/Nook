@@ -29,7 +29,6 @@ class ConnectQuery {
   @IsString()
   returnTo?: string;
 
-  /** `1` also asks for permission to change Google events (the optional, second consent). */
   @IsOptional()
   @IsString()
   edit?: string;

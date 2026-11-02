@@ -18,14 +18,13 @@ const sha256 = (value: string) => createHash('sha256').update(value).digest('hex
 export class InvitationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Creates an invitation and returns its secret token once. Only the hash is stored. */
   async create(
     workspaceId: string,
     invitedById: string,
     dto: CreateInvitationDto,
     actorRole: Role,
   ) {
-    // An admin can bring people in, but only an owner decides who gets more than the basic role.
+    // only owners can invite with a higher role
     if ((dto.role ?? Role.MEMBER) !== Role.MEMBER && actorRole !== Role.OWNER) {
       throw new ForbiddenException('Only an owner can invite someone as an admin');
     }
@@ -64,7 +63,6 @@ export class InvitationsService {
     await this.prisma.invitation.delete({ where: { id, workspaceId } });
   }
 
-  /** What the invite page shows before the person accepts. Does not reveal anything beyond the token holder's own invitation. */
   async preview(token: string) {
     const invitation = await this.prisma.invitation.findUnique({
       where: { tokenHash: sha256(token) },
@@ -79,7 +77,6 @@ export class InvitationsService {
     };
   }
 
-  /** Joins the signed-in user to the workspace. The invitation must have been sent to their e-mail address. */
   async accept(user: AuthUser, token: string) {
     const invitation = await this.prisma.invitation.findUnique({
       where: { tokenHash: sha256(token) },

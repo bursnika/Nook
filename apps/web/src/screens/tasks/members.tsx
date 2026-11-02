@@ -5,7 +5,6 @@ import type { Member } from '../../lib/types';
 
 export type Person = Member['user'];
 
-/** The people of the workspace by user id, for assignee avatars on the cards. */
 export const PeopleContext = createContext<ReadonlyMap<string, Person>>(new Map());
 
 export const usePerson = (id: string | null | undefined) => {
@@ -13,7 +12,6 @@ export const usePerson = (id: string | null | undefined) => {
   return id ? people.get(id) : undefined;
 };
 
-/** Members of the workspace, the people a card can be assigned to. */
 export function useMembers(workspaceId: string) {
   const { data } = useResource<Member[]>(
     () => api<Member[]>(`/workspaces/${workspaceId}/members`),
@@ -35,7 +33,6 @@ export function initials(name: string): string {
 
 const TONES = ['pink', 'lavender', 'blue'] as const;
 
-/** A square pixel avatar: the photo when there is one, otherwise initials on a colour picked from the name. */
 export function Avatar({
   person,
   size = 24,

@@ -28,7 +28,6 @@ enum BlockType {
   DIVIDER
 }
 
-// TODO is the backlog and DONE is complete on the board.
 enum TaskStatus {
   TODO
   IN_PROGRESS
@@ -47,9 +46,8 @@ model User {
   email           String   @unique
   name            String
   avatarUrl       String?
-  // Google account id (the OIDC `sub`); set on first sign-in with Google.
   googleId        String?  @unique
-  // SHA-256 of the personal token that lets a home-screen widget read today's plan (the token itself is shown once).
+  // sha-256 of the widget token
   widgetTokenHash String?  @unique
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -65,12 +63,11 @@ model User {
   taskComments    TaskComment[]
 
   @@index([name])
-  // Trigram indexes for fast substring search (created by the user_search_indexes migration).
+  // trigram indexes for substring search
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "User_name_trgm_idx")
   @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "User_email_trgm_idx")
 }
 
-/// A person's link to their Google Calendar. The refresh token is stored encrypted (see google-calendar/token-crypto.ts).
 model GoogleConnection {
   id              String    @id @default(uuid(7))
   userId          String    @unique
@@ -116,9 +113,7 @@ model Page {
   id          String   @id @default(uuid(7))
   title       String
   icon        String?
-  // Link to an uploaded cover image (the "file" field required by the MVC task).
   coverUrl    String?
-  // Public landing page address: /p/:slug. Null while the page is private.
   slug        String?  @unique
   isPublished Boolean  @default(false)
   createdAt   DateTime @default(now())
@@ -144,7 +139,6 @@ model Block {
   id        String    @id @default(uuid(7))
   type      BlockType @default(PARAGRAPH)
   content   Json      @default("{}")
-  // Fractional position inside the page: a new block goes between its neighbours.
   position  Float
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -155,14 +149,12 @@ model Block {
   @@index([pageId, position])
 }
 
-// One entry per batch of block operations applied to a page. `seq` orders the log, so a client that was
-// offline (or polling) asks for everything after the last `seq` it has seen.
+// change log, clients ask for everything after the last seq
 model PageOp {
   seq         Int      @id @default(autoincrement())
   pageId      String
   workspaceId String
   authorId    String
-  // Who sent it: lets a browser tab tell its own echo from other people's changes.
   clientId    String
   ops         Json
   createdAt   DateTime @default(now())
@@ -179,7 +171,6 @@ model Task {
   status         TaskStatus   @default(TODO)
   priority       TaskPriority @default(MEDIUM)
   dueDate        DateTime?
-  // Order inside a Kanban column.
   position       Float        @default(0)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -187,7 +178,6 @@ model Task {
   workspaceId    String
   pageId         String?
   assigneeId     String?
-  // Set when the task was imported from Google Tasks (`<list id>/<task id>`) by this person.
   googleTaskId   String?
   importedById   String?
 
@@ -206,7 +196,6 @@ model Task {
   @@index([assigneeId])
 }
 
-/// A comment or note under a task. Only its author may edit it.
 model TaskComment {
   id        String   @id @default(uuid(7))
   body      String
@@ -229,16 +218,11 @@ model CalendarEvent {
   startsAt         DateTime
   endsAt           DateTime
   allDay           Boolean  @default(false)
-  // Set when the event was imported from Google Calendar.
   googleEventId    String?
-  // Whose Google Calendar it came from; only that person's sync may remove it again.
   importedById     String?
-  // Which of their calendars (primary, holidays, a shared one, ...) and what it is called.
   googleCalendarId String?
   calendarName     String?
-  // Whether the person may change it in Google (writer/owner of the calendar, not a birthday etc.).
   googleEditable   Boolean  @default(false)
-  // One occurrence of a repeating event: edits apply to this occurrence only.
   recurring        Boolean  @default(false)
   googleUrl        String?
   createdAt        DateTime @default(now())
@@ -258,14 +242,12 @@ model CalendarEvent {
 model Attachment {
   id          String   @id @default(uuid(7))
   filename    String
-  // Link to the stored file (local uploads now, blob storage later).
   url         String
   mimeType    String
   size        Int
   createdAt   DateTime @default(now())
   workspaceId String
   pageId      String?
-  // A file attached to a task; the record goes when the task is deleted.
   taskId      String?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -277,7 +259,7 @@ model Attachment {
   @@index([taskId])
 }
 
-/// Long-lived session token. Only a hash is stored; every use rotates it, and reusing a rotated one revokes the user's sessions.
+// only a hash is stored, rotated on every use
 model RefreshToken {
   id        String    @id @default(uuid(7))
   tokenHash String    @unique
@@ -292,7 +274,6 @@ model RefreshToken {
   @@index([userId])
 }
 
-/// Invites a person (by e-mail) to a workspace. The secret token is shown once; only its hash is stored.
 model Invitation {
   id          String    @id @default(uuid(7))
   email       String
@@ -311,7 +292,6 @@ model Invitation {
   @@index([email])
 }
 
-/// A feature is available to everyone while it is enabled; switching it off hides it for all workspaces.
 model FeatureFlag {
   key         String  @id
   description String

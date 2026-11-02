@@ -13,7 +13,6 @@ export interface CalendarApi {
   error: Error | undefined;
   live: LiveStatus;
   reload: () => Promise<void>;
-  /** Creates (no `existing`) or updates an event; Google events go through the Google routes. */
   save: (
     payload: EventPayload,
     options: { existing?: CalendarEvent; google?: boolean },
@@ -26,7 +25,6 @@ const eventPath = (workspaceId: string, event: CalendarEvent) =>
     ? `/workspaces/${workspaceId}/google-calendar/events/${event.id}`
     : `/workspaces/${workspaceId}/events/${event.id}`;
 
-/** The month's events and task deadlines, kept fresh by live changes. */
 export function useCalendar(workspaceId: string, month: Date): CalendarApi {
   const { from, to } = gridRange(month);
   const resource = useResource<CalendarData>(
@@ -38,7 +36,6 @@ export function useCalendar(workspaceId: string, month: Date): CalendarApi {
   );
   const { reload, setData } = resource;
 
-  // changes that add things (or move task deadlines) are simplest to take from the server, in one go
   const timer = useRef<number | undefined>(undefined);
   const refreshSoon = useCallback(() => {
     window.clearTimeout(timer.current);
@@ -81,7 +78,7 @@ export function useCalendar(workspaceId: string, month: Date): CalendarApi {
       try {
         await api(eventPath(workspaceId, event), { method: 'DELETE' });
       } catch (error) {
-        // 410: it is already gone in Google, so there is nothing left to delete here either
+        // 410: already gone in google
         if (!(error instanceof ApiError && error.status === 410)) throw error;
       }
       await reload();

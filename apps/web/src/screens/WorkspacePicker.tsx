@@ -10,7 +10,6 @@ import { slugify, withSuffix } from '../lib/slug';
 import type { Workspace } from '../lib/types';
 import { readLastWorkspace, rememberWorkspace } from '../lib/workspace';
 
-/** `/`: jumps to the last workspace, otherwise lists the workspaces and lets the person create one. */
 export default function WorkspacePicker() {
   const me = useMe();
   const [params] = useSearchParams();
@@ -34,7 +33,7 @@ export default function WorkspacePicker() {
     try {
       const base = slugify(trimmed);
       let created: Workspace | undefined;
-      // slugs are unique across the whole service, so a taken one gets a short random tail
+      // slugs are global, so a taken one gets a random suffix
       for (let attempt = 0; !created && attempt < 4; attempt++) {
         const slug =
           attempt === 0 ? base : withSuffix(base, Math.random().toString(36).slice(2, 6));

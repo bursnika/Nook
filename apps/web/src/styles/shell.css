@@ -1,5 +1,3 @@
-/* App shell: desktop area (sidebar + window), taskbar with Start menu, and the mobile drawer / bottom nav. */
-
 .shell {
   display: flex;
   flex-direction: column;
@@ -75,7 +73,7 @@
     var(--px) 0 0 0 var(--lav-700);
 }
 
-/* ---------- sidebar ---------- */
+/* sidebar */
 
 .sidebar {
   flex: 1;
@@ -223,7 +221,7 @@
   white-space: nowrap;
 }
 
-/* ---------- taskbar ---------- */
+/* taskbar */
 
 .taskbar {
   flex: none;
@@ -384,7 +382,7 @@
   color: var(--white);
 }
 
-/* ---------- small screens: the sidebar is a drawer and the taskbar a bottom nav ---------- */
+/* small screens */
 
 .shell__scrim {
   position: fixed;

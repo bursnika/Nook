@@ -13,7 +13,6 @@ export function Column({
   onCreate,
 }: {
   status: TaskStatus;
-  /** In display order. */
   tasks: Task[];
   animate: boolean;
   onOpen: (task: Task) => void;
@@ -66,7 +65,6 @@ function AddCard({
   const input = useRef<HTMLInputElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
 
-  // the "+ Add card" button is not on screen while the form is open, so focus goes back to it after closing
   const restoreFocus = useRef(false);
   useEffect(() => {
     if (open) input.current?.focus();

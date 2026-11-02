@@ -82,10 +82,8 @@ export class TasksAdminController {
         .render('admin/tasks/form', await this.formView(workspaceId, { ...view, errors }));
     try {
       const created = await this.tasks.create(workspaceId, value);
-      // the quick forms on the workspace home and on a page post here too and want to land back there
       if (body.from === 'home')
         return res.redirect(`/admin/workspaces/${workspaceId}?flash=task-created`);
-      // the service has just verified that this page belongs to the workspace
       if (body.from === 'page' && created.pageId)
         return res.redirect(
           `/admin/workspaces/${workspaceId}/pages/${created.pageId}?tab=tasks&flash=task-created`,

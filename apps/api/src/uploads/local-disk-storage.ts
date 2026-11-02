@@ -13,7 +13,6 @@ import {
   type StoredFile,
 } from './file-storage.js';
 
-/** Files in a folder on the API's own disk (a Docker volume in production), served under /uploads. */
 export class LocalDiskStorage implements FileStorage {
   readonly kind = 'local';
 
@@ -30,7 +29,7 @@ export class LocalDiskStorage implements FileStorage {
     try {
       await pipeline(toStream(data), counter, createWriteStream(path));
     } catch (error) {
-      await unlink(path).catch(() => undefined); // no half-written file is left behind
+      await unlink(path).catch(() => undefined);
       throw error;
     }
     return { name, url: this.urlFor(name), size: counter.bytes };
@@ -52,7 +51,7 @@ export class LocalDiskStorage implements FileStorage {
     return `${UPLOAD_PREFIX}${name}`;
   }
 
-  /** Only the last path segment counts, so a name can never point outside the folder. */
+  // basename only, so no path traversal
   private pathOf(name: string) {
     return join(this.directory, basename(name));
   }

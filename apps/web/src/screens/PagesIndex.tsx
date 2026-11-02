@@ -8,7 +8,6 @@ import '../styles/pages.css';
 import { LOCALE } from '../lib/locale';
 import { exportMarkdownFile, importMarkdownFile } from '../lib/markdownFile';
 
-/** `/pages`: every page of the workspace, searchable, with create and delete. */
 export default function PagesIndex() {
   const { workspace, pages, pagesLoading, createPage, deletePage } = useWorkspace();
   const navigate = useNavigate();
@@ -46,7 +45,6 @@ export default function PagesIndex() {
     try {
       let last;
       for (const file of list) last = await importMarkdownFile(workspace.id, file);
-      // one file opens straight away, several stay in the list
       if (last && list.length === 1) navigate(`/w/${workspace.id}/pages/${last.id}`);
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'Could not import the file');

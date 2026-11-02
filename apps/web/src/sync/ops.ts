@@ -1,6 +1,6 @@
 import { isBlockType, normaliseContent, type Block, type BlockOp } from './types';
 
-/** Stable order: by position, then id, so two blocks inserted at the same spot sort the same on every client. */
+// id as tiebreak so every client sorts the same
 export function compareBlocks(a: Block, b: Block): number {
   return a.position - b.position || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 }
@@ -9,10 +9,6 @@ export function sortBlocks(blocks: Block[]): Block[] {
   return [...blocks].sort(compareBlocks);
 }
 
-/**
- * Applies one operation the way the server does: replays are harmless (inserting an existing id and changing
- * a missing block are ignored). Untouched blocks keep their object identity so memoised rows do not re-render.
- */
 export function applyOp(blocks: Block[], op: BlockOp): Block[] {
   const index = blocks.findIndex((block) => block.id === op.id);
   switch (op.type) {

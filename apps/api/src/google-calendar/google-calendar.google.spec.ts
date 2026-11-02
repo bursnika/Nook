@@ -34,7 +34,7 @@ describe('toEvent', () => {
       startsAt: new Date('2030-05-01T07:00:00Z'),
       endsAt: new Date('2030-05-01T08:30:00Z'),
       allDay: false,
-      editable: false, // the test calendar is not marked writable
+      editable: false,
       recurring: false,
       url: undefined,
     });
@@ -166,7 +166,6 @@ describe('toTask', () => {
   });
 });
 
-/** Replaces fetch: each entry answers the first request whose URL contains `match`. */
 type Route = { match: string; status?: number; body?: unknown };
 function stubGoogle(routes: Route[]) {
   const calls: string[] = [];
@@ -335,8 +334,7 @@ describe('GoogleCalendarGoogle', () => {
         GoogleAccessRevokedError,
       );
 
-      // 403 on the calendar list is "API not enabled" far more often than "revoked":
-      // dropping the connection for it would be wrong
+      // 403 on the calendar list usually means the api is off, not revoked
       stubGoogle([token, { match: 'calendarList', status: 403 }]);
       const error = await provider.listEvents({ refreshToken: 'r', ...window }).catch((e) => e);
       expect(error).toBeInstanceOf(BadGatewayException);
@@ -434,7 +432,6 @@ describe('GoogleCalendarGoogle', () => {
       htmlLink: 'https://calendar.google.com/e',
     };
 
-    /** Captures what is sent to the events endpoint. */
     function stubWrite(status: number, body: unknown = answer) {
       const sent: {
         url: string;
@@ -652,7 +649,6 @@ describe('GoogleCalendarGoogle', () => {
         start: { dateTime: '2030-05-10T10:00:00.000Z', date: null },
         end: { dateTime: '2030-05-10T11:00:00.000Z', date: null },
       });
-      // the same id and label a later sync gives it, so the sync finds it instead of adding a copy
       expect(event).toMatchObject({
         id: 'me@x.com/new1',
         calendarId: 'me@x.com',

@@ -19,14 +19,7 @@ import { BlockType } from '../generated/prisma/enums.js';
 export const OP_TYPES = ['insert', 'update', 'move', 'delete'] as const;
 export type OpType = (typeof OP_TYPES)[number];
 
-/**
- * One change of one block. The client picks the block id on insert, so it can show the block at once and
- * later changes can refer to it before the server has answered.
- *  - insert: id, position, optional blockType and content
- *  - update: id and the parts that changed (last writer wins per block)
- *  - move:   id and the new fractional position
- *  - delete: id
- */
+// insert | update | move | delete; the client picks the id on insert
 export class BlockOpDto {
   @IsIn(OP_TYPES)
   type!: OpType;
@@ -97,7 +90,6 @@ export class SinceQuery {
   timeout?: number;
 }
 
-/** What travels to other tabs: the batch, who sent it and where it sits in the log. */
 export interface OpsMessage {
   type: 'ops';
   seq: number;

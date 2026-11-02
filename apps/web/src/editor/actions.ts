@@ -7,23 +7,17 @@ export type CaretTarget = number | 'end';
 
 const LISTS: readonly BlockType[] = ['BULLETED_LIST', 'NUMBERED_LIST', 'TODO'];
 
-/** Block types whose text can be edited. */
 export const hasText = (type: BlockType) => type !== 'DIVIDER';
 
 const contentOf = (type: BlockType, text: string, checked?: boolean): BlockContent =>
   type === 'TODO' ? { text, checked: checked ?? false } : { text };
 
-/**
- * Everything the editor does to the document, as plain functions over a SyncClient. Rows call these;
- * keeping them out of the components makes them easy to test and keeps the rows memoisable.
- */
 export function createActions(
   client: SyncClient,
   requestFocus: (id: string, caret: CaretTarget) => void,
 ) {
   const blocks = () => client.getState().blocks;
 
-  /** Position for a new block right after `afterId` (null: at the top); renumbers the page if the gap is gone. */
   function positionAfter(afterId: string | null): number {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const list = blocks();
@@ -49,7 +43,6 @@ export function createActions(
   }
 
   return {
-    /** Typing in a block; a markdown shortcut at the start of a paragraph turns it into another block. */
     change(id: string, text: string) {
       const block = client.getBlock(id);
       if (!block) return;
@@ -74,7 +67,6 @@ export function createActions(
       if (block) client.updateBlock(id, { content: { text: block.content.text, checked } });
     },
 
-    /** Choose a block type from the slash menu (the `/query` text is dropped). */
     applyCommand(id: string, type: BlockType) {
       const block = client.getBlock(id);
       if (!block) return;
@@ -83,7 +75,6 @@ export function createActions(
       else requestFocus(id, 0);
     },
 
-    /** Enter: split at the caret. An empty list item turns back into a paragraph. */
     enter(id: string, start: number, end: number) {
       const block = client.getBlock(id);
       if (!block) return;
@@ -100,7 +91,6 @@ export function createActions(
       requestFocus(insertAfter(id, nextType, after, false), 0);
     },
 
-    /** Enter at the end of a code block after an empty line leaves the block. */
     leaveCode(id: string) {
       const block = client.getBlock(id);
       if (!block) return;
@@ -108,12 +98,10 @@ export function createActions(
       requestFocus(insertAfter(id, 'PARAGRAPH'), 0);
     },
 
-    /** Enter on a divider adds a paragraph below it. */
     addBelow(id: string) {
       requestFocus(insertAfter(id, 'PARAGRAPH'), 0);
     },
 
-    /** The empty space under the last block. */
     appendOrFocusLast() {
       const list = blocks();
       const last = list.at(-1);
@@ -121,7 +109,6 @@ export function createActions(
       else requestFocus(insertAfter(last?.id ?? null, 'PARAGRAPH'), 0);
     },
 
-    /** Backspace at the very start. Returns true when it handled the key. */
     backspaceAtStart(id: string): boolean {
       const list = blocks();
       const index = list.findIndex((b) => b.id === id);
@@ -152,7 +139,6 @@ export function createActions(
       return true;
     },
 
-    /** Delete / Backspace on a divider removes it. */
     removeDivider(id: string) {
       const list = blocks();
       const index = list.findIndex((b) => b.id === id);
@@ -161,7 +147,6 @@ export function createActions(
       if (target) requestFocus(target.id, 'end');
     },
 
-    /** Move the caret to the neighbouring block, keeping the column where possible. */
     focusAdjacent(id: string, direction: -1 | 1, column: number) {
       const list = blocks();
       const index = list.findIndex((b) => b.id === id);
@@ -182,7 +167,6 @@ export function createActions(
       return true;
     },
 
-    /** Move a block one step up or down (keyboard alternative to dragging). */
     moveBy(id: string, delta: -1 | 1) {
       const list = blocks();
       const index = list.findIndex((b) => b.id === id);
@@ -191,7 +175,6 @@ export function createActions(
       this.dropAt(id, target);
     },
 
-    /** Put a block at `finalIndex` of the reordered list. Only that block gets a new position. */
     dropAt(id: string, finalIndex: number) {
       const list = blocks();
       const from = list.findIndex((b) => b.id === id);

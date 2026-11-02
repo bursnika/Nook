@@ -4,7 +4,6 @@ import { AzureBlobStorage } from './azure-blob-storage.js';
 import { FILE_STORAGE, type FileStorage } from './file-storage.js';
 import { LocalDiskStorage } from './local-disk-storage.js';
 
-/** Azure Blob Storage when its connection string is set, otherwise the local uploads folder. */
 @Module({
   providers: [
     {

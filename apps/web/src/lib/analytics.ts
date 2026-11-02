@@ -1,4 +1,3 @@
-/** GA4 custom events. Nothing is sent unless VITE_GA_MEASUREMENT_ID is set at build time. */
 type GtagArgs = [string, ...unknown[]];
 declare global {
   interface Window {

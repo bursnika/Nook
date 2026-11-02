@@ -1,7 +1,7 @@
 import { api } from './api';
 import { track } from './analytics';
 
-/** The API refuses Markdown above this size; checking first gives a clearer message than a 413. */
+// checked here for a nicer message than a 413
 export const MAX_MARKDOWN_BYTES = 1_000_000;
 
 const MARKDOWN_NAME = /\.(md|markdown|txt)$/i;
@@ -12,7 +12,6 @@ export function isMarkdownFile(file: File) {
   );
 }
 
-/** Reads a dropped or chosen file with the File API. */
 export function readTextFile(file: File): Promise<string> {
   if (typeof file.text === 'function') return file.text();
   return new Promise((resolve, reject) => {
@@ -28,7 +27,6 @@ export interface ImportedPage {
   title: string;
 }
 
-/** Turns a Markdown file into a new page: the first `# heading` becomes its title. */
 export async function importMarkdownFile(workspaceId: string, file: File): Promise<ImportedPage> {
   if (!isMarkdownFile(file)) throw new Error(`“${file.name}” is not a Markdown or text file.`);
   if (file.size > MAX_MARKDOWN_BYTES) throw new Error('The file is larger than 1 MB.');
@@ -45,7 +43,6 @@ export async function importMarkdownFile(workspaceId: string, file: File): Promi
   return page;
 }
 
-/** The file name the server suggests, or a safe one made from the title. */
 export function filenameFrom(disposition: string | null, title: string) {
   const match = disposition?.match(/filename="?([^";]+)"?/i);
   if (match) return match[1];
@@ -56,7 +53,6 @@ export function filenameFrom(disposition: string | null, title: string) {
   return `${base || 'page'}.md`;
 }
 
-/** Downloads a page as a `.md` file: fetch the Markdown, hand it to the browser as a Blob. */
 export async function exportMarkdownFile(workspaceId: string, page: { id: string; title: string }) {
   const response = await fetch(`/api/workspaces/${workspaceId}/pages/${page.id}/export.md`, {
     credentials: 'same-origin',

@@ -1,11 +1,7 @@
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto';
 import { env } from '../env.js';
 
-/**
- * Google refresh tokens are long-lived credentials, so they are never stored in the clear.
- * AES-256-GCM with a key derived from JWT_SECRET (changing that secret means reconnecting Google).
- * Format: v1.<iv>.<tag>.<ciphertext>, each part base64url.
- */
+// aes-256-gcm, format v1.<iv>.<tag>.<ciphertext> (base64url)
 const key = () =>
   Buffer.from(hkdfSync('sha256', env.jwtSecret, 'nook', 'google-refresh-token', 32));
 

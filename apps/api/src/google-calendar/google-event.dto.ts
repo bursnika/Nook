@@ -1,7 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsBoolean, IsDate, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
-/** What the event window sends when saving: the whole event, as it should look afterwards. */
 export class UpdateGoogleEventDto {
   @IsString()
   @MinLength(1)

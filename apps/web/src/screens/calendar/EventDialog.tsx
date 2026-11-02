@@ -17,11 +17,8 @@ import { PRIORITY_LABEL, STATUS_LABEL } from '../../lib/types';
 import { LOCALE } from '../../lib/locale';
 
 export interface EventDialogProps {
-  /** Absent when creating. */
   event?: CalendarEvent;
-  /** The day a new event starts on. */
   day: Date;
-  /** Prefilled values for a new event (from the quick form). */
   draft?: EventForm;
   google: GoogleRights;
   workspaceId: string;
@@ -35,7 +32,6 @@ export interface EventDialogProps {
 
 const canCreateInGoogle = (google: GoogleRights) => google.twoWay && google.editGranted;
 
-/** An event as a small window: read it, edit it or delete it, depending on what the viewer may do. */
 export function EventDialog(props: EventDialogProps) {
   const { event, day, draft, google, workspaceId, onClose, onSave, onDelete } = props;
   const creating = !event;
@@ -56,7 +52,7 @@ export function EventDialog(props: EventDialogProps) {
       await action();
       onClose();
     } catch (error) {
-      // 410 means Google no longer has it; the calendar reloads and the event disappears
+      // 410: google no longer has it
       if (error instanceof ApiError && error.status === 410) {
         onClose();
         return;
@@ -284,7 +280,6 @@ export function EventDialog(props: EventDialogProps) {
   );
 }
 
-/** A task deadline in the calendar: details and a way back to the board. */
 export function TaskDialog({
   task,
   workspaceId,

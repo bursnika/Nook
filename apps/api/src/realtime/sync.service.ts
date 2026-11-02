@@ -10,7 +10,6 @@ const MAX_CHANGES = 500;
 
 type Tx = Prisma.TransactionClient;
 
-/** Applies block operations to the database and keeps the ordered log every transport reads from. */
 @Injectable()
 export class SyncService {
   constructor(
@@ -19,13 +18,12 @@ export class SyncService {
     private readonly cache: CacheService,
   ) {}
 
-  /** The page as it is now plus the log position it corresponds to: a client replays only newer ops. */
   async snapshot(workspaceId: string, pageId: string) {
     const page = await this.prisma.page.findFirstOrThrow({
       where: { id: pageId, workspaceId },
       select: { id: true, title: true, icon: true, updatedAt: true },
     });
-    // read the position first: an op that lands in between is then replayed, which is harmless (ops are idempotent)
+    // read the position first, replaying an op is harmless
     const seq = await this.lastSeq(pageId);
     const blocks = await this.prisma.block.findMany({
       where: { pageId },
@@ -34,10 +32,6 @@ export class SyncService {
     return { page, blocks, seq };
   }
 
-  /**
-   * Last writer wins per block: operations are applied in the order they arrive, each one on top of the
-   * current state. Replaying a batch is safe: inserting an existing id, or changing a missing block, is skipped.
-   */
   async apply(workspaceId: string, pageId: string, authorId: string, dto: ApplyOpsDto) {
     await this.prisma.page.findFirstOrThrow({
       where: { id: pageId, workspaceId },
@@ -56,7 +50,7 @@ export class SyncService {
         },
       });
     });
-    await this.cache.invalidateWorkspace(workspaceId); // block counts and updatedAt feed the cached lists
+    await this.cache.invalidateWorkspace(workspaceId);
     const message: OpsMessage = {
       type: 'ops',
       seq: entry.seq,
@@ -69,7 +63,6 @@ export class SyncService {
     return message;
   }
 
-  /** Everything after `since`, oldest first. `more` tells the client to ask again straight away. */
   async changes(pageId: string, since: number) {
     const rows = await this.prisma.pageOp.findMany({
       where: { pageId, seq: { gt: since } },

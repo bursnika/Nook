@@ -1,4 +1,3 @@
-/** `Demo Space` becomes `demo-space`: what the API accepts as a workspace slug. */
 export function slugify(name: string): string {
   const slug = name
     .normalize('NFKD')

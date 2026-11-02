@@ -2,7 +2,6 @@ import { Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import type { CacheDriver } from './cache.driver.js';
 
-/** The few commands the driver needs; the real ioredis client satisfies it, and specs pass a fake. */
 export interface RedisClientLike {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, mode: 'EX', seconds: number): Promise<unknown>;
@@ -23,13 +22,9 @@ const KEY_PREFIX = 'nook:cache:';
 const SCAN_BATCH = 200;
 const ERROR_LOG_INTERVAL_MS = 30_000;
 
-/** Glob characters of SCAN's MATCH, so a prefix is always taken literally. */
+// escape glob chars for SCAN MATCH
 const escapeGlob = (text: string) => text.replace(/[\\*?[\]]/g, '\\$&');
 
-/**
- * Redis cache. Commands fail fast while Redis is down (no offline queue, short timeouts); the
- * `CacheService` on top turns those failures into misses, so an outage never breaks a request.
- */
 export class RedisCache implements CacheDriver {
   readonly name = 'redis';
   private readonly logger = new Logger(RedisCache.name);
@@ -39,7 +34,7 @@ export class RedisCache implements CacheDriver {
     private readonly client: RedisClientLike,
     private readonly now: () => number = Date.now,
   ) {
-    // without a listener ioredis prints every reconnect failure; log them, but not in a flood
+    // without a listener ioredis logs every reconnect error
     client.on('error', (error) => {
       if (this.now() - this.lastErrorLog < ERROR_LOG_INTERVAL_MS) return;
       this.lastErrorLog = this.now();

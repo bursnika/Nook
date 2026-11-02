@@ -2,7 +2,6 @@ import { DAY_MS, dayKey, formatTime, toLocalInput, utcDayKey } from './calendar'
 import type { CalendarEvent } from './types';
 import { LOCALE } from './locale';
 
-/** What the event form edits. Times are `datetime-local` strings, days are `YYYY-MM-DD`. */
 export interface EventForm {
   title: string;
   description: string;
@@ -27,7 +26,7 @@ export function formFromEvent(
   const start = new Date(event.startsAt);
   const end = new Date(event.endsAt);
   if (event.allDay) {
-    // all-day events are plain dates stored as UTC midnight, and the end is exclusive (like Google)
+    // all-day: utc midnight dates, end is exclusive (like google)
     const firstDay = utcDayKey(start);
     const lastDay = utcDayKey(new Date(end.getTime() - DAY_MS));
     return {
@@ -51,7 +50,6 @@ export function formFromEvent(
   };
 }
 
-/** A new event on `day` from 09:00 to 10:00. */
 export function blankForm(day: Date, title = ''): EventForm {
   const key = dayKey(day);
   return {
@@ -65,7 +63,6 @@ export function blankForm(day: Date, title = ''): EventForm {
   };
 }
 
-/** Switching the all-day box carries the dates over so nothing the person typed is lost. */
 export function setAllDay(form: EventForm, allDay: boolean): EventForm {
   if (allDay === form.allDay) return form;
   return allDay
@@ -113,7 +110,6 @@ export function toPayload(
   };
 }
 
-/** "Monday, 2 November · 09:00 – 10:00", or the day range for an all-day event. */
 export function describeWhen(event: CalendarEvent): string {
   const start = new Date(event.startsAt);
   const end = new Date(event.endsAt);

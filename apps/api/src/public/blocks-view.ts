@@ -1,4 +1,3 @@
-/** A block as stored: only the parts the public page needs. */
 export interface PublicBlock {
   type: string;
   content: unknown;
@@ -17,7 +16,6 @@ const textOf = (content: unknown): string => {
 
 const HEADINGS = { HEADING_1: 'h1', HEADING_2: 'h2', HEADING_3: 'h3' } as const;
 
-/** Turns the flat block list into nodes a template can print: consecutive list items are grouped. */
 export function toViewNodes(blocks: PublicBlock[]): ViewNode[] {
   const nodes: ViewNode[] = [];
   for (const block of blocks) {
@@ -55,7 +53,6 @@ export function toViewNodes(blocks: PublicBlock[]): ViewNode[] {
   return nodes;
 }
 
-/** A search-engine friendly summary: the first words of the text, cut at a word boundary. */
 export function describe(blocks: PublicBlock[], max = 160): string {
   const text = blocks
     .map((block) => textOf(block.content).trim())
@@ -67,5 +64,5 @@ export function describe(blocks: PublicBlock[], max = 160): string {
   return `${cut.slice(0, cut.lastIndexOf(' ') > 40 ? cut.lastIndexOf(' ') : cut.length)}…`;
 }
 
-/** JSON for a <script type="application/ld+json"> tag: `<` is escaped so the text can never close the tag. */
+// escape < so the json can't close the script tag
 export const safeJson = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');

@@ -7,7 +7,6 @@ const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo';
 const TIMEOUT_MS = 10_000;
 
-/** Google sign-in via the OAuth2 authorization-code flow with PKCE. */
 @Injectable()
 export class GoogleProvider implements OAuthProvider {
   get configured() {
@@ -65,7 +64,6 @@ export class GoogleProvider implements OAuthProvider {
     const { access_token: accessToken } = (await tokenResponse.json()) as { access_token?: string };
     if (!accessToken) throw new UnauthorizedException('Google returned no access token');
 
-    // The token came straight from Google over TLS, so asking Google who it belongs to is enough.
     const profileResponse = await fetch(USERINFO_URL, {
       headers: { authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(TIMEOUT_MS),

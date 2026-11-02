@@ -9,7 +9,6 @@ import { stamp } from './when';
 const message = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
-/** Ctrl+Enter (Cmd+Enter on a Mac) sends, like in most trackers. */
 const sendsOnKey = (event: KeyboardEvent, send: () => void) => {
   if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
     event.preventDefault();
@@ -17,7 +16,6 @@ const sendsOnKey = (event: KeyboardEvent, send: () => void) => {
   }
 };
 
-/** Comments and notes under a card, newest first. Everyone may write; authors edit, admins tidy up. */
 export function TaskComments({
   workspaceId,
   taskId,
@@ -26,9 +24,7 @@ export function TaskComments({
 }: {
   workspaceId: string;
   taskId: string;
-  /** Owners and admins may delete anyone's comment. */
   canModerate: boolean;
-  /** The number of comments on the card changed. */
   onChanged: () => void;
 }) {
   const me = useMe();

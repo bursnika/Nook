@@ -186,7 +186,6 @@ describe('Markdown import and export', () => {
       .expect(400);
     expect(await ctx.prisma.page.count({ where: { workspaceId: a.workspace.id } })).toBe(0);
 
-    // the page exists, but not in the workspace named in the url
     await http().get(exportUrl(a.workspace.id, foreign.id)).expect(404);
   });
 
@@ -210,7 +209,7 @@ describe('Markdown import and export', () => {
     const line = `${'x'.repeat(98)}\n\n`; // 100 bytes, one paragraph each
     const big = line.repeat(1_000_000 / line.length);
     expect(Buffer.byteLength(big)).toBeLessThanOrEqual(1_000_000);
-    // more than the block cap, so this one is turned away for its block count, not its size
+    // over the block cap, rejected by count not size
     await http().post(url).send({ markdown: big }).expect(400);
 
     const oneBlock = 'y'.repeat(1_000_000);
@@ -225,7 +224,6 @@ describe('Markdown import and export', () => {
       .post(url)
       .send({ markdown: 'ж'.repeat(600_000) })
       .expect(413); // 1.2 MB in UTF-8
-    // the request body itself is capped too
     await http()
       .post(url)
       .send({ markdown: 'y'.repeat(2_200_000) })

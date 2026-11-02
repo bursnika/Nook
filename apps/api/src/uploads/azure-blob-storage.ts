@@ -12,7 +12,6 @@ import {
   type StoredFile,
 } from './file-storage.js';
 
-/** The part of a block blob client this driver uses; the real `BlockBlobClient` fits, so does a spec's fake. */
 export interface BlobLike {
   uploadStream(
     stream: Readable,
@@ -24,7 +23,6 @@ export interface BlobLike {
   download(): Promise<{ readableStreamBody?: NodeJS.ReadableStream; contentLength?: number }>;
 }
 
-/** The part of `ContainerClient` this driver uses. */
 export interface ContainerLike {
   createIfNotExists(): Promise<unknown>;
   getBlockBlobClient(name: string): BlobLike;
@@ -35,11 +33,6 @@ const UPLOAD_CONCURRENCY = 4;
 
 const statusOf = (error: unknown) => (error as { statusCode?: number } | null)?.statusCode;
 
-/**
- * Files as blobs in a private container. Nothing is public: the API reads a blob and streams it under
- * /uploads/<name> with the same hardening headers as local files, so urls stored in the database stay valid
- * for ever (no expiring SAS tokens) and the browser never talks to the storage account.
- */
 export class AzureBlobStorage implements FileStorage, OnModuleInit {
   readonly kind = 'azure';
   private readonly logger = new Logger(AzureBlobStorage.name);
@@ -52,7 +45,6 @@ export class AzureBlobStorage implements FileStorage, OnModuleInit {
     return new AzureBlobStorage(service.getContainerClient(containerName));
   }
 
-  /** Creates the container on first start; if Azure is unreachable now, the first upload tries again. */
   async onModuleInit() {
     await this.ensureContainer().catch((error: unknown) =>
       this.logger.warn(`Cannot prepare the blob container yet: ${String(error)}`),
@@ -75,7 +67,7 @@ export class AzureBlobStorage implements FileStorage, OnModuleInit {
   async delete(urlOrName: string) {
     const name = storedNameOf(urlOrName);
     if (!name) return;
-    // an orphaned blob is cheaper than failing the request that already removed the database row
+    // best effort, an orphaned blob is fine
     await this.container
       .getBlockBlobClient(name)
       .deleteIfExists()

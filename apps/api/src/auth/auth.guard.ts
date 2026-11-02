@@ -14,7 +14,6 @@ import { TokenService } from './token.service.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-/** Global guard: every route needs a valid access token unless it is marked @Public(). */
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
@@ -35,7 +34,7 @@ export class AuthGuard implements CanActivate {
     const user = token ? await this.tokens.verifyAccessToken(token) : null;
     if (!user) this.reject(req);
 
-    // A cookie is sent by the browser on its own, so cookie-authenticated writes must come from our own pages.
+    // csrf check for cookie-authenticated writes
     if (!bearer && !SAFE_METHODS.has(req.method)) this.assertSameOrigin(req);
 
     req.user = user!;
@@ -60,12 +59,12 @@ export class AuthGuard implements CanActivate {
 
   private assertSameOrigin(req: Request) {
     const origin = req.headers.origin;
-    if (origin === undefined) return; // not a browser cross-site request (curl, server-to-server, same-origin form posts of old browsers)
+    if (origin === undefined) return;
     let host: string | null = null;
     try {
       host = new URL(origin).host;
     } catch {
-      // "null" origins (sandboxed frames, some redirects) fall through and are rejected
+      // "null" origin falls through and is rejected
     }
     if (host !== req.headers.host) throw new ForbiddenException('Cross-origin request blocked');
   }

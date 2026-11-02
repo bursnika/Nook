@@ -9,7 +9,6 @@ import { TaskDialog } from './tasks/TaskDialog';
 import { useTasks } from './tasks/useTasks';
 import '../styles/kanban.css';
 
-/** The Kanban board of the workspace. */
 export default function TasksPage() {
   const { workspace, role } = useWorkspace();
   const board = useTasks(workspace.id);
@@ -24,7 +23,6 @@ export default function TasksPage() {
   const fail = (error: unknown) =>
     setProblem(error instanceof Error ? error.message : 'Could not save that change');
 
-  // the open card follows live changes (new counts, someone else's edit) instead of a stale copy
   const open =
     editing && editing !== 'new'
       ? (board.tasks.find((task) => task.id === editing.id) ?? editing)

@@ -16,7 +16,6 @@ import {
   type SubscribeOptions,
 } from './message-queue.js';
 
-/** The slice of an amqplib message the driver reads. */
 export interface AmqpMessage {
   content: Buffer;
   fields: { deliveryTag: number };
@@ -30,7 +29,6 @@ interface PublishProperties {
   headers: Record<string, unknown>;
 }
 
-/** The parts of an amqplib channel / connection in use; the real library satisfies them and specs pass fakes. */
 export interface AmqpChannelLike {
   assertExchange(exchange: string, type: string, options: { durable: boolean }): Promise<unknown>;
   assertQueue(
@@ -75,14 +73,11 @@ export interface AmqpConnectionLike {
 
 export interface RabbitMqDeps {
   connect?: (url: string) => Promise<AmqpConnectionLike>;
-  /** Reconnect delay after the n-th failed attempt in a row. */
   backoffMs?: (attempt: number) => number;
   wait?: (ms: number, signal: AbortSignal) => Promise<void>;
-  /** How long close() lets running handlers finish. */
   shutdownGraceMs?: number;
 }
 
-/** Work goes through this exchange (routing key = queue name); what fails for good goes through the DLX. */
 export const EXCHANGE = 'nook';
 export const DEAD_LETTER_EXCHANGE = 'nook.dlx';
 export const deadQueueName = (queue: string) => `${queue}.dead`;
@@ -114,7 +109,6 @@ interface Consumer {
   policy: RetryPolicy;
   channel?: AmqpChannelLike;
   tag?: string;
-  /** Attached or being attached on the current connection; stops a double attach. */
   active: boolean;
 }
 
@@ -123,17 +117,7 @@ function detach(consumer: Consumer) {
   consumer.active = false;
 }
 
-/**
- * RabbitMQ driver. Topology per queue `q` (all durable, messages persistent):
- *
- *   nook (direct) --q--> q ----------- nack(requeue=false) / out of attempts --> nook.dlx --q--> q.dead
- *                        ^                                                                (inspect, replay)
- *                        '---- TTL expires <---- q.retry.<delay> <---- failed handler (delay doubles per attempt)
- *
- * There is one retry queue per delay (the TTL is a queue property), so a long delay never blocks a short one.
- * The driver reconnects with backoff and, on every new connection, redeclares the topology and re-attaches
- * its consumers.
- */
+// one retry queue per delay since ttl is a queue property
 export class RabbitMqQueue implements MessageQueue {
   readonly name = 'rabbitmq';
   private readonly log = new Logger('Queue');
@@ -143,13 +127,11 @@ export class RabbitMqQueue implements MessageQueue {
   private readonly grace: number;
   private readonly stop = new AbortController();
   private readonly consumers = new Map<string, Consumer>();
-  /** Every queue this process uses, so a new connection can declare them all. */
   private readonly known = new Set<string>();
   private readonly retryQueues = new Map<string, number[]>();
   private readonly inflight = new Set<Promise<void>>();
   private connection?: AmqpConnectionLike;
   private publisher?: AmqpConfirmChannelLike;
-  /** Queues declared on the current publisher channel. */
   private declared = new Set<string>();
   private connecting = false;
   private loop?: Promise<void>;
@@ -164,7 +146,6 @@ export class RabbitMqQueue implements MessageQueue {
     this.grace = deps.shutdownGraceMs ?? 10_000;
   }
 
-  /** Resolves with the first successful connection (or when the driver is closed first). */
   start() {
     this.loop ??= this.connectLoop();
     return this.loop;
@@ -202,7 +183,6 @@ export class RabbitMqQueue implements MessageQueue {
     this.consumers.set(queue, consumer);
     this.known.add(queue);
     this.retryQueues.set(queue, retryDelays(policy));
-    // while the broker is away the consumer is attached by the next successful connection
     if (this.connection) {
       await this.attach(this.connection, consumer).catch((error) =>
         this.log.warn(`Cannot consume "${queue}" yet: ${String(error)}`),
@@ -253,7 +233,6 @@ export class RabbitMqQueue implements MessageQueue {
     const connection = this.connection;
     this.connection = undefined;
     this.publisher = undefined;
-    // no new deliveries, then let the running handlers finish (bounded)
     await Promise.allSettled(
       [...this.consumers.values()].map((c) => c.channel && c.tag && c.channel.cancel(c.tag)),
     );
@@ -297,7 +276,6 @@ export class RabbitMqQueue implements MessageQueue {
       this.connection = current;
       const publisher = await current.createConfirmChannel();
       publisher.on('error', (error) => this.log.warn(`RabbitMQ channel error: ${String(error)}`));
-      // a dead publisher channel cannot be repaired in place: start over with a fresh connection
       publisher.on('close', () => {
         if (this.publisher === publisher) {
           this.lost(current);
@@ -318,7 +296,6 @@ export class RabbitMqQueue implements MessageQueue {
     }
   }
 
-  /** The connection dropped: forget everything tied to it and reconnect in the background. */
   private lost(connection: AmqpConnectionLike) {
     if (this.connecting || this.connection !== connection || this.stop.signal.aborted) return;
     this.log.warn('RabbitMQ connection lost; reconnecting');
@@ -367,7 +344,6 @@ export class RabbitMqQueue implements MessageQueue {
     channel.on('error', (error) =>
       this.log.warn(`RabbitMQ channel of "${consumer.queue}" failed: ${String(error)}`),
     );
-    // a channel can die on its own (the broker deleted the queue, ...) while the connection stays up
     channel.on('close', () => {
       if (consumer.channel !== channel || this.stop.signal.aborted) return;
       detach(consumer);
@@ -383,7 +359,6 @@ export class RabbitMqQueue implements MessageQueue {
     await this.declareBase(channel, consumer.queue);
     const { consumerTag } = await channel.consume(consumer.queue, (message) => {
       if (!message) {
-        // the broker cancelled this consumer (queue deleted, node failover)
         detach(consumer);
         void channel.close().catch(() => undefined);
         void this.reattach(connection, consumer);
@@ -415,7 +390,7 @@ export class RabbitMqQueue implements MessageQueue {
     try {
       payload = JSON.parse(message.content.toString('utf8'));
     } catch {
-      // not ours / corrupted: no retry can fix it, the dead-letter exchange keeps it for inspection
+      // corrupt message, straight to the dlx
       this.log.warn(`Message ${id} of "${consumer.queue}" is not valid JSON; dead-lettering`);
       settle(() => channel.nack(message, false, false));
       return;
@@ -472,7 +447,7 @@ export class RabbitMqQueue implements MessageQueue {
       }
       settle(() => channel.ack(message));
     } catch (publishError) {
-      // could not park the message: give it back, the broker redelivers it
+      // broker redelivers on nack
       this.log.warn(`Message ${id} of "${consumer.queue}" is requeued: ${String(publishError)}`);
       settle(() => channel.nack(message, false, true));
     }
@@ -487,7 +462,6 @@ const mainQueue = (queue: string) => ({
   },
 });
 
-/** Holds a failed message for `delay` ms, then the TTL dead-letters it back into the work queue. */
 const retryQueue = (queue: string, delay: number) => ({
   durable: true,
   arguments: {
@@ -504,7 +478,6 @@ const properties = (messageId: string, attempt: number): PublishProperties => ({
   headers: { [ATTEMPT_HEADER]: attempt },
 });
 
-/** amqplib's confirm callbacks as a promise. */
 const send = (publish: (callback: (error: Error | null) => void) => unknown) =>
   new Promise<void>((resolve, reject) => {
     try {
@@ -514,11 +487,10 @@ const send = (publish: (callback: (error: Error | null) => void) => unknown) =>
     }
   });
 
-/** ack/nack on a channel that died meanwhile throws; the broker redelivers anyway. */
 function settle(action: () => void) {
   try {
     action();
   } catch {
-    // channel closed: the unacked message returns to the queue
+    // channel closed, broker redelivers
   }
 }

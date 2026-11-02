@@ -1,7 +1,6 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
-/** Makes the signed-in user and their role in the current workspace available to every Handlebars template. */
 @Injectable()
 export class AdminLocalsInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler) {

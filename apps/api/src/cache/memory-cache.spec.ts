@@ -16,7 +16,7 @@ describe('MemoryCache', () => {
     expect(await cache.get('a')).toBe('1');
     time.advance(0.2);
     expect(await cache.get('a')).toBeNull();
-    expect(cache.size).toBe(0); // the expired entry is dropped when it is read
+    expect(cache.size).toBe(0);
   });
 
   it('overwriting a key restarts its TTL', async () => {
@@ -54,7 +54,7 @@ describe('MemoryCache', () => {
     await cache.set('old', '1', 1);
     await cache.set('b', '2', 100);
     await cache.set('c', '3', 100);
-    time.advance(5); // "old" has expired
+    time.advance(5);
     await cache.set('d', '4', 100);
     expect(cache.size).toBe(3);
     expect(await cache.get('old')).toBeNull();

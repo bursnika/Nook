@@ -25,13 +25,11 @@ function setStatus(next: LiveStatus) {
   statusListeners.forEach((listener) => listener());
 }
 
-/** One socket for the whole app; graphql-ws reconnects it with backoff and resubscribes by itself. */
 function getClient(): Client {
   if (client) return client;
   const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
   client = createClient({
     url: `${scheme}://${window.location.host}/graphql`,
-    // the sign-in cookie travels with the upgrade request
     lazy: true,
     lazyCloseTimeout: 3_000,
     retryAttempts: Infinity,
@@ -40,7 +38,7 @@ function getClient(): Client {
       connecting: () => setStatus('connecting'),
       connected: () => {
         setStatus('live');
-        // after a drop, changes may have been missed: let screens fetch again
+        // changes may have been missed while disconnected
         if (hadConnection) reconnectListeners.forEach((listener) => listener());
         hadConnection = true;
       },
@@ -51,14 +49,11 @@ function getClient(): Client {
 }
 
 interface SubscriptionOptions<T> {
-  /** Pass false to stay disconnected (no workspace yet). */
   enabled?: boolean;
   onData: (data: T) => void;
-  /** The connection came back after a drop: refetch what may have changed meanwhile. */
   onReconnect?: () => void;
 }
 
-/** Subscribes while mounted. `query` must be a complete `subscription { ... }` document. */
 export function useSubscription<T>(
   field: 'taskChanged' | 'eventChanged',
   query: string,
@@ -97,7 +92,6 @@ export const useTaskChanges = (workspaceId: string, options: SubscriptionOptions
 export const useEventChanges = (workspaceId: string, options: SubscriptionOptions<EventChange>) =>
   useSubscription<EventChange>('eventChanged', EVENT_CHANGED(workspaceId), options);
 
-/** Whether the live connection is up, for the small LIVE badge. */
 export function useLiveStatus(): LiveStatus {
   return useSyncExternalStore(
     (notify) => {

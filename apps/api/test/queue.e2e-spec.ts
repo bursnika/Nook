@@ -52,7 +52,6 @@ describe('message queues', () => {
       recurring: false,
     });
 
-    /** A signed-in person who has connected Google (the token is stored directly, as the callback would). */
     async function person(email: string, refreshToken = `token-${email}`) {
       await signIn(ctx, { email });
       const user = await ctx.prisma.user.findUniqueOrThrow({ where: { email } });
@@ -78,7 +77,7 @@ describe('message queues', () => {
     it('answers 202 at once and imports in the background', async () => {
       const who = await person('a@example.com');
       ctx.googleCalendar.calendars.set(who.refreshToken, [event('1', 'Lecture')]);
-      // hold Google back: the answer must not wait for it
+      // hold Google back, the response must not wait for it
       let release!: () => void;
       const gate = new Promise<void>((resolve) => (release = resolve));
       const listEvents = ctx.googleCalendar.listEvents.bind(ctx.googleCalendar);
@@ -119,12 +118,10 @@ describe('message queues', () => {
       const stranger = await person('b@example.com');
       const publish = vi.spyOn(queue, 'publish');
       await syncAsync(who.workspaceId).expect(401);
-      // other people's workspaces do not exist for you
       await syncAsync(who.workspaceId, stranger.token).expect(404);
 
       await ctx.prisma.googleConnection.delete({ where: { userId: who.user.id } });
       await syncAsync(who.workspaceId, who.token).expect(409);
-      // nothing was queued for any of the refused calls
       expect(publish).not.toHaveBeenCalled();
       publish.mockRestore();
     });

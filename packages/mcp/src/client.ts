@@ -1,18 +1,9 @@
-/**
- * Minimal HTTP client for the Nook REST API. It knows nothing about MCP: every method returns the
- * parsed JSON body or throws a NookApiError carrying the API's own message, so it is easy to unit test
- * with a stubbed `fetch`.
- */
-
 export const DEFAULT_API_URL = 'http://localhost:3000/api';
 const REQUEST_TIMEOUT_MS = 15_000;
 
 export interface NookConfig {
-  /** Base URL of the REST API including the `/api` prefix, without a trailing slash. */
   apiUrl: string;
-  /** JWT sent as `Authorization: Bearer`. */
   token?: string;
-  /** Workspace used by the tools when they get no `workspaceId` argument. */
   workspaceId?: string;
 }
 
@@ -32,7 +23,6 @@ export const BLOCK_TYPES = [
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
-/** The `{ items, total, skip, limit, nextLink }` envelope of every list endpoint. */
 export interface PageResult<T = unknown> {
   items: T[];
   total: number;
@@ -73,7 +63,7 @@ export interface AppendBlockBody {
   text: string;
 }
 
-/** An error answer of the API (or a failure to reach it). `status` is 0 when there was no answer. */
+// status 0 = no response
 export class NookApiError extends Error {
   constructor(
     readonly status: number,
@@ -95,7 +85,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): NookConfig {
 
 type Query = Record<string, string | number | undefined>;
 
-/** Nest answers `{ statusCode, message: string | string[], error }`; anything else falls back to the status text. */
 function errorMessage(status: number, statusText: string, body: unknown): string {
   const message = (body as { message?: unknown } | null)?.message;
   if (Array.isArray(message) && message.length > 0) return message.join('; ');
@@ -109,7 +98,6 @@ export class NookClient {
     private readonly fetchImpl: typeof fetch = fetch,
   ) {}
 
-  /** The workspace to use: an explicit argument wins over NOOK_WORKSPACE_ID. */
   resolveWorkspace(workspaceId?: string): string {
     const id = workspaceId ?? this.config.workspaceId;
     if (!id) {
@@ -124,7 +112,6 @@ export class NookClient {
     return this.request<PageResult>('GET', `${ws(workspaceId)}/pages`, { query: { ...params } });
   }
 
-  /** A single page already contains its blocks in order. */
   getPage(workspaceId: string, pageId: string) {
     return this.request<Record<string, unknown>>(
       'GET',
@@ -136,7 +123,6 @@ export class NookClient {
     return this.request<PageResult>('GET', `${ws(workspaceId)}/tasks`, { query: { ...params } });
   }
 
-  /** Events and tasks due inside the `from`..`to` window. */
   calendar(workspaceId: string, from: string, to: string) {
     return this.request<Record<string, unknown>>('GET', `${ws(workspaceId)}/calendar`, {
       query: { from, to },
@@ -147,7 +133,6 @@ export class NookClient {
     return this.request<Record<string, unknown>>('POST', `${ws(workspaceId)}/tasks`, { body });
   }
 
-  /** The API stores the editor payload in `content`; plain text lives in `content.text`. */
   appendBlock(workspaceId: string, pageId: string, { type, text }: AppendBlockBody) {
     return this.request<Record<string, unknown>>(
       'POST',
@@ -196,7 +181,7 @@ export class NookClient {
       try {
         json = JSON.parse(text);
       } catch {
-        // not JSON (e.g. a proxy error page): handled below
+        // not json
       }
     }
     if (!res.ok) throw new NookApiError(res.status, errorMessage(res.status, res.statusText, json));

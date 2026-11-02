@@ -1,5 +1,4 @@
 import { LOCALE } from './locale';
-/** 0 (nothing) to 4 (busiest quarter), relative to the busiest day of the period. */
 export function heatLevel(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
   if (count <= 0 || max <= 0) return 0;
   const share = count / max;
@@ -10,16 +9,11 @@ export function heatLevel(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
 }
 
 export interface HeatCell {
-  /** `YYYY-MM-DD`, or null for a blank cell that only pads the first week. */
   date: string | null;
   count: number;
   level: 0 | 1 | 2 | 3 | 4;
 }
 
-/**
- * Lays the days out week by week (columns) with Monday on the top row, padding the first week so every
- * day sits under its own weekday.
- */
 export function heatmapCells(activity: readonly { date: string; count: number }[]): HeatCell[] {
   if (activity.length === 0) return [];
   const max = Math.max(...activity.map((day) => day.count));
@@ -40,7 +34,6 @@ export function heatmapCells(activity: readonly { date: string; count: number }[
   ];
 }
 
-/** `2026-10-26` becomes "26 Oct". */
 export function weekLabel(weekStart: string): string {
   const [year, month, day] = weekStart.split('-').map(Number) as [number, number, number];
   return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(LOCALE, {

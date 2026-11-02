@@ -198,7 +198,6 @@ describe('markdownToBlocks', () => {
     const { blocks } = markdownToBlocks(
       '| a | b |\n|---|---|\n| 1 | 2 |\n\n![img](x.png)\n\n<div>html</div>\n\n[link]: http://x',
     );
-    // the table's separator row is the only line that is not plain text for us
     expect(types(blocks).filter((type) => type !== BlockType.PARAGRAPH)).toEqual([]);
     expect(blocks.map((b) => b.content.text)).toContain('![img](x.png)');
     expect(blocks.map((b) => b.content.text)).toContain('<div>html</div>');
@@ -343,13 +342,11 @@ describe('round trip', () => {
     expect(parsed.blocks).toEqual(blocks);
   });
 
-  // a tiny seeded generator, so a failure can be replayed
+  // seeded so a failure can be replayed
   const rng = (seed: number) => () => {
     seed = (seed * 1664525 + 1013904223) % 4294967296;
     return seed / 4294967296;
   };
-  // A line is an optional marker followed by optional text. Text that is itself a construct (a bullet
-  // whose text is "[ ] x") cannot survive a trip without escaping, which is out of scope.
   const MARKERS = [
     '# ',
     '## ',

@@ -5,7 +5,6 @@ import { CacheService } from './cache.service.js';
 import { MemoryCache } from './memory-cache.js';
 import { RedisCache } from './redis-cache.js';
 
-/** Redis when REDIS_URL is set, otherwise memory. Global so any service can invalidate its workspace. */
 @Global()
 @Module({
   providers: [

@@ -14,16 +14,10 @@ const MAX_INTERVAL_MS = 10_000;
 
 export interface PollingOptions {
   scheduler?: Scheduler;
-  /** Is the tab visible? Polling pauses while it is hidden. */
   isHidden?: () => boolean;
-  /** Subscribe to visibility changes; returns an unsubscribe function. */
   onVisible?: (fn: () => void) => () => void;
 }
 
-/**
- * Adaptive polling: plain GET .../changes at the interval the server suggests (`nextPollMs`: short while
- * people are typing, longer while it is quiet), exponential backoff on errors, paused while the tab is hidden.
- */
 export class AdaptivePollingTransport implements Transport {
   readonly kind = 'polling' as const;
   private readonly scheduler: Scheduler;

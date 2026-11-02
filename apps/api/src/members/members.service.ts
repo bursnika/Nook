@@ -3,7 +3,6 @@ import { Role } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AddMemberDto, UpdateMemberDto } from './member.dto.js';
 
-/** What a workspace member may learn about a colleague: never the token hashes or the Google id. */
 const PUBLIC_USER = {
   select: { id: true, name: true, email: true, avatarUrl: true, createdAt: true },
 } as const;
@@ -28,7 +27,6 @@ export class MembersService {
     });
   }
 
-  /** Roles are handed out by owners only, and never to oneself. */
   async updateRole(
     workspaceId: string,
     id: string,

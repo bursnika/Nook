@@ -12,7 +12,7 @@ describe('LocalDiskStorage', () => {
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), 'nook-local-storage-'));
-    storage = new LocalDiskStorage(join(dir, 'nested')); // the folder does not exist yet
+    storage = new LocalDiskStorage(join(dir, 'nested'));
   });
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -62,7 +62,7 @@ describe('LocalDiskStorage', () => {
     await storage.delete('/uploads/../../../etc/passwd');
     const opened = await storage.open('../' + NAME); // reads <dir>/nested/NAME, never the parent
     expect(opened).not.toBeNull();
-    await opened?.stream.toArray(); // drain it before the folder is removed
+    await opened?.stream.toArray();
     expect(existsSync(join(dir, NAME))).toBe(false);
   });
 });

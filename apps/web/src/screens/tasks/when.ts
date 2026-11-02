@@ -1,6 +1,5 @@
 import { LOCALE } from '../../lib/locale';
 
-/** "5 Nov 2026, 14:30": the moment a comment or a file was added. */
 export const stamp = (iso: string) =>
   new Date(iso).toLocaleString(LOCALE, { dateStyle: 'medium', timeStyle: 'short' });
 

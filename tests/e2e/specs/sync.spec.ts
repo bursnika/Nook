@@ -15,7 +15,6 @@ test.describe('live sync between two people', () => {
       bob,
       signIn,
     }) => {
-      // the server counts what each transport carried; a platform admin may read the counters
       const root = await signIn('root');
       await root.api.remove('/sync-metrics');
       const page = await ann.api.createPage(unique(`Sync ${transport.kind}`), [
@@ -28,11 +27,10 @@ test.describe('live sync between two people', () => {
       await annEditor.useTransport(transport.kind, transport.label);
       await bobEditor.useTransport(transport.kind, transport.label);
 
-      // each sees the other on the page
       await expect(ann.page.getByLabel('Bob Baker is here')).toBeVisible();
       await expect(bob.page.getByLabel('Ann Archer is here')).toBeVisible();
 
-      // Ann types: the text, her caret flag and the change highlight show up for Bob
+      // ann -> bob
       await annEditor.field('paragraph').click();
       await ann.page.keyboard.press('End');
       await ann.page.keyboard.type(' + from Ann');
@@ -42,7 +40,7 @@ test.describe('live sync between two people', () => {
       ).toBeVisible();
       await expect(bob.page.locator('.row__flash-tag', { hasText: 'Ann Archer' })).toBeVisible();
 
-      // ...and the other way round
+      // bob -> ann
       await bobEditor.field('paragraph').click();
       await bob.page.keyboard.press('End');
       await bob.page.keyboard.type(' + from Bob');
@@ -74,14 +72,11 @@ test.describe('live sync between two people', () => {
     await ann.page.keyboard.type('second');
     await expect.poll(() => bobEditor.texts()).toEqual(['first', 'second']);
 
-    // Bob turns the new line into a heading: the type change travels too
     await bobEditor.field('paragraph', 1).click();
     await bob.page.keyboard.press('Home');
     await bob.page.keyboard.type('## ');
     await expect(annEditor.field('heading 2')).toHaveValue('second');
 
-    // Backspace at the start: first back to a paragraph, then it joins the line above and one block
-    // disappears for Ann as well
     await bob.page.keyboard.press('Home');
     await bob.page.keyboard.press('Backspace');
     await expect(annEditor.field('paragraph', 1)).toHaveValue('second');

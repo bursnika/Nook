@@ -4,7 +4,6 @@ import { AdaptivePollingTransport } from './polling';
 import type { Transport, TransportContext } from './transport';
 import { WebSocketTransport } from './websocket';
 
-/** The setting picks the implementation; the rest of the app only sees `Transport`. */
 export function createTransport(kind: TransportKind, ctx: TransportContext): Transport {
   switch (kind) {
     case 'websocket':

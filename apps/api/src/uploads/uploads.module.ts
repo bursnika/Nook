@@ -5,7 +5,6 @@ import { FILE_STORAGE, type FileStorage } from './file-storage.js';
 import { FileStorageModule } from './file-storage.module.js';
 import { UploadsService } from './uploads.service.js';
 
-/** Upload handling shared by the REST API and the admin: the interceptors get the storage through multer's module options. */
 @Module({
   imports: [
     FileStorageModule,

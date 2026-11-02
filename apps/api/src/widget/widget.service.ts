@@ -4,7 +4,6 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { env } from '../env.js';
 import { dayOf, planFor } from './today.js';
 
-/** Widget tokens start with this, so a leaked one is recognisable in logs and secret scanners. */
 export const TOKEN_PREFIX = 'nkw_';
 
 const hash = (token: string) => createHash('sha256').update(token).digest('hex');
@@ -13,7 +12,6 @@ const hash = (token: string) => createHash('sha256').update(token).digest('hex')
 export class WidgetService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** A new token replaces the old one. Only the hash is kept, so the token can be shown just this once. */
   async issueToken(userId: string) {
     const token = `${TOKEN_PREFIX}${randomBytes(24).toString('base64url')}`;
     await this.prisma.user.update({

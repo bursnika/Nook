@@ -1,14 +1,11 @@
 import { isBlockType, normaliseContent, type Block, type BlockOp, type PageInfo } from './types';
 
-/** What is kept in localStorage per page, so a closed browser loses nothing. */
 export interface StoredDoc {
   v: 1;
   blocks: Block[];
   outbox: BlockOp[];
-  /** Last log position we applied. */
   seq: number;
   page: PageInfo | null;
-  /** A title edit that the server has not confirmed yet. */
   dirtyTitle: string | null;
   savedAt: number;
 }
@@ -53,7 +50,7 @@ export function saveDoc(store: KeyValueStore | null, pageId: string, doc: Stored
   try {
     store.setItem(docKey(pageId), JSON.stringify(doc));
   } catch {
-    // quota or blocked storage: the server copy still exists
+    // quota or blocked storage, the server still has it
   }
 }
 

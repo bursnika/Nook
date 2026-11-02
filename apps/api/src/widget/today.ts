@@ -23,12 +23,6 @@ export const dayBounds = (day: string) => ({
   to: new Date(`${day}T23:59:59.999Z`),
 });
 
-/**
- * What is on a person's plate for one UTC day, across every workspace they belong to: open tasks due that
- * day or earlier (overdue ones keep showing) and the day's events. Used by the widgets.
- * A platform administrator sees every workspace in the app without being a member, so `everywhere` gives the
- * same view here.
- */
 export async function planFor(
   prisma: PrismaService,
   userId: string,

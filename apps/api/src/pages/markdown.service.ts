@@ -9,7 +9,6 @@ import { PagesService } from './pages.service.js';
 const POSITION_STEP = 1024;
 const MAX_IMPORT_BLOCKS = 5_000;
 
-/** Import and export of a page as a Markdown file (the backend half of the File API task). */
 @Injectable()
 export class PageMarkdownService {
   constructor(
@@ -32,7 +31,6 @@ export class PageMarkdownService {
     };
   }
 
-  /** Creates a page with blocks from Markdown; the signed-in user becomes its author. */
   async import(workspaceId: string, authorId: string, dto: ImportMarkdownDto) {
     if (Buffer.byteLength(dto.markdown, 'utf8') > MAX_MARKDOWN_BYTES) {
       throw new PayloadTooLargeException(
@@ -41,7 +39,6 @@ export class PageMarkdownService {
     }
     if (dto.parentId) await this.assertParent(workspaceId, dto.parentId);
 
-    // an explicit title wins, and then a leading `# ` line is ordinary content
     const parsed = markdownToBlocks(dto.markdown, { liftTitle: dto.title === undefined });
     if (parsed.blocks.length > MAX_IMPORT_BLOCKS) {
       throw new BadRequestException(
@@ -68,7 +65,6 @@ export class PageMarkdownService {
     return this.pages.get(workspaceId, page.id);
   }
 
-  /** Same rule as moving a page: the parent must live in this workspace, or tenants could be linked. */
   private async assertParent(workspaceId: string, parentId: string) {
     const parent = await this.prisma.page.findFirst({
       where: { id: parentId, workspaceId },

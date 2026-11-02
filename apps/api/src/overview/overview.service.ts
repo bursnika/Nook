@@ -3,10 +3,6 @@ import { TaskPriority, TaskStatus } from '../generated/prisma/enums.js';
 import { GoogleCalendarService } from '../google-calendar/google-calendar.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
-/**
- * Tasks due within this many hours are "about to expire". Overdue ones stay in the list until done.
- * Timed events that start (or are still running) inside the same window are listed next to them.
- */
 export const DUE_SOON_HOURS = 24;
 const RECENT_PAGES = 8;
 const MAX_CALENDAR_DAYS = 100;
@@ -30,7 +26,6 @@ export class OverviewService {
     private readonly googleCalendar: GoogleCalendarService,
   ) {}
 
-  /** Everything the workspace home page shows besides the calendar. */
   async summary(workspaceId: string, now = new Date()) {
     const open = { workspaceId, status: { not: TaskStatus.DONE } };
     const soonLimit = new Date(now.getTime() + DUE_SOON_HOURS * 60 * 60 * 1000);
@@ -42,7 +37,6 @@ export class OverviewService {
           take: 10,
           select: taskCard,
         }),
-        // all-day entries (holidays, birthdays) are not deadlines, so they stay in the calendar only
         this.prisma.calendarEvent.findMany({
           where: { workspaceId, allDay: false, startsAt: { lte: soonLimit }, endsAt: { gt: now } },
           orderBy: { startsAt: 'asc' },
@@ -87,7 +81,6 @@ export class OverviewService {
     };
   }
 
-  /** Events and task deadlines inside a window, for drawing a calendar. */
   async calendar(workspaceId: string, viewerId: string, from: Date, to: Date) {
     if (to <= from) throw new BadRequestException('"to" must be after "from"');
     if (to.getTime() - from.getTime() > MAX_CALENDAR_DAYS * 24 * 60 * 60 * 1000) {
@@ -126,7 +119,6 @@ export class OverviewService {
         ({ googleEventId, importedById, googleEditable, googleUrl, ...event }) => ({
           ...event,
           imported: googleEventId !== null,
-          // Google rights of the person looking: the client decides what to offer from these
           mine: googleEventId !== null && importedById === viewerId,
           editable: googleEditable,
           url: googleUrl,

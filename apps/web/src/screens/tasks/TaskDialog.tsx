@@ -19,10 +19,6 @@ import type { TaskPatch } from './useTasks';
 import { stamp } from './when';
 import '../../styles/task-view.css';
 
-/**
- * A card opened like an issue in a tracker: title, description, attachments and comments on the left; status,
- * assignee, priority and dates on the right. Without `task` it makes a new card in `status`.
- */
 export function TaskDialog({
   task,
   workspaceId,
@@ -36,15 +32,12 @@ export function TaskDialog({
 }: {
   task?: Task;
   workspaceId: string;
-  /** People the card can be assigned to. */
   members?: readonly Member[];
-  /** Owners and admins may delete other people's comments. */
   canModerate?: boolean;
   status?: TaskStatus;
   onClose: () => void;
   onSave: (patch: TaskPatch & { title: string; status: TaskStatus }) => Promise<void>;
   onDelete?: () => Promise<void>;
-  /** A comment or a file was added or removed, so the counts on the card are stale. */
   onChanged?: () => void;
 }) {
   const me = useMe();
@@ -201,7 +194,7 @@ export function TaskDialog({
                     {member.user.name}
                   </option>
                 ))}
-                {/* the current assignee may have left the workspace */}
+                {/* assignee may have left the workspace */}
                 {assigneeId && !assignee && <option value={assigneeId}>Former member</option>}
               </select>
             </div>

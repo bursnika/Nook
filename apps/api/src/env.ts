@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-/** The apps/api folder, found by walking up from this file (works from both src/ and dist/src/). */
+// walk up so it works from both src/ and dist/src/
 function findAppRoot(): string {
   let dir = import.meta.dirname;
   while (!existsSync(join(dir, 'package.json'))) {
@@ -35,7 +35,6 @@ export const env = {
   jwtSecret,
   accessTokenTtlSeconds: 15 * 60,
   refreshTokenTtlDays: 30,
-  /** Cookies are only sent over HTTPS in production. */
   cookieSecure: process.env.COOKIE_SECURE
     ? process.env.COOKIE_SECURE === 'true'
     : nodeEnv === 'production',
@@ -54,25 +53,18 @@ export const env = {
         ? `${process.env.RENDER_EXTERNAL_URL}/api/auth/google/callback`
         : 'http://localhost:3000/api/auth/google/callback'),
   },
-  /** Public address of the site: canonical links, Open Graph and the sitemap are built from it. */
-  // on Render the service's own address is known at runtime (RENDER_EXTERNAL_URL)
   publicUrl: (
     process.env.PUBLIC_URL ??
     process.env.RENDER_EXTERNAL_URL ??
     `http://localhost:${process.env.PORT ?? 3000}`
   ).replace(/\/+$/, ''),
-  /** GA4 measurement id (G-XXXX); the analytics snippet is only rendered when it is set. */
   gaMeasurementId: process.env.GA_MEASUREMENT_ID || undefined,
-  /** The built SPA (apps/web/dist). Served under /app when the folder exists. */
   webDist: resolve(process.env.WEB_DIST ?? join(findAppRoot(), '..', 'web', 'dist')),
   uploadDir: resolve(process.env.UPLOAD_DIR ?? 'uploads'),
-  /** List caching in Redis; without it the cache lives in the process memory. */
   redisUrl: process.env.REDIS_URL || undefined,
-  /** Message queues (docs/b8-queues.md): RabbitMQ when AMQP_URL is set, otherwise an in-process queue. */
   amqpUrl: process.env.AMQP_URL || undefined,
-  /** Background Google sync of every connected person; 0 switches it off. */
+  // 0 disables the background sync
   googleSyncEveryMinutes: Number(process.env.GOOGLE_SYNC_EVERY_MINUTES ?? 30) || 0,
-  /** Uploaded files go to this Azure Blob container when the connection string is set, otherwise to uploadDir. */
   azureStorage: {
     connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING || undefined,
     container: process.env.AZURE_STORAGE_CONTAINER || 'nook-uploads',

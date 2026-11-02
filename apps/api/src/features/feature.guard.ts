@@ -10,7 +10,6 @@ import type { Request } from 'express';
 import { REQUIRED_FEATURE } from '../auth/decorators.js';
 import { FeaturesService } from './features.service.js';
 
-/** Blocks routes marked @RequireFeature('key') when its flag is switched off. */
 @Injectable()
 export class FeatureGuard implements CanActivate {
   constructor(

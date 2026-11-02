@@ -141,7 +141,6 @@ describe('Realtime: block operations, transports and GraphQL', () => {
       await http().get(base()).set('Authorization', tok.outsider).expect(404);
       await http().get(`${base()}/changes`).set('Authorization', tok.outsider).expect(404);
       await http().get(base()).expect(401);
-      // a page of another workspace addressed through our workspace id is just as unknown
       const foreign = await ctx.prisma.page.create({
         data: {
           title: 'F',
@@ -407,7 +406,6 @@ describe('Realtime: block operations, transports and GraphQL', () => {
         .delete(`/api/workspaces/${wsId}/tasks/${created.body.id}`)
         .set('Authorization', tok.ann)
         .expect(204);
-      // a change in another workspace must not show up
       await http()
         .post(`/api/workspaces/${otherWsId}/tasks`)
         .set('Authorization', tok.outsider)
@@ -478,7 +476,6 @@ describe('Realtime: block operations, transports and GraphQL', () => {
         );
       });
       void client2.dispose();
-      // the answer is an error result, never data
       expect(got).toEqual([
         { errors: [expect.objectContaining({ message: expect.stringMatching(/Not a member/) })] },
       ]);

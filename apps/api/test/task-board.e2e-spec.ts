@@ -137,7 +137,6 @@ describe('Task board: on hold, comments and task files', () => {
       await as('owner').post(`${tasks()}/${task.id}/comments`).send({ body: 'secret' }).expect(201)
     ).body;
     await as('outsider').get(`${tasks()}/${task.id}/comments`).expect(404);
-    // the task id under a workspace the outsider does belong to
     const foreign = `/api/workspaces/${wsB.id}/tasks/${task.id}/comments`;
     await as('outsider').get(foreign).expect(404);
     await as('outsider').post(foreign).send({ body: 'hi' }).expect(404);

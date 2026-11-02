@@ -5,7 +5,6 @@ import { blankForm, toPayload, type EventForm, type EventPayload } from '../../l
 import type { CalendarEvent, GoogleRights } from '../../lib/types';
 import { LOCALE } from '../../lib/locale';
 
-/** The selected day as a list, with a quick "add an event" row under it. */
 export function DayAgenda({
   dayKeyValue,
   items,
@@ -28,7 +27,6 @@ export function DayAgenda({
   const [problem, setProblem] = useState<string>();
   const [busy, setBusy] = useState(false);
 
-  // a new day starts a fresh form
   const [formDay, setFormDay] = useState(dayKeyValue);
   if (formDay !== dayKeyValue) {
     setFormDay(dayKeyValue);

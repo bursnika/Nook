@@ -5,12 +5,11 @@ export const GRID_DAYS = 42;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** `YYYY-MM-DD` of a moment in the browser's own time zone. */
 export function dayKey(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-/** `YYYY-MM-DD` of a moment in UTC (all-day events are plain dates stored as UTC midnight). */
+// all-day events are stored as utc midnight
 export function utcDayKey(date: Date): string {
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
 }
@@ -32,7 +31,6 @@ export function addMonths(date: Date, months: number): Date {
   return new Date(date.getFullYear(), date.getMonth() + months, 1);
 }
 
-/** The grid starts on the Monday of the week that holds the 1st and always shows six weeks. */
 export function gridStart(month: Date): Date {
   const first = monthStart(month);
   return addDays(first, -((first.getDay() + 6) % 7));
@@ -43,7 +41,7 @@ export function gridDays(month: Date): Date[] {
   return Array.from({ length: GRID_DAYS }, (_, i) => addDays(start, i));
 }
 
-/** The window to ask the API for (it allows at most 100 days; the grid is 42). */
+// the api allows at most 100 days
 export function gridRange(month: Date): { from: Date; to: Date } {
   const from = gridStart(month);
   return { from, to: addDays(from, GRID_DAYS) };
@@ -53,12 +51,10 @@ export function formatTime(date: Date): string {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-/** Value for `<input type="datetime-local">`. */
 export function toLocalInput(date: Date): string {
   return `${dayKey(date)}T${formatTime(date)}`;
 }
 
-/** The day keys an event covers: all-day events by UTC date, timed ones by local time. */
 export function eventDays(event: Pick<CalendarEvent, 'startsAt' | 'endsAt' | 'allDay'>): string[] {
   const start = new Date(event.startsAt);
   const end = new Date(event.endsAt);
@@ -74,7 +70,7 @@ export function eventDays(event: Pick<CalendarEvent, 'startsAt' | 'endsAt' | 'al
     }
     return keys;
   }
-  // an event that ends exactly at midnight does not spill into the next day
+  // ending exactly at midnight doesn't spill into the next day
   const last = dayKey(new Date(Math.max(start.getTime(), end.getTime() - 1)));
   for (
     let day = new Date(start.getFullYear(), start.getMonth(), start.getDate());
@@ -90,7 +86,6 @@ export type DayItem =
   | { kind: 'event'; id: string; title: string; at: number; event: CalendarEvent }
   | { kind: 'task'; id: string; title: string; at: number; task: TaskCard };
 
-/** Everything that happens on each day, earliest first. */
 export function itemsByDay(
   events: readonly CalendarEvent[],
   tasks: readonly TaskCard[],
@@ -123,13 +118,10 @@ export function itemsByDay(
 
 export interface EventRights {
   edit: boolean;
-  /** Why the viewer cannot edit, in a sentence. */
   reason?: string;
-  /** The viewer could change this by granting Nook write access to Google Calendar. */
   canGrant?: boolean;
 }
 
-/** What the viewer may do with an event, judged from what the API says about it and about their Google link. */
 export function eventRights(
   event: Pick<CalendarEvent, 'imported' | 'editable' | 'mine'>,
   google: { twoWay: boolean; editGranted: boolean },

@@ -55,7 +55,7 @@ describe('Pages & blocks API', () => {
     await http()
       .post(`/api/workspaces/${a.workspace.id}/pages`)
       .send({ title: 'x', authorId: a.user.id })
-      .expect(400); // not an accepted field any more
+      .expect(400);
   });
 
   it('isolates workspaces: a page is invisible and immutable from another workspace', async () => {

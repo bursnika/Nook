@@ -24,10 +24,6 @@ const isJob = (value: unknown): value is GoogleSyncJob => {
   return typeof job?.workspaceId === 'string' && typeof job.userId === 'string';
 };
 
-/**
- * Google sync as background jobs: the "sync" button only enqueues, a consumer runs the same sync the
- * synchronous endpoint runs, and a timer enqueues it for everyone who has connected Google.
- */
 @Injectable()
 export class GoogleSyncJobs implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly log = new Logger('GoogleSync');
@@ -41,7 +37,7 @@ export class GoogleSyncJobs implements OnApplicationBootstrap, OnApplicationShut
 
   async onApplicationBootstrap() {
     await this.queue.subscribe<GoogleSyncJob>(GOOGLE_SYNC_QUEUE, (job) => this.run(job), {
-      // Google is rate limited; a few syncs at a time are plenty
+      // google is rate limited
       prefetch: 2,
       retryDelayMs: 30_000,
     });
@@ -58,7 +54,6 @@ export class GoogleSyncJobs implements OnApplicationBootstrap, OnApplicationShut
     clearInterval(this.timer);
   }
 
-  /** Queues one sync. Fails fast when the person has not connected Google, as the synchronous endpoint does. */
   async enqueue(workspaceId: string, userId: string) {
     const connection = await this.prisma.googleConnection.findUnique({
       where: { userId },
@@ -68,7 +63,6 @@ export class GoogleSyncJobs implements OnApplicationBootstrap, OnApplicationShut
     await this.publish({ workspaceId, userId });
   }
 
-  /** One job per connected person and workspace they belong to. */
   async enqueueAll() {
     const connections = await this.prisma.googleConnection.findMany({
       select: {
@@ -86,19 +80,17 @@ export class GoogleSyncJobs implements OnApplicationBootstrap, OnApplicationShut
     return queued;
   }
 
-  /** The consumer. Failures other than "nothing to sync" are retried with backoff by the queue. */
   async run(job: GoogleSyncJob) {
     if (!isJob(job)) throw new PermanentQueueError('Malformed google-sync job');
     const member = await this.prisma.membership.findUnique({
       where: { userId_workspaceId: { userId: job.userId, workspaceId: job.workspaceId } },
       select: { id: true },
     });
-    // left the workspace since the job was queued
     if (!member) return;
     try {
       await this.calendar.sync(job.workspaceId, job.userId);
     } catch (error) {
-      // disconnected, or Google revoked access: retrying cannot help and the person has been told
+      // no point retrying
       if (error instanceof ConflictException) {
         this.log.log(`Skipped sync for ${job.userId}: ${error.message}`);
         return;

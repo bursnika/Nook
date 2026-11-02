@@ -5,14 +5,12 @@ export const ACTIVITY_DAYS = 84;
 
 const dayKey = (date: Date) => date.toISOString().slice(0, 10);
 
-/** Midnight UTC of the Monday of the week the date falls in. */
 export function weekStart(date: Date): Date {
   const midnight = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
   const sinceMonday = (new Date(midnight).getUTCDay() + 6) % 7;
   return new Date(midnight - sinceMonday * DAY);
 }
 
-/** Completed tasks per week for the last `WEEKS` weeks, oldest first, empty weeks included. */
 export function weeklyCompleted(completedAt: Date[], now: Date) {
   const first = weekStart(now).getTime() - (WEEKS - 1) * 7 * DAY;
   const counts = new Array<number>(WEEKS).fill(0);
@@ -26,7 +24,6 @@ export function weeklyCompleted(completedAt: Date[], now: Date) {
   }));
 }
 
-/** Everything that happened per day (a task created or completed, a page created), for a heat map. */
 export function activityByDay(timestamps: Date[], now: Date) {
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const counts = new Map<string, number>();
@@ -37,7 +34,6 @@ export function activityByDay(timestamps: Date[], now: Date) {
   });
 }
 
-/** The oldest moment the charts need, so queries do not read the whole history. */
 export const insightsSince = (now: Date) =>
   new Date(
     Math.min(weekStart(now).getTime() - (WEEKS - 1) * 7 * DAY, now.getTime() - ACTIVITY_DAYS * DAY),

@@ -1,4 +1,3 @@
-{{!-- Select2 with options loaded from `lookup` as the user types (see public/admin.js). --}}
 <div class="mb-3">
   <label for="f-{{name}}" class="form-label">{{label}}{{#if required}} <span class="text-danger">*</span>{{/if}}</label>
   <select class="form-select{{#if error}} is-invalid{{/if}}" id="f-{{name}}" name="{{name}}"{{#if multiple}} multiple{{/if}}{{#if required}} required{{/if}} data-lookup="{{src}}" data-min-length="{{minLength}}" data-placeholder="{{placeholder}}">

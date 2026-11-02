@@ -9,7 +9,7 @@ export default defineConfig({
   },
   datasource: {
     url: env('DATABASE_URL'),
-    // Only needed by commands that replay migrations (migrate dev / migrate diff --from-migrations).
+    // only for migrate dev / migrate diff
     shadowDatabaseUrl: process.env.SHADOW_DATABASE_URL,
   },
 });

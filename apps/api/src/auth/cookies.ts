@@ -6,13 +6,12 @@ export const REFRESH_COOKIE = 'nook_rt';
 export const OAUTH_STATE_COOKIE = 'nook_oauth_state';
 export const OAUTH_VERIFIER_COOKIE = 'nook_oauth_verifier';
 export const OAUTH_RETURN_COOKIE = 'nook_oauth_return';
-/** Why the flow was started: absent for sign-in, 'calendar' when connecting Google Calendar. */
 export const OAUTH_PURPOSE_COOKIE = 'nook_oauth_purpose';
 
 const base = (): CookieOptions => ({
-  httpOnly: true, // never readable from JavaScript, so an XSS bug cannot steal the session
+  httpOnly: true,
   secure: env.cookieSecure,
-  sameSite: 'lax', // not sent with cross-site POSTs, which blocks classic CSRF
+  sameSite: 'lax',
 });
 
 export const REFRESH_PATH = '/api/auth';
@@ -29,7 +28,7 @@ export function setSessionCookies(
   });
   res.cookie(REFRESH_COOKIE, tokens.refreshToken, {
     ...base(),
-    path: REFRESH_PATH, // the long-lived token is only ever sent to the auth endpoints
+    path: REFRESH_PATH,
     maxAge: env.refreshTokenTtlDays * 24 * 60 * 60 * 1000,
   });
 }
@@ -61,7 +60,6 @@ export function clearOAuthCookies(res: Response) {
   }
 }
 
-/** Only same-site relative paths are allowed as a post-login destination (prevents open redirects). */
 export function safeReturnTo(value: unknown, fallback = '/admin'): string {
   if (typeof value !== 'string') return fallback;
   if (

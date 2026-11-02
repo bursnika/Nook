@@ -26,10 +26,7 @@ export interface CaretBox {
   height: number;
 }
 
-/**
- * Where the caret at `offset` sits inside a textarea, measured with an invisible copy of it
- * (textareas expose no caret coordinates). Used for remote cursors and for "is this the first/last line".
- */
+// textareas don't expose caret coords, so measure a hidden copy
 export function measureCaret(el: HTMLTextAreaElement, offset: number): CaretBox {
   const mirror = document.createElement('div');
   const computed = getComputedStyle(el);
@@ -57,14 +54,12 @@ export function measureCaret(el: HTMLTextAreaElement, offset: number): CaretBox 
   return box;
 }
 
-/** True when the caret is on the first visual line of the textarea. */
 export function onFirstLine(el: HTMLTextAreaElement): boolean {
   if (el.selectionStart === 0) return true;
   if (el.value.lastIndexOf('\n', el.selectionStart - 1) >= 0) return false;
   return measureCaret(el, el.selectionStart).top === measureCaret(el, 0).top;
 }
 
-/** True when the caret is on the last visual line. */
 export function onLastLine(el: HTMLTextAreaElement): boolean {
   const end = el.value.length;
   if (el.selectionStart === end) return true;

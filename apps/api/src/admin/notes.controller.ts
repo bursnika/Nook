@@ -33,7 +33,6 @@ class AppendForm {
   text!: string;
 }
 
-/** Quick notes: jot text down without opening a page form first. */
 @AdminController('admin/workspaces/:workspaceId')
 export class NotesAdminController {
   constructor(private readonly notes: NotesService) {}

@@ -1,12 +1,10 @@
 import { BlockType } from '../generated/prisma/enums.js';
 
-/** What the editor stores in `Block.content` for the types Markdown can express. */
 export interface MarkdownBlock {
   type: BlockType;
   content: { text: string; checked?: boolean; language?: string };
 }
 
-/** The part of a stored block the exporter reads. */
 export interface ExportableBlock {
   type: string;
   content: unknown;
@@ -25,17 +23,12 @@ const textOf = (content: unknown): string => {
 
 const oneLine = (text: string) => text.replace(/\s*\n\s*/g, ' ').trim();
 
-/** A fence one backtick longer than the longest run inside the code, so the code cannot close it early. */
+// one backtick longer than any run inside the code
 function fenceFor(code: string): string {
   const longest = Math.max(0, ...(code.match(/`+/g) ?? []).map((run) => run.length));
   return '`'.repeat(Math.max(3, longest + 1));
 }
 
-/**
- * Page to Markdown: the title as `# `, then one construct per block. Items of the same list stay
- * together, and numbered items are counted again from 1 in every run. Empty text blocks are dropped
- * (Markdown has no way to say "an empty paragraph").
- */
 export function blocksToMarkdown(title: string, blocks: ExportableBlock[]): string {
   const chunks: { text: string; group: string | null }[] = [
     { text: `# ${oneLine(title) || FALLBACK_TITLE}`, group: null },
@@ -58,7 +51,7 @@ export function blocksToMarkdown(title: string, blocks: ExportableBlock[]): stri
         });
         break;
       case BlockType.NUMBERED_LIST:
-        // a dropped empty block does not end a run, or the next export of the result would count differently
+        // skipped empty blocks don't break the numbering
         number = chunks[chunks.length - 1].group === block.type ? number + 1 : 1;
         chunks.push({ text: `${number}. ${oneLine(text)}`.trimEnd(), group: block.type });
         break;
@@ -92,14 +85,13 @@ export function blocksToMarkdown(title: string, blocks: ExportableBlock[]): stri
   }
   let out = '';
   chunks.forEach((chunk, index) => {
-    // items of one list sit on consecutive lines; everything else is a paragraph apart
     if (index > 0) out += chunk.group && chunk.group === chunks[index - 1].group ? '\n' : '\n\n';
     out += chunk.text;
   });
   return `${out}\n`;
 }
 
-/** `- ---` would read back as a divider, so a bullet whose text is only dashes (or stars) takes another marker. */
+// "- ---" would parse back as a divider
 function bulletMarker(text: string): string {
   return ['-', '*', '+'].find((marker) => !DIVIDER.test(`${marker} ${text}`)) ?? '+';
 }
@@ -111,7 +103,7 @@ const paragraphLines = (text: string) =>
     .join('\n')
     .trim();
 
-// A thematic break: three or more of the same of - * _, spaces allowed between them.
+// thematic break: 3+ of - * _
 const DIVIDER = /^([-*_])(?:\s*\1){2,}$/;
 const FENCE_OPEN = /^(`{3,}|~{3,})\s*([^`]*)$/;
 const HEADING = /^(#{1,6})\s+(.*)$/;
@@ -123,19 +115,10 @@ const QUOTE = /^>\s?(.*)$/;
 const HEADING_TYPES = [BlockType.HEADING_1, BlockType.HEADING_2, BlockType.HEADING_3] as const;
 
 export interface ParsedMarkdown {
-  /** Text of a leading `# ` line, which is lifted out of the body; undefined when there is none. */
   title: string | undefined;
   blocks: MarkdownBlock[];
 }
 
-/**
- * Markdown to blocks, line by line (a line never needs more than the lines of its own construct).
- * Recognised: `#`..`######` (levels 4-6 become heading 3), bullets, numbered items, `- [ ]` todos,
- * `>` quotes, fenced code, and dividers. List nesting is flattened. Everything else (tables, images,
- * HTML, front matter) is kept as paragraphs rather than rejected; consecutive plain lines are one
- * paragraph. Only a `# ` line that opens the document is taken as the title (unless `liftTitle` is off,
- * when the caller already has one and the line stays a heading).
- */
 export function markdownToBlocks(
   markdown: string,
   { liftTitle = true }: { liftTitle?: boolean } = {},
@@ -202,7 +185,6 @@ export function markdownToBlocks(
     const heading = HEADING.exec(line);
     if (heading) {
       flushParagraph();
-      // a single `#` that opens the document is its title, not a block
       if (liftTitle && blocks.length === 0 && title === undefined && heading[1].length === 1) {
         title = clampTitle(heading[2]);
       } else {
@@ -286,7 +268,6 @@ const CYRILLIC: Record<string, string> = {
   ъ: '',
 };
 
-/** A file-name friendly form of a title: Latin letters and digits joined by dashes (Cyrillic is transliterated). */
 export function slugify(title: string, fallback = 'page'): string {
   const slug = [...title.toLowerCase()]
     .map((char) => CYRILLIC[char] ?? char)

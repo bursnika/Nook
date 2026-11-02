@@ -21,7 +21,7 @@ packages/mcp    MCP-сервер для Claude Desktop і Claude Code
 widgets/        віджети для iPhone (Scriptable) і Mac (Übersicht)
 infra/          Docker Compose (dev і prod), Dockerfile, Caddyfile
 tests/          Postman (Newman) і Playwright
-docs/           документація, звіти (C10, покриття, Redis, черги, Blob) і таблиця задач
+docs/           документація й звіти (C10, покриття, Redis, черги, Blob)
 ```
 
 ## Локальний запуск
@@ -152,7 +152,7 @@ subscription {
 
 ### Публічні сторінки й SEO
 
-Сторінку можна опублікувати (slug у формі сторінки або через API). Вона відкривається без входу за адресою `/p/<slug>`: серверний Bootstrap-лендінг із обкладинкою, контентом і блоком контактів автора, що залипає. Для пошуковиків: `<title>`, `description`, canonical, Open Graph і Twitter-теги, JSON-LD `Article`, `/sitemap.xml`, `/robots.txt`. Аудит Seobility виконується після деплою (`docs/deploy.md`).
+Сторінку можна опублікувати (slug у формі сторінки або через API). Вона відкривається без входу за адресою `/p/<slug>`: серверний Bootstrap-лендінг із обкладинкою, контентом і блоком контактів автора, що залипає. Для пошуковиків: `<title>`, `description`, canonical, Open Graph і Twitter-теги, JSON-LD `Article`, `/sitemap.xml`, `/robots.txt`.
 
 ### MCP-сервер
 
@@ -166,7 +166,7 @@ subscription {
 
 ### Деплой і CI/CD
 
-GitHub Actions (`.github/workflows/ci.yml`): lint, типи, unit і e2e, Newman, Playwright, збірка образів, а після push у `main` публікація образів у GHCR і деплой на Azure VM з Caddy (HTTPS). Покроково: [`docs/deploy.md`](docs/deploy.md).
+GitHub Actions (`.github/workflows/ci.yml`): lint, типи, unit і e2e, Newman, Playwright, збірка образів, а після push у `main` публікація образів у GHCR і деплой на Azure VM з Caddy (HTTPS). Деплой на Render описано в [`render.yaml`](render.yaml).
 
 ### Увесь стек у Docker
 

@@ -3,7 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { NookClient, loadConfig } from './client.js';
 import { createServer } from './server.js';
 
-// stdout carries the MCP protocol: all diagnostics go to stderr
+// stdout is for mcp, log to stderr
 const config = loadConfig();
 if (!config.token) console.error('nook-mcp: NOOK_TOKEN is not set, API calls will fail');
 if (!config.workspaceId) {

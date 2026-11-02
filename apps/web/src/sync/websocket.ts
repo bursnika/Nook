@@ -10,7 +10,6 @@ import {
 } from './transport';
 import type { BlockOp, OpsMessage, PresenceMessage } from './types';
 
-/** The part of the browser WebSocket we use, so tests can pass a fake class. */
 export interface SocketLike {
   readyState: number;
   onopen: ((event: unknown) => void) | null;
@@ -29,7 +28,6 @@ const PING_MS = 25_000;
 export interface WebSocketOptions {
   scheduler?: Scheduler;
   createSocket?: SocketFactory;
-  /** Base such as `wss://host`; defaults to the page origin. */
   origin?: string;
 }
 
@@ -47,10 +45,7 @@ interface PendingAck {
   timer: unknown;
 }
 
-/**
- * One WebSocket per page. After every (re)connect it first catches up over HTTP (`changes?since=`) while
- * buffering pushed frames, then delivers the buffered ones that are newer, so nothing is lost or reordered.
- */
+// after each connect: catch up over http, buffer pushed frames meanwhile
 export class WebSocketTransport implements Transport {
   readonly kind = 'websocket' as const;
   private readonly scheduler: Scheduler;
@@ -161,7 +156,7 @@ export class WebSocketTransport implements Transport {
       this.onFrame(frame, generation);
     };
     socket.onclose = () => this.lost(generation);
-    socket.onerror = () => undefined; // `close` follows and does the work
+    socket.onerror = () => undefined; // close follows
   }
 
   private onFrame(frame: Frame, generation: number) {

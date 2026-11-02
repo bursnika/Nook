@@ -242,7 +242,7 @@ test.describe('block editor', () => {
       .poll(async () => (await ann.api.blocks(page.id)).map((b) => [b.type, b.content.text]))
       .toEqual([['HEADING_2', 'Chosen with the keyboard']]);
 
-    // nothing matches: the menu says so and Escape leaves the text alone
+    // no match
     await ann.page.keyboard.press('Enter');
     await ann.page.keyboard.type('/zzzz');
     await expect(menu).toContainText('No block type matches');
@@ -268,7 +268,6 @@ test.describe('block editor', () => {
     await keyboard.press('Enter');
     await keyboard.type('third');
     await expect(ann.page.getByText('3.', { exact: true })).toBeVisible();
-    // Enter on an empty list item ends the list
     await keyboard.press('Enter');
     await keyboard.press('Enter');
     await keyboard.type('> a quote');
@@ -277,7 +276,7 @@ test.describe('block editor', () => {
     await keyboard.type('---');
     await keyboard.type('```');
     await expect(editor.field('code')).toBeVisible();
-    // inside code Enter makes a new line, a second Enter on an empty line leaves the block
+    // double enter leaves the code block
     await keyboard.type('let a = 1;');
     await keyboard.press('Enter');
     await keyboard.press('Enter');
@@ -293,12 +292,10 @@ test.describe('block editor', () => {
       ['PARAGRAPH', 'the end'],
     ]);
 
-    // Backspace at the start of a paragraph joins it to the block above
     await keyboard.press('Home');
     await keyboard.press('Backspace');
     await expect.poll(async () => (await state()).at(-1)).toEqual(['CODE', 'let a = 1;the end']);
 
-    // ArrowUp from the first line of the code block lands on the divider, which Backspace removes
     await keyboard.press('Control+Home');
     await keyboard.press('ArrowUp');
     await expect(ann.page.getByRole('separator', { name: /^Divider/ })).toBeFocused();
@@ -309,7 +306,6 @@ test.describe('block editor', () => {
       .poll(async () => (await state()).map(([type]) => type))
       .toEqual(['NUMBERED_LIST', 'NUMBERED_LIST', 'NUMBERED_LIST', 'QUOTE', 'CODE']);
 
-    // focus moved to the block above; ArrowDown/ArrowUp walk through the blocks
     await expect(editor.field('quote')).toBeFocused();
     await keyboard.press('ArrowDown');
     await expect(editor.field('code')).toBeFocused();

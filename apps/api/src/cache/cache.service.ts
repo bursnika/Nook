@@ -2,24 +2,18 @@ import { Inject, Injectable, Logger, type OnApplicationShutdown } from '@nestjs/
 import type { Response } from 'express';
 import { CACHE_DRIVER, type CacheDriver } from './cache.driver.js';
 
-/** How long a cached list lives. Writes invalidate earlier; this bounds what a missed invalidation can cost. */
 export const CACHE_TTL_SECONDS = {
   pages: 60,
   tasks: 60,
   events: 60,
-  // "due soon" and "running now" move with the clock, so the summary is kept the shortest
+  // summary depends on the clock, so it expires sooner
   overview: 15,
 } as const;
 
 export type CacheKind = keyof typeof CACHE_TTL_SECONDS;
 
-/** Keys all start with this, so one `deleteByPrefix` clears a whole tenant. */
 export const workspacePrefix = (workspaceId: string) => `ws:${workspaceId}:`;
 
-/**
- * The same query always yields the same text: keys sorted, empty values dropped, dates as ISO strings.
- * It is built from the validated DTO, so `?limit=20` and no limit at all share an entry.
- */
 export function normalizeQuery(query: object): string {
   const entries = Object.entries(query as Record<string, unknown>)
     .filter(([, value]) => value !== undefined && value !== null && value !== '')
@@ -31,14 +25,10 @@ export function setCacheHeader(res: Response, hit: boolean) {
   res.setHeader('X-Cache', hit ? 'HIT' : 'MISS');
 }
 
-/**
- * JSON cache over a driver. Every failure of the driver (Redis down, slow, corrupt value) is treated as
- * "nothing cached": a request is never failed by the cache, it just reads the database.
- */
 @Injectable()
 export class CacheService implements OnApplicationShutdown {
   private readonly logger = new Logger(CacheService.name);
-  /** Counts invalidations; a result loaded while one happened may already be stale, so it is not stored. */
+  // bumped on invalidate; a load that raced with it is not stored
   private epoch = 0;
   private lastLog = 0;
 
@@ -48,7 +38,6 @@ export class CacheService implements OnApplicationShutdown {
     return this.driver.name;
   }
 
-  /** `workspaceId` is part of the key, so a tenant can only ever read its own entries. */
   listKey(workspaceId: string, kind: CacheKind, query: object = {}) {
     return `${workspacePrefix(workspaceId)}${kind}:${normalizeQuery(query)}`;
   }
@@ -80,12 +69,10 @@ export class CacheService implements OnApplicationShutdown {
     }
   }
 
-  /** Call after anything that can change a cached list of this workspace. */
   invalidateWorkspace(workspaceId: string) {
     return this.deleteByPrefix(workspacePrefix(workspaceId));
   }
 
-  /** The cached value, or the loader's result (stored for next time). `hit` feeds the X-Cache header. */
   async remember<T>(key: string, ttlSeconds: number, load: () => Promise<T>) {
     const cached = await this.get<T>(key);
     if (cached !== undefined) return { value: cached, hit: true };
@@ -99,7 +86,6 @@ export class CacheService implements OnApplicationShutdown {
     await this.driver.close().catch(() => undefined);
   }
 
-  /** One line per half minute: an outage should be visible without flooding the log. */
   private logFailure(action: string, error: unknown) {
     const now = Date.now();
     if (now - this.lastLog < 30_000) return;

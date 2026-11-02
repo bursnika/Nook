@@ -7,7 +7,6 @@ const POSITION_STEP = 1024;
 const TITLE_LENGTH = 80;
 const MAX_BLOCKS = 200;
 
-/** A note is a page whose body is one paragraph per line of text; its checklist is the to-do items. */
 @Injectable()
 export class NotesService {
   constructor(
@@ -37,7 +36,6 @@ export class NotesService {
     return page;
   }
 
-  /** Adds the lines after the page's last block. */
   async append(workspaceId: string, pageId: string, text: string) {
     await this.prisma.page.findFirstOrThrow({
       where: { id: pageId, workspaceId },
@@ -59,7 +57,6 @@ export class NotesService {
     await this.cache.invalidateWorkspace(workspaceId);
   }
 
-  /** Adds one unchecked checklist item per line. */
   async addItems(workspaceId: string, pageId: string, text: string) {
     await this.requirePage(workspaceId, pageId);
     const { _max } = await this.prisma.block.aggregate({

@@ -14,7 +14,6 @@ import {
 
 interface Entry {
   id: string;
-  /** JSON text, as a broker would store it, so handlers never share objects with publishers. */
   body: string;
   attempt: number;
 }
@@ -48,17 +47,10 @@ interface QueueState {
 }
 
 export interface InMemoryQueueOptions {
-  /**
-   * Retries wait on a virtual clock that only moves with `advance()` / `drain()`, so a test controls time and
-   * no real timer is ever created. Without it, retries use (unref'ed) real timers.
-   */
+  // fake clock for tests, moved by advance()/drain()
   manualRetries?: boolean;
 }
 
-/**
- * The default queue: same semantics as the RabbitMQ driver (FIFO per queue, prefetch, backoff retries, dead
- * letters) inside the process. Nothing survives a restart; use it for development and tests.
- */
 export class InMemoryQueue implements MessageQueue {
   readonly name = 'memory';
   private readonly log = new Logger('Queue');
@@ -116,7 +108,6 @@ export class InMemoryQueue implements MessageQueue {
     await Promise.allSettled([...this.inflight]);
   }
 
-  /** Forgets every message, pending retry and dead letter; consumers stay subscribed. For tests between cases. */
   async clear() {
     await this.flush();
     for (const state of this.queues.values()) {
@@ -127,12 +118,10 @@ export class InMemoryQueue implements MessageQueue {
     }
   }
 
-  /** What failed for good in `queue` (inspection for tests and ops). */
   deadLetters(queue: string): readonly DeadLetter[] {
     return this.queues.get(queue)?.dead ?? [];
   }
 
-  /** Resolves once every message that can be handled has been handled (retries still waiting are not awaited). */
   async flush() {
     while (this.busy()) {
       await Promise.allSettled([...this.inflight]);
@@ -140,7 +129,6 @@ export class InMemoryQueue implements MessageQueue {
     }
   }
 
-  /** Moves the clock forward and releases the retries that came due, then lets them run. */
   async advance(ms: number) {
     this.clock += ms;
     for (const state of this.queues.values()) {
@@ -152,7 +140,6 @@ export class InMemoryQueue implements MessageQueue {
     await this.flush();
   }
 
-  /** Runs everything to the end: handles messages, jumps to the next retry, repeats until nothing is left. */
   async drain() {
     await this.flush();
     for (;;) {
@@ -182,7 +169,7 @@ export class InMemoryQueue implements MessageQueue {
     );
   }
 
-  /** Delivery starts on a microtask, never inside publish(), as with a real broker. */
+  // deliver on a microtask, like a real broker
   private schedulePump(state: QueueState) {
     if (state.pumpScheduled) return;
     state.pumpScheduled = true;

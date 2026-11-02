@@ -2,7 +2,6 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { between, fits, STEP } from './position';
 import { TASK_STATUSES, type Task, type TaskStatus } from './types';
 
-/** Task ids of each column, top to bottom. */
 export type Columns = Record<TaskStatus, string[]>;
 
 export interface Placement {
@@ -21,13 +20,12 @@ export function columnsOf(tasks: readonly Task[]): Columns {
 const isStatus = (id: string): id is TaskStatus =>
   (TASK_STATUSES as readonly string[]).includes(id);
 
-/** The column an id lives in; a column's own id (dropping on an empty column) answers with itself. */
+// dropping on an empty column gives the column id itself
 export function findColumn(columns: Columns, id: string): TaskStatus | undefined {
   if (isStatus(id)) return id;
   return TASK_STATUSES.find((status) => columns[status].includes(id));
 }
 
-/** While dragging: lets the card jump into the column it hovers over. */
 export function dragOver(
   columns: Columns,
   activeId: string,
@@ -48,7 +46,6 @@ export function dragOver(
   };
 }
 
-/** On drop: puts the card where the pointer left it inside its (possibly new) column. */
 export function dragEnd(columns: Columns, activeId: string, overId: string): Columns {
   const from = findColumn(columns, activeId);
   const to = findColumn(columns, overId);
@@ -59,10 +56,6 @@ export function dragEnd(columns: Columns, activeId: string, overId: string): Col
   return { ...columns, [from]: arrayMove(columns[from], oldIndex, newIndex) };
 }
 
-/**
- * Which tasks must be saved so the card `id` sits where `columns` puts it: normally just that card with a
- * position between its neighbours; when two neighbours are too close to split, its whole column is renumbered.
- */
 export function placements(columns: Columns, tasks: readonly Task[], id: string): Placement[] {
   const byId = new Map(tasks.map((task) => [task.id, task]));
   const status = findColumn(columns, id);
@@ -82,7 +75,6 @@ export function placements(columns: Columns, tasks: readonly Task[], id: string)
   });
 }
 
-/** Moves a card to the bottom of another column (the "move" buttons on a card). */
 export function moveToColumn(tasks: readonly Task[], id: string, status: TaskStatus): Placement[] {
   const columns = columnsOf(tasks);
   const from = findColumn(columns, id);
@@ -103,7 +95,6 @@ export function applyPlacements(tasks: readonly Task[], changes: readonly Placem
   });
 }
 
-/** A position that puts a task at the bottom of a column. */
 export function endOf(tasks: readonly Task[], status: TaskStatus, ignoreId?: string): number {
   const positions = tasks
     .filter((task) => task.status === status && task.id !== ignoreId)

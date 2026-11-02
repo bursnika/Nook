@@ -9,7 +9,6 @@ interface SyncResult {
   removed?: number;
 }
 
-/** Connect, sync and disconnect Google Calendar for this person. */
 export function GoogleBar({
   workspaceId,
   status,
@@ -17,7 +16,6 @@ export function GoogleBar({
 }: {
   workspaceId: string;
   status: GoogleStatus;
-  /** Called after a sync or a disconnect so the calendar can reload. */
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState<'sync' | 'disconnect'>();

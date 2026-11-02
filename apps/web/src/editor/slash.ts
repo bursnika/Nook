@@ -4,9 +4,7 @@ export interface SlashCommand {
   type: BlockType;
   label: string;
   hint: string;
-  /** Extra words that also find the command. */
   keywords: string[];
-  /** Short pixel-style marker shown in the menu. */
   glyph: string;
 }
 
@@ -83,13 +81,11 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
   },
 ];
 
-/** The slash menu is open while a block holds just `/` and an optional query without spaces. */
 export function slashQuery(text: string): string | null {
   const match = /^\/(\S*)$/.exec(text);
   return match ? match[1]! : null;
 }
 
-/** Commands whose label, type or keywords start with / contain the query; best matches first. */
 export function filterCommands(
   query: string,
   commands: readonly SlashCommand[] = SLASH_COMMANDS,

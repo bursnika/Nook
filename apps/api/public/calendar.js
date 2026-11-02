@@ -1,4 +1,3 @@
-/* Workspace calendar: a month grid of events and task deadlines, drawn in the browser's own time zone. */
 (function () {
   'use strict';
 
@@ -19,7 +18,7 @@
   var data = { events: [], tasks: [], google: {} };
   var loadSeq = 0;
 
-  // ---- dates ---------------------------------------------------------------------------------
+  // dates
 
   function pad(n) {
     return n < 10 ? '0' + n : String(n);
@@ -37,7 +36,7 @@
   function addDays(d, n) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
   }
-  /** The grid starts on the Monday of the week that contains the 1st and always shows six weeks. */
+  // always six weeks, starting on monday
   function gridStart() {
     var offset = (month.getDay() + 6) % 7;
     return addDays(month, -offset);
@@ -45,12 +44,11 @@
   function time(d) {
     return pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
-  /** Value for <input type="datetime-local"> in local time. */
   function localStamp(d) {
     return key(d) + 'T' + time(d);
   }
 
-  /** Day keys an event covers. All-day events are plain dates (UTC); timed ones follow local time. */
+  // all-day events are utc dates, timed ones use local time
   function eventDays(ev) {
     var start = new Date(ev.startsAt);
     var end = new Date(ev.endsAt);
@@ -99,9 +97,8 @@
     return days;
   }
 
-  // ---- talking to the server -----------------------------------------------------------------
+  // api
 
-  /** Resolves with the JSON body; rejects with { status, message, code } so the UI can explain. */
   function request(method, path, body) {
     var options = {
       method: method,
@@ -114,7 +111,7 @@
     }
     return fetch(API + path, options).then(function (res) {
       if (res.status === 401) {
-        window.location.reload(); // the session expired: the server sends us to sign in again
+        window.location.reload(); // session expired
         return new Promise(function () {});
       }
       if (res.ok) return res.status === 204 ? null : res.json();
@@ -140,7 +137,7 @@
     var seq = ++loadSeq;
     var from = gridStart();
     var to = addDays(from, 42);
-    render(); // draw the empty grid at once, items follow
+    render();
     request(
       'GET',
       '/calendar?from=' +
@@ -158,7 +155,7 @@
       });
   }
 
-  // ---- drawing -------------------------------------------------------------------------------
+  // drawing
 
   function el(tag, className, text) {
     var node = document.createElement(tag);
@@ -187,7 +184,6 @@
     for (var i = 0; i < 42; i++) {
       var day = addDays(start, i);
       var k = key(day);
-      // a div, not a button: the events inside it are buttons of their own
       var cell = el('div', 'cal-cell');
       cell.setAttribute('role', 'button');
       cell.tabIndex = 0;
@@ -206,7 +202,7 @@
         var pill = button('cal-pill cal-pill-' + item.kind, item.title);
         pill.title = item.title;
         pill.addEventListener('click', function (event) {
-          event.stopPropagation(); // do not also select the day
+          event.stopPropagation();
           openDetails(item);
         });
         if (item.kind === 'task' && item.task.status === 'DONE') pill.classList.add('is-done');
@@ -275,7 +271,6 @@
     return node;
   }
 
-  /** A quick "add event on this day" row under the agenda. */
   function eventForm() {
     var form = el('form', 'cal-form');
     var day = fromKey(selected);
@@ -303,7 +298,6 @@
       form.appendChild(node);
     });
 
-    // second row: also put it in Google (when the plan and permissions allow), and the full window
     var extra = el('div', 'cal-form-extra');
     var toGoogle = input('checkbox', 'form-check-input');
     toGoogle.id = 'cal-quick-google';
@@ -346,7 +340,6 @@
         title: title.value.trim(),
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
-        // the Google route takes the whole event
         ...(goesToGoogle ? { allDay: false, description: null } : {}),
       })
         .then(load)
@@ -358,7 +351,7 @@
     return form;
   }
 
-  // ---- the event window (like Google Calendar's) -----------------------------------------------
+  // event dialog
 
   var dialog = null;
 
@@ -366,7 +359,7 @@
     if (dialog) return dialog;
     dialog = el('dialog', 'cal-dialog');
     dialog.setAttribute('aria-labelledby', 'cal-dialog-title');
-    // a click on the dimmed backdrop (the dialog element itself) closes it
+    // click on the backdrop
     dialog.addEventListener('click', function (event) {
       if (event.target === dialog) dialog.close();
     });
@@ -374,7 +367,6 @@
     return dialog;
   }
 
-  /** What the viewer may do with an event, and when not, why not. */
   function rights(ev) {
     if (!ev.imported) return { edit: true };
     var google = data.google || {};
@@ -402,13 +394,11 @@
     return { edit: true, google: true };
   }
 
-  /** New events can also be created in Google when the plan and the permission allow it. */
   function canCreateInGoogle() {
     var google = data.google || {};
     return Boolean(google.twoWay && google.editGranted);
   }
 
-  /** The full "new event" window, prefilled from the quick form. */
   function openCreate(prefill) {
     var box = getDialog();
     box.textContent = '';
@@ -591,7 +581,7 @@
       })
       .catch(function (problem) {
         if (problem.status === 410) {
-          box.close(); // already gone in Google: nothing left to delete here either
+          box.close();
           load();
         } else {
           alertIn(box, problem.message);
@@ -628,7 +618,7 @@
     var endDate = input('date');
     if (ev.allDay) {
       startDate.value = utcKey(start);
-      endDate.value = utcKey(new Date(end.getTime() - DAY_MS)); // inclusive, like Google shows it
+      endDate.value = utcKey(new Date(end.getTime() - DAY_MS)); // inclusive end
       startDt.value = startDate.value + 'T09:00';
       endDt.value = startDate.value + 'T10:00';
     } else {
@@ -688,7 +678,6 @@
     if (ev.recurring)
       form.appendChild(el('p', 'small text-muted', '↻ Repeats. Only this occurrence changes.'));
 
-    // creating: optionally put the new event into Google Calendar as well
     var toGoogle = input('checkbox', 'form-check-input');
     toGoogle.id = 'cal-to-google';
     toGoogle.checked = Boolean(options && options.google);
@@ -730,7 +719,7 @@
       var endsAt;
       if (allDay.checked) {
         startsAt = new Date(startDate.value + 'T00:00:00Z');
-        endsAt = new Date(new Date(endDate.value + 'T00:00:00Z').getTime() + DAY_MS); // Google's end is exclusive
+        endsAt = new Date(new Date(endDate.value + 'T00:00:00Z').getTime() + DAY_MS); // google's end is exclusive
         if (!(endsAt > startsAt)) {
           error.textContent = 'The last day cannot be before the first day.';
           return;
@@ -775,7 +764,7 @@
     title.focus();
   }
 
-  // ---- controls ------------------------------------------------------------------------------
+  // controls
 
   function selectDay(cell) {
     selected = cell.getAttribute('data-day');

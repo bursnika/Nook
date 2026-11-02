@@ -14,7 +14,7 @@ test.describe('pages and the desktop', () => {
     ).toBeVisible();
     await expect(list.getByRole('link', { name: new RegExp(title) })).toBeVisible();
 
-    // search narrows the list
+    // search
     const search = ann.page.getByLabel('Search pages');
     await search.fill(title.toUpperCase());
     await expect(list.getByRole('link')).toHaveCount(1);
@@ -24,7 +24,7 @@ test.describe('pages and the desktop', () => {
     ).toBeVisible();
     await search.fill('');
 
-    // delete asks first
+    // delete
     await ann.page.getByRole('button', { name: `Delete ${title}`, exact: true }).click();
     const warning = ann.page.getByRole('alertdialog', { name: 'Warning' });
     await expect(warning).toContainText(`Delete “${title}”?`);
@@ -81,7 +81,7 @@ test.describe('pages and the desktop', () => {
       .toEqual(['A paragraph of text.', 'first item', 'second item', 'a quote']);
     const id = /\/pages\/([^/]+)$/.exec(ann.page.url())?.[1] ?? '';
 
-    // the same page comes back out as a .md file
+    // export as .md
     await ann.open('/pages');
     const download = ann.page.waitForEvent('download');
     await ann.page.getByRole('button', { name: `Export ${heading} as Markdown` }).click();
@@ -127,7 +127,7 @@ test.describe('pages and the desktop', () => {
     await ann.page.getByLabel('Page title').fill('Tree child');
     await expect(tree.getByRole('link', { name: 'Tree child' })).toBeVisible();
 
-    // go back to the parent: the child can be folded away and unfolded
+    // fold / unfold
     await tree.getByRole('link', { name: parentTitle }).click();
     await expect(ann.page.getByLabel('Page title')).toHaveValue(parentTitle);
     await ann.page.getByRole('button', { name: `Collapse ${parentTitle}` }).click();
@@ -169,7 +169,7 @@ test.describe('pages and the desktop', () => {
     await expect(today.getByRole('checkbox', { name: new RegExp(soon) })).toHaveCount(0);
     await expect.poll(async () => (await ann.api.task(task.id)).status).toBe('DONE');
 
-    // quick note: the first line is the title, every line is a block
+    // quick note
     const noteTitle = unique('Quick note');
     await ann.page.getByLabel('Jot something down').fill(`${noteTitle}\nsecond line\nthird line`);
     await ann.page.getByRole('button', { name: 'Save as page' }).click();

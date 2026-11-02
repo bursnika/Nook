@@ -1,8 +1,7 @@
-/* Admin behaviour: Select2 autocomplete over server-side lookups, and delete confirmations. */
 (function ($) {
   'use strict';
 
-  // Every <select data-lookup="/admin/..."> becomes an autocomplete that queries the back-end as you type.
+  // select2 autocomplete for <select data-lookup>
   $('select[data-lookup]').each(function () {
     var $el = $(this);
     $el.select2({
@@ -11,11 +10,11 @@
       placeholder: $el.data('placeholder') || 'Start typing…',
       allowClear: !$el.prop('multiple'),
       closeOnSelect: !$el.prop('multiple'),
-      minimumInputLength: Number($el.data('min-length')) || 3, // the back-end is only asked from 3 characters
+      minimumInputLength: Number($el.data('min-length')) || 3,
       ajax: {
         url: $el.data('lookup'),
         dataType: 'json',
-        delay: 300, // wait for a pause in typing before sending the request
+        delay: 300,
         cache: true,
         data: function (params) {
           return { q: params.term, page: params.page || 1 };
@@ -39,12 +38,11 @@
     });
   });
 
-  // <form data-confirm="Delete this?"> asks before submitting.
   $(document).on('submit', 'form[data-confirm]', function (event) {
     if (!window.confirm($(this).data('confirm'))) event.preventDefault();
   });
 
-  // <time class="local-time" datetime="ISO"> is rendered in UTC by the server and shown in the viewer's time zone.
+  // server renders utc, show it in local time
   $('time.local-time').each(function () {
     var date = new Date(this.getAttribute('datetime'));
     if (!isNaN(date.getTime())) {

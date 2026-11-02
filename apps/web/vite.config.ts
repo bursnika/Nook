@@ -5,7 +5,7 @@ import type { ViteUserConfig } from 'vitest/config';
 
 const API = process.env.NOOK_API ?? 'http://localhost:3000';
 
-/** The API only accepts cookie-authenticated writes from its own origin, so the dev proxy speaks as that origin. */
+// the api only accepts writes from its own origin
 const asApiOrigin: ProxyOptions = {
   target: API,
   changeOrigin: true,
@@ -15,10 +15,7 @@ const asApiOrigin: ProxyOptions = {
   },
 };
 
-/**
- * `VITE_COVERAGE=true` builds a copy of the app that records which lines ran (window.__coverage__); the
- * Playwright tests collect it into a code-coverage report (see tests/e2e/README.md). Never set it for a release.
- */
+// VITE_COVERAGE=true instruments the build for e2e coverage
 const coverage: PluginOption[] =
   process.env.VITE_COVERAGE === 'true'
     ? [
@@ -32,7 +29,6 @@ const coverage: PluginOption[] =
     : [];
 
 const config: ViteUserConfig = {
-  // the API serves the production build under /app
   base: '/app/',
   plugins: [react(), ...coverage],
   server: {

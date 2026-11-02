@@ -3,7 +3,6 @@ import { Badge, Window } from '../components/ui';
 import { api } from '../lib/api';
 import { useResource } from '../lib/hooks';
 
-/** A personal token for home-screen widgets. Shown once, because the server keeps only its hash. */
 export function WidgetCard() {
   const status = useResource(() => api<{ exists: boolean }>('/widget/token'), 'widget');
   const [token, setToken] = useState<string>();

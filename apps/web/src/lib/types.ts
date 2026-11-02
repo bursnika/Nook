@@ -1,15 +1,12 @@
-/** Shapes of what the API returns, trimmed to the fields the screens use. */
 export type Role = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
 
 export interface Workspace {
   id: string;
   name: string;
   slug: string;
-  /** Only the list endpoint includes the viewer's own membership. */
   memberships?: { role: Role }[];
 }
 
-/** TODO is the backlog and DONE is complete. */
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'ON_HOLD' | 'DONE';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -35,15 +32,12 @@ export interface Task {
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority;
-  /** ISO timestamp. */
   dueDate: string | null;
-  /** Order inside a column; fractional. */
   position: number;
   pageId: string | null;
   assigneeId: string | null;
   commentCount?: number;
   attachmentCount?: number;
-  /** ISO timestamps; live updates over GraphQL leave them out. */
   createdAt?: string;
   updatedAt?: string;
   completedAt?: string | null;
@@ -79,7 +73,6 @@ export interface CalendarEvent {
   startsAt: string;
   endsAt: string;
   allDay: boolean;
-  /** Present on events from the calendar endpoint. */
   imported?: boolean;
   mine?: boolean;
   editable?: boolean;
@@ -88,7 +81,6 @@ export interface CalendarEvent {
   url?: string | null;
 }
 
-/** A task as the calendar and the overview list it. */
 export interface TaskCard {
   id: string;
   title: string;

@@ -3,9 +3,7 @@ import { Injectable } from '@nestjs/common';
 export type TransportName = 'websocket' | 'longpoll' | 'polling' | 'graphql-ws';
 
 export interface Counters {
-  /** HTTP requests served (or WebSocket messages received). */
   requests: number;
-  /** Messages pushed or returned to clients. */
   messages: number;
   bytesIn: number;
   bytesOut: number;
@@ -13,7 +11,6 @@ export interface Counters {
 
 const empty = (): Counters => ({ requests: 0, messages: 0, bytesIn: 0, bytesOut: 0 });
 
-/** What each transport costs the server. The C10 benchmark reads this and resets it between runs. */
 @Injectable()
 export class TransportMetrics {
   private counters: Record<TransportName, Counters> = this.fresh();

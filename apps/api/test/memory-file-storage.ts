@@ -7,19 +7,15 @@ import {
   type StoredFile,
 } from '../src/uploads/file-storage.js';
 
-/**
- * A storage that keeps files in memory and has no folder to serve, like blob storage: the API has to read
- * every file back through `open`. Calls are recorded so a spec can see what the app asked of it.
- */
+// in-memory storage without a public folder, behaves like blob storage
 export class MemoryFileStorage implements FileStorage {
-  readonly kind = 'azure'; // takes the same code path as Azure Blob Storage
+  readonly kind = 'azure';
   readonly files = new Map<string, { data: Buffer; contentType: string }>();
   readonly calls: { put: string[]; delete: string[]; open: string[] } = {
     put: [],
     delete: [],
     open: [],
   };
-  /** When set, `open` fails like an unreachable storage account. */
   openError: Error | null = null;
 
   async put({ name, data, contentType }: PutInput): Promise<StoredFile> {

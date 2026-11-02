@@ -11,10 +11,7 @@ import { Role } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ROLES } from './decorators.js';
 
-/**
- * Tenant isolation. Any route with a `:workspaceId` parameter is only open to members of that workspace.
- * Non-members get 404 (not 403), so workspace ids cannot be probed.
- */
+// non-members get 404, not 403, so ids can't be probed
 @Injectable()
 export class WorkspaceGuard implements CanActivate {
   constructor(

@@ -11,7 +11,6 @@ export interface Me {
 
 const SessionContext = createContext<Me | null>(null);
 
-/** The signed-in person. Anonymous visitors are sent to Google; they come back to the page they wanted. */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [problem, setProblem] = useState<string | null>(null);

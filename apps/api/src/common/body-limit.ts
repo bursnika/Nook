@@ -1,22 +1,14 @@
 import type { NextFunction, Request, Response } from 'express';
 
-/** Every JSON endpoint takes bodies up to this size, as Express would by default. */
 export const JSON_BODY_LIMIT_BYTES = 100 * 1024;
-/** The Markdown import takes a text of up to 1 MB; JSON escaping can make the body somewhat bigger. */
 export const IMPORT_BODY_LIMIT = '2mb';
 
 const IMPORT_ROUTE = /^\/api\/workspaces\/[^/]+\/pages\/import\/?$/;
-/** The assistant gets the whole conversation (up to 40 messages of 8000 characters) with each request. */
-const ASSISTANT_ROUTE = /^\/api\/workspaces\/[^/]+\/assistant\/chat\/?$/;
 
-/**
- * The JSON parser accepts IMPORT_BODY_LIMIT everywhere (it is one parser for the whole app), so this runs
- * first and keeps the small limit on every route except the import, by the announced size.
- */
+// the json parser allows the import limit everywhere, so check size first
 export function limitJsonBodies(req: Request, res: Response, next: NextFunction) {
   const size = Number(req.headers['content-length']);
-  const isLarge =
-    req.method === 'POST' && (IMPORT_ROUTE.test(req.path) || ASSISTANT_ROUTE.test(req.path));
+  const isLarge = req.method === 'POST' && IMPORT_ROUTE.test(req.path);
   if (size > JSON_BODY_LIMIT_BYTES && !isLarge && req.is('application/json')) {
     res.status(413).json({ statusCode: 413, message: 'Payload Too Large' });
     return;

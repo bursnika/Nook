@@ -1,7 +1,6 @@
 import { colorFor, initials } from '../sync/colors';
 import type { RemotePresence } from '../sync/syncClient';
 
-/** Avatars of everybody else on this page (one per person, even with several tabs open). */
 export function Participants({ presence }: { presence: readonly RemotePresence[] }) {
   const people = new Map<string, RemotePresence>();
   for (const p of presence) if (!people.has(p.userId)) people.set(p.userId, p);

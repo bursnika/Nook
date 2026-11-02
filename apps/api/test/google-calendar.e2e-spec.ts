@@ -61,7 +61,6 @@ describe('Google Calendar', () => {
     ...extra,
   });
 
-  /** A signed-in person (cookie session) with their own workspace, not yet connected to Google. */
   async function person(email: string) {
     const session = await signIn(ctx, { email });
     const user = await ctx.prisma.user.findUniqueOrThrow({ where: { email } });
@@ -71,7 +70,6 @@ describe('Google Calendar', () => {
     return { ...session, user, workspaceId, token: await bearer(app, user) };
   }
 
-  /** Walks the browser through the consent screen and back. */
   async function connect(
     who: Awaited<ReturnType<typeof person>>,
     grant: { refreshToken: string; scope?: string },
@@ -177,7 +175,7 @@ describe('Google Calendar', () => {
       ctx.googleCalendar.codes.set('c', { refreshToken: 'r', scope: CALENDAR_SCOPE });
       const start = await who.agent.get('/api/google-calendar/connect');
       const state = new URL(start.headers.location).searchParams.get('state');
-      // the same oauth cookies, but nobody is signed in
+      // oauth cookies but no session
       const cookies = ([] as string[])
         .concat(start.headers['set-cookie'] ?? [])
         .map((line: string) => line.split(';')[0])
@@ -307,7 +305,6 @@ describe('Google Calendar', () => {
     it('leaves manual events, events outside the window and other people’s imports alone', async () => {
       const a = await connected('a@example.com');
       const b = await connected('b@example.com');
-      // both people work in a's workspace
       await ctx.prisma.membership.create({
         data: { userId: b.user.id, workspaceId: a.workspaceId, role: 'MEMBER' },
       });
@@ -418,7 +415,6 @@ describe('Google Calendar', () => {
         expect(res.body.removed).toBe(0);
         expect(await titles(who.workspaceId)).toEqual(['Lecture', 'Main event']);
 
-        // once readable again, a deletion in Google is mirrored as usual
         ctx.googleCalendar.failedCalendars.clear();
         ctx.googleCalendar.calendars.set(who.refreshToken, [event('e1', 'Main event', 2)]);
         expect((await sync(who).expect(200)).body.removed).toBe(1);
@@ -672,7 +668,7 @@ describe('Google Calendar', () => {
 
   describe('editing Google events from Nook', () => {
     const WRITE = `openid ${CALENDAR_SCOPE} ${TASKS_SCOPE} ${EVENTS_WRITE_SCOPE}`;
-    // fixed once: asserting against a clock that keeps moving would be flaky
+    // fixed clock, otherwise flaky
     const newStart = at(3);
     const newEnd = at(3, 12);
     const body = (extra: Record<string, unknown> = {}) => ({
@@ -684,7 +680,6 @@ describe('Google Calendar', () => {
       ...extra,
     });
 
-    /** Imports one editable event for a person who may (or may not) change Google events. */
     async function withEvent(
       options: {
         scope?: string;
@@ -740,7 +735,7 @@ describe('Google Calendar', () => {
       expect(stored.title).toBe('Lecture (moved)');
       expect(stored.startsAt.toISOString()).toBe(newStart.toISOString());
       expect(stored.googleUrl).toContain('updated');
-      expect(stored.googleEventId).toBe(w.row.googleEventId); // still the same event
+      expect(stored.googleEventId).toBe(w.row.googleEventId);
     });
 
     it('can turn an event into an all-day one, and clear its description', async () => {
@@ -853,7 +848,7 @@ describe('Google Calendar', () => {
         .patch(`/api/workspaces/${stranger.workspaceId}/google-calendar/events/${w.row.id}`)
         .set('Authorization', stranger.token)
         .send(body())
-        .expect(404); // their own workspace, but the event is not in it
+        .expect(404);
       await http().patch(w.url).send(body()).expect(401);
       expect(ctx.googleCalendar.updates).toHaveLength(0);
     });
@@ -949,7 +944,7 @@ describe('Google Calendar', () => {
 
   describe('creating events that go to Google', () => {
     const WRITE = `openid ${CALENDAR_SCOPE} ${TASKS_SCOPE} ${EVENTS_WRITE_SCOPE}`;
-    // fixed once: asserting against a clock that keeps moving would be flaky
+    // fixed clock, otherwise flaky
     const start = at(4);
     const end = at(4, 11);
     const body = (extra: Record<string, unknown> = {}) => ({

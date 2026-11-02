@@ -2,7 +2,6 @@ import { Readable } from 'node:stream';
 import { describe, expect, it, vi } from 'vitest';
 import { AzureBlobStorage, type BlobLike, type ContainerLike } from './azure-blob-storage.js';
 
-/** A fake container: blobs are kept in a Map, and the calls are recorded. */
 function fakeContainer() {
   const blobs = new Map<string, { data: Buffer; contentType?: string }>();
   const calls = { createIfNotExists: 0, uploads: [] as string[], deletes: [] as string[] };

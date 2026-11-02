@@ -5,7 +5,7 @@ import InsightsPage from './InsightsPage';
 vi.mock('../lib/workspace', () => ({
   useWorkspace: () => ({ workspace: { id: 'ws-1', name: 'Test', slug: 'test' } }),
 }));
-// canvas drawing is not available in jsdom
+// no canvas in jsdom
 vi.mock('./insights/ChartCanvas', () => ({
   ChartCanvas: ({ label }: { label: string }) => <div role="img" aria-label={label} />,
   palette: () => ({

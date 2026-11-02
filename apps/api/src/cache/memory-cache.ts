@@ -5,7 +5,6 @@ interface Entry {
   expiresAt: number;
 }
 
-/** In-process cache: the default, and what the tests use. Entries expire lazily when read. */
 export class MemoryCache implements CacheDriver {
   readonly name = 'memory';
   private readonly entries = new Map<string, Entry>();
@@ -27,7 +26,7 @@ export class MemoryCache implements CacheDriver {
 
   async set(key: string, value: string, ttlSeconds: number) {
     if (ttlSeconds <= 0) return;
-    this.entries.delete(key); // re-insert so the Map keeps oldest-written first
+    this.entries.delete(key); // re-insert to keep insertion order
     this.entries.set(key, { value, expiresAt: this.now() + ttlSeconds * 1000 });
     if (this.entries.size > this.maxEntries) this.evict();
   }
@@ -46,7 +45,6 @@ export class MemoryCache implements CacheDriver {
     return this.entries.size;
   }
 
-  /** Drops expired entries first, then the oldest ones, until the cache fits again. */
   private evict() {
     const now = this.now();
     for (const [key, entry] of this.entries) {

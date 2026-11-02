@@ -212,7 +212,7 @@ export class PagesAdminController {
         .status(400)
         .render('admin/pages/form', await this.formView(workspaceId, { ...view, formError }));
     }
-    if (file || removing) await this.uploads.remove(current.coverUrl); // the old cover is no longer referenced
+    if (file || removing) await this.uploads.remove(current.coverUrl);
     return res.redirect(`/admin/workspaces/${workspaceId}/pages/${id}?flash=updated`);
   }
 
@@ -224,7 +224,6 @@ export class PagesAdminController {
     return res.redirect(`/admin/workspaces/${workspaceId}/pages?flash=deleted`);
   }
 
-  /** The cover must be an image; anything else is deleted again and reported on the form. */
   private async rejectBadCover(file?: Express.Multer.File) {
     if (!file || IMAGE.test(file.mimetype)) return null;
     await this.uploads.remove(file.filename);

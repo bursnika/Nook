@@ -25,7 +25,6 @@ export function Window({
   children: ReactNode;
   className?: string;
   titleId?: string;
-  /** Heading level of the title: the main window of a screen is the page's h1. */
   level?: 1 | 2 | 3;
 }) {
   const Heading = `h${level}` as const;
@@ -43,7 +42,6 @@ export function Window({
   );
 }
 
-/** A modal window on top of a native `<dialog>`: focus is trapped and Escape closes it, for free. */
 export function Dialog({
   title,
   onClose,
@@ -61,7 +59,6 @@ export function Dialog({
   role?: 'dialog' | 'alertdialog';
   tone?: 'pink' | 'blue' | 'lavender';
   wide?: boolean;
-  /** `issue` is the large two-column window of a Kanban card. */
   size?: 'wide' | 'issue';
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -179,7 +176,6 @@ export function ProgressBar({ value, label }: { value: number; label: string }) 
   );
 }
 
-/** A labelled form control; the label is tied to the control through `htmlFor`. */
 export function Field({
   label,
   htmlFor,

@@ -7,7 +7,6 @@ import { WorkspaceParams } from '../common/params.js';
 import { GoogleCalendarService } from '../google-calendar/google-calendar.service.js';
 import { AdminController } from './admin-controller.decorator.js';
 
-/** Buttons on the workspace home. Connecting starts at GET /api/google-calendar/connect. */
 @AdminController('admin')
 export class GoogleCalendarAdminController {
   constructor(private readonly calendar: GoogleCalendarService) {}

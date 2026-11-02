@@ -1,4 +1,3 @@
-/* Product landing page at `/`: the Nook retro-desktop look (docs/design.md) without Bootstrap. */
 :root {
   --pink-100: #fce1ee;
   --pink-200: #f9c6de;
@@ -71,7 +70,7 @@ a {
   top: 8px;
 }
 
-/* ---------- pixel frames and buttons ---------- */
+/* pixel frames and buttons */
 .framed,
 .card,
 .col,
@@ -123,7 +122,7 @@ a:focus-visible {
   padding: 10px 22px 11px;
 }
 
-/* ---------- header ---------- */
+/* header */
 .top {
   background: linear-gradient(90deg, var(--pink-300), var(--lav-300));
   border-bottom: 2px solid var(--lav-700);
@@ -157,7 +156,7 @@ a:focus-visible {
   text-decoration: underline;
 }
 
-/* ---------- hero ---------- */
+/* hero */
 .hero {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
@@ -211,7 +210,7 @@ h1 {
   width: 52%;
 }
 
-/* ---------- mini windows ---------- */
+/* mini windows */
 .win {
   --bar: linear-gradient(90deg, var(--pink-300), var(--lav-300));
   --face: var(--pink-200);
@@ -293,7 +292,7 @@ h1 {
   color: var(--blue-700);
 }
 
-/* ---------- sections ---------- */
+/* sections */
 .section {
   padding: 56px 0;
 }
@@ -336,7 +335,7 @@ kbd {
   box-shadow: 0 0 0 2px var(--lav-300);
 }
 
-/* ---------- board ---------- */
+/* board */
 .board {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -432,7 +431,7 @@ kbd {
   background: var(--blue-200);
 }
 
-/* ---------- final call ---------- */
+/* final call */
 .final {
   padding-bottom: 72px;
 }
@@ -450,7 +449,7 @@ kbd {
   font-size: clamp(24px, 3.4vw, 34px);
 }
 
-/* ---------- footer ---------- */
+/* footer */
 .foot {
   background: var(--lav-100);
   border-top: 2px solid var(--lav-700);
@@ -468,7 +467,7 @@ kbd {
   gap: 20px;
 }
 
-/* ---------- small screens ---------- */
+/* small screens */
 @media (max-width: 900px) {
   .hero {
     grid-template-columns: 1fr;

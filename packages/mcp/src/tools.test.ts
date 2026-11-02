@@ -17,7 +17,6 @@ const envelope = (items: unknown[] = []) => ({
 
 type Reply = { status?: number; body?: unknown };
 
-/** Boots the real MCP server in memory with a stubbed `fetch` and talks to it like a client would. */
 async function setup(reply: (url: URL, init: RequestInit) => Reply = () => ({ body: envelope() })) {
   const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
     const { status = 200, body } = reply(new URL(String(input)), init ?? {});

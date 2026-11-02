@@ -1,4 +1,4 @@
-/** Pixel icons are ASCII grids rendered as crisp SVG rects (docs/design.md). `.` is transparent. */
+// ascii grids drawn as svg rects, '.' is transparent
 const COLORS: Record<string, string> = {
   O: '#2b1e33',
   P: '#ec4e95',

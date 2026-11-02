@@ -21,7 +21,6 @@ test.describe('public landing pages (/p/:slug)', () => {
       'href',
       'mailto:ann@e2e.test',
     );
-    // anonymous visitors need no sign-in and the page is not part of the app
     await expect(page.getByRole('link', { name: /sitemap/ })).toHaveAttribute(
       'href',
       '/sitemap.xml',
@@ -94,7 +93,7 @@ test.describe('public landing pages (/p/:slug)', () => {
     const slug = `e2e-${Date.now().toString(36)}`;
     const page = await ann.api.createPage(title, [{ text: 'Secret until published' }]);
 
-    // private: nobody can read it
+    // private
     expect((await request.get(`/p/${slug}`)).status()).toBe(404);
 
     const patch = (data: object) =>

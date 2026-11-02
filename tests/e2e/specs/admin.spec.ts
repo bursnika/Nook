@@ -37,7 +37,7 @@ test.describe('classic admin (MVC)', () => {
     await page.goto('/admin/workspaces');
     await page.getByRole('link', { name: '+ New workspace' }).click();
 
-    // validation: a slug with capitals is refused and the form keeps what was typed
+    // bad slug
     await page.getByLabel('Name').fill(name);
     await page.getByLabel('Slug').fill('Not A Slug');
     await page.getByRole('button', { name: 'Save' }).click();
@@ -51,7 +51,7 @@ test.describe('classic admin (MVC)', () => {
     await expectFlash(page, 'Created successfully.');
     await expect(page.getByRole('heading', { name })).toBeVisible();
 
-    // the same slug again: the database refuses and the form says so
+    // duplicate slug
     await page.goto('/admin/workspaces/new');
     await page.getByLabel('Name').fill(`${name} twin`);
     await page.getByLabel('Slug').fill(slug);
@@ -71,7 +71,7 @@ test.describe('classic admin (MVC)', () => {
     await expectFlash(page, 'Changes saved.');
     await expect(page.getByRole('heading', { name: renamed })).toBeVisible();
 
-    // delete: the browser asks for confirmation first
+    // delete
     await page.goto(`/admin/workspaces?q=${slug}`);
     page.once('dialog', (dialog) => {
       expect(dialog.message()).toContain(renamed);
@@ -119,7 +119,6 @@ test.describe('classic admin (MVC)', () => {
     await expect(page.getByRole('heading', { name: new RegExp(title) })).toBeVisible();
     const cover = page.getByRole('img', { name: `Cover of ${title}` });
     await expect(cover).toBeVisible();
-    // the uploaded file is really served, as an image
     const src = await cover.getAttribute('src');
     expect(src).toMatch(/^\/uploads\/.+\.png$/);
     const file = await page.request.get(src!);
@@ -129,11 +128,10 @@ test.describe('classic admin (MVC)', () => {
       .poll(() => cover.evaluate((img) => (img as HTMLImageElement).naturalWidth))
       .toBe(16);
 
-    // and the public landing page shows it as its cover
     const landing = await page.request.get(`/p/${slug}`);
     expect(await landing.text()).toContain(`url('${src}')`);
 
-    // edit: add a block through the note form, then rename
+    // edit
     await page.getByLabel('Add to this note').fill('First line\nSecond line');
     await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByText('Second line', { exact: true })).toBeVisible();
@@ -147,7 +145,7 @@ test.describe('classic admin (MVC)', () => {
     await expect(page.getByRole('img', { name: /^Cover of/ })).toHaveCount(0);
     expect((await page.request.get(src!)).status()).toBe(404);
 
-    // a file that is not an image is refused
+    // not an image
     await page.goto(`${base}/pages/new`);
     await page.getByLabel('Title').fill(unique('Bad cover'));
     await page.getByLabel(/^Cover/).setInputFiles({
@@ -211,14 +209,14 @@ test.describe('classic admin (MVC)', () => {
     await root.api.post(`/workspaces/${workspace.id}/pages`, { title: 'Linked planning page' });
     const title = unique('Admin task');
 
-    // the quick form on the workspace home
+    // quick form
     await page.goto(base);
     await page.getByRole('textbox', { name: 'Task title' }).fill(unique('Home quick task'));
     await page.getByLabel('Priority', { exact: true }).selectOption('HIGH');
     await page.getByRole('button', { name: '+ Add task' }).click();
     await expectFlash(page, 'Task added.');
 
-    // the full form
+    // full form
     await page.goto(`${base}/tasks/new`);
     await page.getByLabel('Title').fill(title);
     await page.getByLabel('Description').fill('Created through the admin form');
@@ -244,7 +242,7 @@ test.describe('classic admin (MVC)', () => {
     ).toBeVisible();
     await expect(page.getByText('not yet')).toHaveCount(0);
 
-    // list filter by status, then delete
+    // filter, then delete
     await page.goto(`${base}/tasks`);
     await page.getByRole('searchbox', { name: 'Search' }).fill(title);
     await page.getByLabel('Status').selectOption('DONE');
@@ -275,7 +273,7 @@ test.describe('classic admin (MVC)', () => {
     const users = new Select2(page, 'f-userId');
     await users.search('an');
     await expect(page.getByText('Type at least 1 more character(s)')).toBeVisible();
-    // the pause before a request is 300 ms: give a wrong request every chance to show up, then check
+    // debounce is 300ms
     await page.waitForTimeout(600);
     expect(requests).toHaveLength(0);
 
@@ -307,7 +305,7 @@ test.describe('classic admin (MVC)', () => {
     await page.getByRole('button', { name: 'Create invitation' }).click();
     await expect(page.getByText('Invitation created for guest@e2e.test.')).toBeVisible();
     await expect(page.getByLabel('Invitation link')).toHaveValue(/\/admin\/invite\/.+/);
-    // opening the page again does not show the link: the server keeps only a hash of it
+    // link is shown only once
     await page.goto(`/admin/workspaces/${workspace.id}/team`);
     await expect(page.getByLabel('Invitation link')).toHaveCount(0);
     await expect(page.getByText('guest@e2e.test')).toBeVisible();

@@ -1,16 +1,13 @@
-/** The REST API, same origin (the Vite dev server proxies /api; in production the API serves the app). */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
-    /** The API's own error body, e.g. `{ feature: 'insights' }` for a Pro-only route. */
     readonly body?: unknown,
   ) {
     super(message);
   }
 }
 
-/** The shape of every list the API returns. */
 export interface Paged<T> {
   items: T[];
   total: number;
@@ -19,10 +16,9 @@ export interface Paged<T> {
   nextLink: string | null;
 }
 
-/** One refresh at a time: several requests that hit an expired access token share the same rotation. */
+// one refresh at a time, parallel 401s share it
 let refreshing: Promise<boolean> | undefined;
 
-/** The access token is short-lived; the refresh cookie rotates it. False means the session is really over. */
 function refreshSession(): Promise<boolean> {
   refreshing ??= fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' })
     .then((response) => response.ok)
@@ -57,7 +53,6 @@ export async function api<T = unknown>(
     });
   let response = await send();
   if (response.status === 401 && !path.startsWith('/auth/')) {
-    // an expired access token: rotate the session once and repeat the request
     if (await refreshSession()) response = await send();
     if (response.status === 401) sendToLogin();
   }
@@ -83,7 +78,6 @@ function safeParse(text: string): unknown {
   }
 }
 
-/** Everything of a list, following `nextLink` (for screens that need the whole set, like a Kanban board). */
 export async function apiAll<T>(path: string): Promise<T[]> {
   const items: T[] = [];
   let next: string | null = `${path}${path.includes('?') ? '&' : '?'}limit=100`;
@@ -95,7 +89,7 @@ export async function apiAll<T>(path: string): Promise<T[]> {
   return items;
 }
 
-/** `nextLink` is an absolute URL (`http://host/api/...`); `api()` wants the part after `/api`. */
+// nextLink is absolute, api() wants the part after /api
 export function apiPathOf(link: string): string {
   const url = new URL(link, window.location.origin);
   return (url.pathname + url.search).replace(/^\/api/, '');

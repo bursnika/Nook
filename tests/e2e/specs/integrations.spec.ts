@@ -11,7 +11,6 @@ interface TodayPlan {
   tasks: { title: string }[];
 }
 
-/** The widget endpoint is for apps that cannot sign in: it is called with no cookies at all. */
 async function widgetToday(token: string) {
   const anonymous = await playwrightRequest.newContext({ baseURL: BASE_URL });
   try {
@@ -25,7 +24,6 @@ async function widgetToday(token: string) {
   }
 }
 
-/** A settings card: the window around the heading with this title. */
 const card = (page: Page, title: string): Locator =>
   page
     .getByRole('heading', { level: 2, name: title, exact: true })
@@ -94,18 +92,17 @@ test.describe('settings and integrations', () => {
     await expect(widgets).toContainText('Token active');
     await expect(widgets).toContainText('it is shown only once');
 
-    // the token opens today's plan, with no sign-in
     const first = await widgetToday(token);
     expect(first.status).toBe(200);
     expect(first.plan?.date).toBe(today());
     expect(first.plan?.tasks.map((item) => item.title)).toContain(title);
 
-    // shown once: after a reload the token is gone from the screen but still active
+    // token is shown only once
     await bob.page.reload();
     await expect(widgets.getByLabel('Widget token')).toHaveCount(0);
     await expect(widgets).toContainText('Token active');
 
-    // replacing it kills the old one
+    // replace
     await widgets.getByRole('button', { name: 'Replace token' }).click();
     const replacement = await widgets.getByLabel('Widget token').inputValue();
     expect(replacement).not.toBe(token);
@@ -139,7 +136,7 @@ test.describe('settings and integrations', () => {
       ann.page.getByRole('img', { name: /changes in the last \d+ days|No activity/ }),
     ).toBeVisible();
 
-    // Chart.js really drew something: the canvases are not blank
+    // canvases are not blank
     await expect
       .poll(() =>
         charts.evaluateAll((canvases) =>

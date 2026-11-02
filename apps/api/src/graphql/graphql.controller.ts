@@ -20,7 +20,6 @@ interface GraphqlBody {
   operationName?: unknown;
 }
 
-/** Queries and mutations over HTTP at /graphql. Subscriptions use the WebSocket on the same path. */
 @ApiExcludeController()
 @Controller('graphql')
 export class GraphqlController {
@@ -32,7 +31,6 @@ export class GraphqlController {
     return this.run(body, req);
   }
 
-  /** Queries only: a GET must never change anything. */
   @Get()
   get(@Query() query: GraphqlBody, @Req() req: Request) {
     return this.run(query, req, true);
@@ -52,7 +50,7 @@ export class GraphqlController {
     const parsed =
       typeof variables === 'string' && variables ? (JSON.parse(variables) as unknown) : variables;
     const context: GraphqlContext = { user: req.user! };
-    // errors of a GraphQL operation travel in the body with status 200, as the protocol says
+    // graphql errors go in the body with status 200
     return graphql({
       schema,
       source: query,
